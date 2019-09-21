@@ -1,7 +1,9 @@
 import fortran_kinenergy as fortran
 import variables as var
+from timing import timing
 
 
+@timing
 def kinenergy(state):
     """
     compute the kinetic energy function from the model state

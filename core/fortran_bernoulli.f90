@@ -26,21 +26,25 @@ subroutine gradke(ke, du, l, m, n)
 end subroutine gradke
 
 !----------------------------------------
-subroutine gradkeandb(ke, b, du, l, m, n)
+subroutine gradkeandb(ke, b, du, dz, l, m, n)
   !
-  ! du += delta[ ke ] + b
+  ! du += delta[ ke ] + b*dz
   ! where delta[ ] is the finite difference in the 'u' direction
   ! the 'u' direction is the third entry of the 3D array
   !
   implicit none
 
   integer, intent(in):: l, m, n
+  real*8:: dz
   real*8, dimension(l, m, n), intent(in) :: ke, b
   real*8, dimension(l, m, n), intent(inout) :: du
 
   !f2py intent(inplace):: ke, b, du
 
   integer:: i, j, k
+  real*8:: cff
+
+  cff = 0.5*dz
   
   do k = 1, l
      do j = 1, m

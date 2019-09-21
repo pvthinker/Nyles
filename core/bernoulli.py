@@ -2,6 +2,10 @@
 
 add b*grad(z) + grad(ke) to rhs
 
+TODO:
+  to increase computational intensity, compute delta[b*grad(z) + grad(ke)]
+  and add it to the rhs of the multigrid
+
 """
 
 import fortran_bernoulli as fortran
@@ -16,13 +20,15 @@ def bernoulli(state, rhs):
     b = state.get('b')
     ke = state.get('ke')
 
+    dz = 1. # the vertical grid size
+
     for d in 'ijk':
         comp = getattr(du, d)
         if d in 'ij':
             fortran.gradke(ke.view(d), comp.view(d))
 
         else:
-            fortran.gradkeandb(ke.view(d), b.view(d), comp.view(d))
+            fortran.gradkeandb(ke.view(d), b.view(d), comp.view(d), dz)
 
 
 # ----------------------------------------------------------------------

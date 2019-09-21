@@ -5,8 +5,10 @@ module to compute -div( vol * trac )
 """
 import fortran_upwind as fortran
 import variables as var
+from timing import timing
 
 
+@timing
 def rhstrac(state, rhs, traclist):
     """
 

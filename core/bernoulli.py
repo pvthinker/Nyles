@@ -9,7 +9,6 @@ TODO:
 """
 
 import fortran_bernoulli as fortran
-import variables as var
 from timing import timing
 
 
@@ -34,6 +33,8 @@ def bernoulli(state, rhs):
 # ----------------------------------------------------------------------
 if __name__ == '__main__':
 
+    import variables as var
+    
     param = {'nx': 40, 'ny': 50, 'nz': 60, 'nh': 2}
     state = var.get_state(param)
     ds = state.duplicate()

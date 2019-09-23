@@ -8,6 +8,7 @@ The class defining the 3D arrays and the model state
 
 """
 import numpy as np
+from mpi import topology as topo
 
 modelvar = {
     'b': ['scalar', 'buoyancy', 'm.s^-2', 'T'],
@@ -36,6 +37,12 @@ class Scalar(object):
         p = {}
         for k in self.list_param:
             p[k] = param[k]
+        key = 'neighbours'
+        if key in param.keys():
+            p[key] = param[key]
+        else:
+            p[key] = topo.noneighbours()
+
         self.param = p
 #            setattr(self, k, param[k])
 
@@ -48,13 +55,24 @@ class Scalar(object):
 
         # nx, ny, nz, nh = self.nx, self.ny, self.nz, self.nh
         nx, ny, nz, nh = p['nx'], p['ny'], p['nz'], p['nh']
+
+        ngbs = p['neighbours']
+        size = [nx, ny, nz]
+        for k, direc in enumerate('ijk'):
+            for pm in 'mp':
+                if ngbs[direc+pm] is None:
+                    pass
+                else:
+                    size[k] += nh
+        nxl, nyl, nzl = size
+        self.size = size
         self.data = {}
         # extended arrays with halo
         # we might be smarter by removing the halo
         # in the directions where we don't need a halo
-        self.data['j'] = np.zeros((nx+2*nh, nz+2*nh, ny+2*nh))
-        self.data['k'] = np.zeros((ny+2*nh, nx+2*nh, nz+2*nh))
-        self.data['i'] = np.zeros((nz+2*nh, ny+2*nh, nx+2*nh))
+        self.data['j'] = np.zeros((nxl, nzl, nyl))
+        self.data['k'] = np.zeros((nyl, nxl, nzl))
+        self.data['i'] = np.zeros((nzl, nyl, nxl))
         self.activeview = 'i'
 
     def duplicate(self):
@@ -63,13 +81,18 @@ class Scalar(object):
         return Scalar(self.param, self.header)
 
     def view(self, idx):
-        """ return the 3D array
+        """ return the 3D array with idx as inner direction
+
+        idx = 'i', 'j', 'k'
+
+        view('i') return x in the convention (k, j, i)
 
         if lastview is idx
         - copy it from the last activeview buffer to the 'idx' buffer
         - return the pointer to the data
 
         in any case, the function returns the pointer to the buffer
+
         """
 
         if self.activeview == idx:
@@ -88,6 +111,19 @@ class Scalar(object):
 
         return field
 
+    def flipview(self, idx):
+        """
+
+        return the 3D array but with idx indicating the outer direction
+
+        flipview('i') return x in the convention (i, k, j)
+
+        """
+        if idx == 'i': x = self.view('j')
+        if idx == 'j': x = self.view('k')
+        if idx == 'k': x = self.view('i')
+        return x
+        
 # ----------------------------------------------------------------------
 
 
@@ -229,7 +265,16 @@ def get_work(param):
 # ----------------------------------------------------------------------
 if __name__ == '__main__':
 
-    param = {'nx': 40, 'ny': 50, 'nz': 60, 'nh': 2}
+    procs = [4, 2, 1]
+    topology = 'closed'
+    myrank = 3
+    nh = 3
+
+    loc = topo.rank2loc(myrank, procs)
+    neighbours = topo.get_neighbours(loc, procs, topology)
+
+    param = {'nx': 40, 'ny': 50, 'nz': 60, 'nh': nh,
+             'neighbours': neighbours}
 
     # define the model's state
     s = get_state(param)

@@ -1,5 +1,10 @@
-%.so : %.f90 ; $(F2PY) -m $* -c $< --opt='-O3 -fPIC' 
+%.so : %.f90
+	$(F2PY) -m $* -c $< --opt='-O3 -fPIC'
+	echo $*
 
 
-all:	fortran_interp.so fortran_kinenergy.so fortran_upwind.so fortran_bernoulli.so fortran_vorticity.so
+SRCS = $(wildcard *.f90)
+OBJS = $(patsubst %.f90, %.so, $(SRCS))
+
+all:	$(OBJS)
 

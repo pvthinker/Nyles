@@ -36,12 +36,11 @@ def loc2rank(loc, procs):
 
     """
     nbproc = np.prod(procs)
-    ranks = np.reshape(np.arange(nbproc), procs)
-    rank = ranks[loc[0], loc[1], loc[2]]
+    rank = (loc[0]*procs[1] + loc[1])*procs[2] + loc[2]
     return rank
 
 
-def get_neighbours(loc, procs, topology):
+def get_neighbours(loc, procs, topology, incr=[1, 1, 1]):
     """ Return the neighbours rank in the six directions
 
     the result is presented in a dictionnary
@@ -54,37 +53,53 @@ def get_neighbours(loc, procs, topology):
     """
     k, j, i = loc
     nz, ny, nx = procs
+    incz, incy, incx = incr
+    k *= incz
+    j *= incy
+    i *= incx
 
-    im = loc2rank([k, j, (i-1) % nx], procs)
-    ip = loc2rank([k, j, (i+1) % nx], procs)
-    jm = loc2rank([k, (j-1) % ny, i], procs)
-    jp = loc2rank([k, (j+1) % ny, i], procs)
-    km = loc2rank([(k-1) % nz, j, i], procs)
-    kp = loc2rank([(k+1) % nz, j, i], procs)
+    im = loc2rank([k, j, (i-incx) % nx], procs)
+    ip = loc2rank([k, j, (i+incx) % nx], procs)
+    jm = loc2rank([k, (j-incy) % ny, i], procs)
+    jp = loc2rank([k, (j+incy) % ny, i], procs)
+    km = loc2rank([(k-incz) % nz, j, i], procs)
+    kp = loc2rank([(k+incz) % nz, j, i], procs)
 
     if 'x' in topology:
         pass
     else:
-        if i == 0:
+        if i < incx:
             im = None
-        if i == nx-1:
+        if i >= nx-incx:
             ip = None
+        # if im == i:
+        #     im = None
+        # if ip == i:
+        #     ip = None
 
     if 'y' in topology:
         pass
     else:
-        if j == 0:
+        if j < incy:
             jm = None
-        if j == ny-1:
+        if j >= ny-incy:
             jp = None
+        # if jm == j:
+        #     jm = None
+        # if jp == j:
+        #     jp = None
 
     if 'z' in topology:
         pass
     else:
-        if k == 0:
+        if k < incz:
             km = None
-        if k == nz-1:
+        if k >= nz-incz:
             kp = None
+        # if km == k:
+        #     km = None
+        # if kp == k:
+        #     kp = None
 
     return {'km': km, 'kp': kp, 'jm': jm, 'jp': jp, 'im': im, 'ip': ip}
 

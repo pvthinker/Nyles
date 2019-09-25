@@ -16,6 +16,11 @@
   on the finest grid (level=0), each core computes its own subdomain
   on the coarsest grid, all cores compute the whole domain
 
+  if you use this module as a main, it is suggested to redirect the
+  output in a text file as the output is quite lengthy
+
+  % python grids.py > out.txt
+
 """
 import numpy as np
 import topology as topo
@@ -30,7 +35,7 @@ def define_grids(p):
     a grid is declared the coarsest when all cores compute the whole domain
     and that the number of cells of the global domain is <= 'ncellscoarsest'
     """
-    procs = p['procs']
+    procs = p['procs'].copy()
     nx, ny, nz = p['nx'], p['ny'], p['nz']
     shape = [nz, ny, nx]
 
@@ -96,6 +101,28 @@ def myloc(loc, inc, delta, proc):
     return topo.loc2rank([k, j, i], proc)
 
 
+def fixneighbours(neighbours, myrank, masterrank):
+    """
+
+    for subdomains computed by several ranks
+    the neighbours are correct only for the master rank
+    (smallest rank of the family)
+    for the others, the neighbours are recovered by
+    shifting the value by (myrank-masterrank)
+
+    this is what is doing this fix
+
+    """
+    for key, val in neighbours.items():
+        if val is None:
+            pass
+        else:
+            neighbours[key] += (myrank - masterrank)
+    # note that a dictionnary is mutable so there is
+    # need to return something, neighbours is change in-place
+    return neighbours
+
+
 def pairing(coarse, cores):
     """
 
@@ -112,9 +139,10 @@ def pairing(coarse, cores):
     k0, j0, i0 = loc0
     gathers = []
     doms = []
-    flag = True
     first = True
     tags = rank*0
+
+    subdom_partition = []
 
     print('-'*80)
     print('')
@@ -126,9 +154,6 @@ def pairing(coarse, cores):
     print('')
     for lev, c in enumerate(coarse):
         keys = c.keys()
-        if flag:
-            loc0 = loc.copy()
-            k0, j0, i0 = loc0
         if any(['g' in k for k in keys]) or lev == 0:
             print('-'*80)
             g = []
@@ -140,9 +165,8 @@ def pairing(coarse, cores):
                     g += [direc]
             if g != '':
                 gathers += [g]
-                flag = True
+
             else:
-                flag = False
                 print('***no gather****')
             k, j, i = loc
 
@@ -154,36 +178,11 @@ def pairing(coarse, cores):
                 # d is the index of the subdomain
                 # rank with same d do the same computation
                 d = myloc(l, incr, [0, 0, 0], procs0)
-
-                # here is the list of neighbours
-                #
-                # the print has been discarded to lighten the output
-                # but clearly this information is very important
-                # note that the neighbours relationships for a given
-                # rank depends on the subdomain decomposition
-                # the neighbours get further and further as
-                # subdomains are glued. This is accounted by
-                # 'incr'.  incr == 1 on the finest grid, then
-                # whenever there is gluing in one direction
-                # incr is doubled in that direction, until
-                # the point where the is only one subdomain is that
-                # direction. Each rank is then neighbour with itself
-                #
-                im = myloc(l, incr, [0, 0, -1], procs0)
-                ip = myloc(l, incr, [0, 0, +1], procs0)
-                jm = myloc(l, incr, [0, -1, 0], procs0)
-                jp = myloc(l, incr, [0, +1, 0], procs0)
-                km = myloc(l, incr, [-1, 0, 0], procs0)
-                kp = myloc(l, incr, [+1, 0, 0], procs0)
                 dom[r] = d
-
-                # discarded print
-                # print('r: %i - d: %i / ' % (r, d), im, ip, jm, jp, km, kp)
 
             doms += [dom]
             dd = set(dom)
             print('Subdomains are : ', dd)
-            nbproc = np.prod(procs)
             print('corresponding to domain decomposition: ', procs)
             print('increments in each directions: ', incr)
 
@@ -193,6 +192,7 @@ def pairing(coarse, cores):
             print('i: ', i)
             if not(first):
                 print('gluing was in directions ', g)
+            neighbours = [{}]*len(rank)
             for d in dd:
                 family = [r for r in rank if dom[r] == d]
                 # in a family, all ranks have the same loc
@@ -208,6 +208,37 @@ def pairing(coarse, cores):
                 print('     computed by ' % d, family)
                 if not(first):
                     print('     obtained by gluing ranks:', glued)
+                # here is the list of neighbours
+                #
+                # the print has been discarded to lighten the output
+                # but clearly this information is very important
+                # note that the neighbours relationships for a given
+                # rank depends on the subdomain decomposition
+                # the neighbours get further and further as
+                # subdomains are glued. This is accounted by
+                # 'incr'.  incr == 1 on the finest grid, then
+                # whenever there is gluing in one direction
+                # incr is doubled in that direction, until
+                # the point where the is only one subdomain is that
+                # direction. Each rank is then neighbour with itself
+                #
+                print('     neighbours:')
+                for r in family:
+                    l = [k0[r], j0[r], i0[r]]
+                    nghbs = topo.get_neighbours(l, procs0, topology, incr=incr)
+                    ngbs = fixneighbours(nghbs, r, d)
+                    print('rank : %i / ' % r, ngbs)
+                    neighbours[r] = ngbs
+
+            localpartition = {'procs': procs.copy(),
+                              'incr': incr.copy(),
+                              'gluing': g.copy(),
+                              'dom': dom.copy(),
+                              'neighbours': neighbours.copy()}
+            #            if not(first):
+            localpartition['tags'] = tags.copy()
+            subdom_partition += [localpartition]
+
             #
             # tags is used to identify which ranks are glued together
             #
@@ -219,7 +250,33 @@ def pairing(coarse, cores):
                 for k, r in enumerate(family):
                     tags[r] = k
             first = False
+
     print('-'*80)
+
+    return subdom_partition
+
+
+def check_graph(neighbours):
+    """
+    build the connectivity matrix of the neighbours graph
+
+    assert that it is symmetric
+
+    """
+    nbprocs = len(neighbours)
+    connectivity = np.zeros((nbprocs, nbprocs), dtype=int)
+    for i, n in enumerate(neighbours):
+        for key, j in n.items():
+            if j is None:
+                pass
+            else:
+                connectivity[i, j] += 1
+    print('connectivity matrix')
+    print(connectivity)
+
+    # the matrix should be symmetric
+    msg = 'neighbours are not connected symmetrically'
+    assert (connectivity == connectivity.transpose()).all(), msg
 
 
 # ----------------------------------------------------------------------
@@ -229,6 +286,7 @@ if __name__ == '__main__':
     topology = 'closed'
     myrank = 3
     nh = 3
+    topology = 'closed'
 
     loc = topo.rank2loc(myrank, procs)
     neighbours = topo.get_neighbours(loc, procs, topology)
@@ -249,4 +307,19 @@ if __name__ == '__main__':
               ' coarsening in ', [k[1] for k in c.keys() if k[0] == 'r'],
               ' gluing in ', [k[1] for k in c.keys() if k[0] == 'g'])
 
-    pairing(coarse, cores)
+    partition = pairing(coarse, cores)
+    print('Subdomains partitions:')
+    for k, p in enumerate(partition):
+        print('')
+        print('partition #%i :' % k)
+        for key, val in p.items():
+            if key == 'neighbours':
+                print('    neighbours')
+                for r, v in enumerate(val):
+                    print('rank %2i: ' % r, v)
+                check_graph(val)
+
+            else:
+                print('    %8s:' % key, val)
+
+    print('-'*80)

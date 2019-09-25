@@ -119,11 +119,21 @@ class Scalar(object):
         flipview('i') return x in the convention (i, k, j)
 
         """
-        if idx == 'i': x = self.view('j')
-        if idx == 'j': x = self.view('k')
-        if idx == 'k': x = self.view('i')
+        if idx == 'i':
+            x = self.view('j')
+        if idx == 'j':
+            x = self.view('k')
+        if idx == 'k':
+            x = self.view('i')
         return x
-        
+
+    def viewlike(self, scalar):
+        """
+        return the view that has the same convention than scalar
+        """
+        activeview = scalar.activeview
+        return self.view(activeview)
+
 # ----------------------------------------------------------------------
 
 

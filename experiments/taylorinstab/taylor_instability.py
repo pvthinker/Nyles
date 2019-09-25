@@ -1,6 +1,7 @@
+from nyles import Nyles
 from param import Param
 from grid import Grid
-from nyles import Nyles
+
 import numpy as np
 
 param = Param()
@@ -15,13 +16,13 @@ param.npx = 1
 param.npy = 1
 param.npz = 1
 
-param.Lx = 1.
-param.Ly = 1.
-param.Lz = 1.
+param.Lx = 1.0
+param.Ly = 1.0
+param.Lz = 1.0
 param.geometry = 'closed'
 
 # time
-param.tend = 10.
+param.tend = 10.0
 param.cfl = 1.5
 param.adaptable_dt = True
 param.dt = 0.004
@@ -34,14 +35,14 @@ param.order = 5
 param.plot_var = 'b'
 param.var_to_save = ['u', 'b', 'p']
 param.list_diag = 'all'
-param.freq_his = 1.
-param.freq_diag = 1.
+param.freq_his = 1.0
+param.freq_diag = 1.0
 
 # plot
 param.plot_interactive = True
 param.freq_plot = 10
 param.colorscheme = 'imposed'
-param.cax = [-.6, .6]
+param.cax = [-0.6, 0.6]
 param.generate_mp4 = True
 
 # physics
@@ -73,10 +74,10 @@ def stratif():
 
 buoy[:] = (1-stratif() - 0.5)
 # add noise to trigger the instability
-noise = np.random.normal(size=np.shape(yr), scale=1.)*grid.msk
-noise -= grid.domain_integration(noise)*grid.msk/grid.area
+noise = np.random.normal(size=np.shape(yr), scale=1.) * grid.msk
+noise -= grid.domain_integration(noise) * grid.msk / grid.area
 grid.fill_halo(noise)
 
-buoy += 1e-3*noise
+buoy += 1e-3 * noise
 
 nyles.loop()

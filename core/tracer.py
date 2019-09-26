@@ -8,7 +8,6 @@ import variables as var
 from timing import timing
 
 
-@timing
 def rhstrac(state, rhs, traclist):
     """
 
@@ -21,7 +20,7 @@ def rhstrac(state, rhs, traclist):
     # U = state.get('U') # U is a 'Velocity' instance
     # in z coordinates use 'u' the covariant
     # and account for the metric term by tweaking the volume vol=>vol/ds**2
-    U = state.get('u')
+    U = state.get('U')
 
     for tracname in traclist:
         trac = state.get(tracname)  # trac is a 'Scalar' instance
@@ -33,7 +32,6 @@ def rhstrac(state, rhs, traclist):
             cff = vol/ds2  # for z coordinates
 
             component = getattr(U, direction)
-
             field = trac.view(direction)
             dfield = dtrac.view(direction)
             velocity = component.view(direction)

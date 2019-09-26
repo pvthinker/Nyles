@@ -26,7 +26,7 @@ subroutine upwind(trac, u, dtrac, vol, iflag, l, m, n)
   do k = 1, l
      do j = 1, m
         fxm = 0.
-        do i = 1, n
+        do i = 1, n-1
            UU = abs(u(k,j,i))
            up = 0.5*(u(k,j,i)+UU) ! right-going flux
            um = 0.5*(u(k,j,i)-UU) ! left-going flux

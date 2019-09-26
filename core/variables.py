@@ -80,7 +80,7 @@ class Scalar(object):
         # p = {'nx': self.nx, 'ny': self.ny, 'nz': self.nz, 'nh': self.nh}
         return Scalar(self.param, self.header)
 
-    def view(self, idx):
+    def view(self, idx=None):
         """ return the 3D array with idx as inner direction
 
         idx = 'i', 'j', 'k'
@@ -94,6 +94,8 @@ class Scalar(object):
         in any case, the function returns the pointer to the buffer
 
         """
+        if idx is None:
+            idx = self.activeview
 
         if self.activeview == idx:
             field = self.data[idx]
@@ -171,9 +173,11 @@ class Vector(object):
     def duplicate(self):
         return Vector(self.param, self.header, self.nature)
 
-    def view(self, idx):
+    def view(self, idx=None):
         """ return the three components """
-        return [self.x.view(idx), self.y.view(idx), self.z.view(idx)]
+        if idx is None:
+            idx = self.i.activeview
+        return [self.i.view(idx), self.j.view(idx), self.k.view(idx)]
 
 # ----------------------------------------------------------------------
 
@@ -202,7 +206,17 @@ class State(object):
         self.state = state
 
     def get(self, var):
-        return getattr(self, var)
+        if len(var) > 2:
+            suffix = var[-2:]
+        else:
+            suffix = '  '
+
+        if (suffix[0] == '_') and (suffix[1] in 'ijk'):
+            vector = getattr(self, var[:-2])
+            field = getattr(vector, suffix[1])
+        else:
+            field = getattr(self, var)
+        return field
 
     def duplicate(self):
         """
@@ -310,3 +324,6 @@ if __name__ == '__main__':
         s.get('u')).__name__ == 'Vector', 's.get() does not return a Vector'
     assert type(
         s.get('u').i).__name__ == 'Scalar', 'vector.i does not return a Scalar'
+
+    cov = s.get('u').view()
+    contra = s.get('U').view()

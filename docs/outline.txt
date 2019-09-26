@@ -3,31 +3,89 @@
 * We will work on several components
 
   - the data structure: how do we store the 3D arrays
+
         * we need to anticipate the halo fill
 
-        * anticipate that we want to distringuish covariant and contravariant components, even though the distinction is trivial in Cartesian coordinates.
+        * anticipate that we want to distinguish covariant and
+          contravariant components, even though the distinction is
+          trivial in Cartesian coordinates.
 
-  - computation of the model r.h.s
-        * our guidelines are: data contiguity + maximize computational intensity
+  - computation of the model r.h.s.
+        * our guidelines are:
+          data contiguity + maximize computational intensity
+
+### MR: what does "maximize computational intensity" mean?
 
   - multigrid
 
   - parallelization
-        * write things to be as general as possible: subdomain partition can be anything (but power of 2)
 
-        * halo fill: it should be flexible: fill only two faces, fill the 6 faces, fill the 6 faces and the 8 corners etc.
+        * write things to be as general as possible:
+          subdomain partition can be anything (but power of 2)
 
-        * gather arrays and matrice A [for the multigrid]
+### MR: this is unclear! "anything but" means "anything apart from";
+        I think it should say "anything, but it must be a power of 2";
+        please clarify.
 
-* for each subroutine we should systematically write
+        * halo fill: it should be flexible: fill only two faces,
+          fill the 6 faces, fill the 6 faces and the 8 corners etc.
+
+        * gather arrays and matrix A [for the multigrid]
+
+* for each subroutine we should systematically
 
   - write the docstring
 
-  - write one or several tests
+  - write one or several tests:
+
+        * of the subroutine itself
+
+        * of its interaction with other parts of the software
 
 
-* at this stage of the development, don't be afraid to rewrite things
-  completely => e.g. the datastructure is central and impacts a lot
+* At this stage of the development, don't be afraid to rewrite things
+  completely => e.g. the data structure is central and impacts a lot
   the way the rest of the code is written
+
+
+* More important things to address:
+
+  - MR: see file core/variables.py, class Vector, l. 170.
+
+  - MR: the class State in core/variables.py is confusing.
+        It claims to pack variables in a dictionary 'state',
+        but actually that dictionary is neither used nor filled.
+        Instead, the variables are stored directly as attributes of
+        the State class.  Which way is the intended way?  The one given
+        in the docstring or the one implemented?
+
+
+* Questions and minor things to address:
+
+  - MR: file core/variables.py: line 49 is commented for no obvious
+    reason and thereby confusing.
+
+  - MR: file core/defaults.json, line 19 ("doc" of "expname") contains
+    the statement "the history (2D snapshots)".  Should it be 3D?
+
+  - MR: file core/defaults.json, line 41 ("doc" of "order") says that
+    centered fluxes require diffusion.  Is that correct or a leftover
+    from fluid2d?
+
+  - MR: file core/defaults.json, line 129 ("geometry") should probably
+    be removed or maybe adopted (remove disc, add zperiodic?).
+
+  - MR: file core/defaults.json, line 141 ("isisland") should probably
+    be removed or adopted, since there is no streamfunction anymore.
+
+  - MR: file core/defaults.json, line 167 ("plotting_options") has to
+    be adopted.
+
+  - MR: file core/defaults.json, line 234 ("expdir"): are "expdir" and
+    "datadir" both needed?
+
+  - MR: file core/defaults.json, lines 276, 301, 306 ("hydroepsilon",
+    "ageostrophic", "bottom_torque") have probably no use in a 3D model
+    and should be removed.
 
 

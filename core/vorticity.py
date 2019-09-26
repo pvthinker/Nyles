@@ -46,13 +46,13 @@ def vorticity_all_comp(state):
     cova = state.get('u')
     vort = state.get('vor')
 
-    ui = getattr(cova, 'i').view('i')
-    uj = getattr(cova, 'j').view('i')
-    uk = getattr(cova, 'k').view('i')
+    ui = cova.i.view('i')
+    uj = cova.j.view('i')
+    uk = cova.k.view('i')
 
-    wi = getattr(vort, 'i').view('i')
-    wj = getattr(vort, 'j').view('i')
-    wk = getattr(vort, 'k').view('i')
+    wi = vort.i.view('i')
+    wj = vort.j.view('i')
+    wk = vort.k.view('i')
 
     fortran.vorticity_all_comp(ui, uj, uk, wi, wj, wk)
 

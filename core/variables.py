@@ -16,7 +16,8 @@ modelvar = {
     'ke': ['scalar', 'kinetic energy', 'm^2.s^-2', 'T'],
     'u': ['velocity', 'covariant velocity', 'm^2.s^-1'],
     'U': ['velocity', 'contravariant velocity',  's^-1'],
-    'vor': ['vorticity', 'vorticity',  'm^2.s^-1']}
+    'vor': ['vorticity', 'vorticity',  'm^2.s^-1'],
+}
 
 # ----------------------------------------------------------------------
 
@@ -25,14 +26,14 @@ class Scalar(object):
     def __init__(self, param, header):
         """
 
-        header is a dictionnary containing meta information about the scalar
-        header.keys = ['name', 'dimensions', 'location', 'nickname']
-        this information will be written in the Netcdf file
+        header is a dictionary containing meta information about the
+        scalar with the keys ['name', 'units', 'location', 'nickname'].
+        This information will be written in the Netcdf file.
 
         """
         self.list_param = ['nx', 'ny', 'nz', 'nh']
         # later 'param' will be an object Param (like in Fluid2d)
-        # currently we will suppose that param is a dictionnary
+        # currently we will suppose that param is a dictionary
         #
         p = {}
         for k in self.list_param:
@@ -44,12 +45,13 @@ class Scalar(object):
             p[key] = topo.noneighbours()
 
         self.param = p
+# MR: why is this line commented? Should it be removed?
 #            setattr(self, k, param[k])
 
+        # Check header for completeness
+        for k in ['name', 'units', 'location', 'nickname']:
+            assert k in header.keys(), "header is missing the key " + repr(k)
         self.header = header
-        required_keys = ['name', 'units', 'location', 'nickname']
-        keypresent = [k in header.keys() for k in required_keys]
-        assert all(keypresent), "header is incomplete"
 
         self.nature = 'scalar'
 
@@ -94,10 +96,7 @@ class Scalar(object):
         in any case, the function returns the pointer to the buffer
 
         """
-        if idx is None:
-            idx = self.activeview
-
-        if self.activeview == idx:
+        if idx == self.activeview or idx is None:
             field = self.data[idx]
 
         else:
@@ -166,6 +165,16 @@ class Vector(object):
             setattr(self, k, Scalar(param, header))
 
         # use the param from the last component as the param of Vector
+        # MR: This line seems to depend on the order in which the keys
+        #     are given to the dictionary.  If that is the case, it
+        #     should NOT be done like this, because until Python 3.6,
+        #     the insertion order of a dictionary is not preserved.
+        #     Suggestion: if the last element is always "k", just write
+        #     self.k.param -- otherwise, use a different datastructure
+        #     like an OrderedDict or create an extra variable for the
+        #     last component.
+        #     If this line does not depend on the insertion order, then
+        #     just do self.k.param, since it is much clearer.
         self.param = getattr(self, k).param
         self.header = header
         self.nature = nature
@@ -184,39 +193,35 @@ class Vector(object):
 
 class State(object):
     """
-    pack a list of variables (Scalars and Vectors) into a 'state' dictionary
+    Pack a list of variables (Scalars and Vectors) into a 'state' dictionary
 
-    there is one entry per variable (Scalar) or per components (for Vector)
+    The dictionary 'state' has
+     - for scalars: one entry per scalar with the key 'nickname'
+     - for vectors: one entry per component with the key 'nickname_comp'
+       with 'comp' = 'i', 'j' or 'k'
 
-    the entry key is the variable 'nickname' (Scalar)
-    or 'nickname_comp' (comp = 'i', 'j', 'k')
-
+    MR: the information given in this docstring does not represent the
+        way it is currently implemented.
     """
 
     def __init__(self, listvar):
-        # table of content
-        toc = {}
-        state = {}
+        # Create a table of contents (toc) for the State object
+        self.toc = {}
         for var in listvar:
             key = var.header['nickname']
-            toc[key] = var.nature
+            self.toc[key] = var.nature
             setattr(self, key, var)  # <- store the variable
-
-        self.toc = toc
-        self.state = state
+        self.state = {}
 
     def get(self, var):
-        if len(var) > 2:
-            suffix = var[-2:]
-        else:
-            suffix = '  '
-
-        if (suffix[0] == '_') and (suffix[1] in 'ijk'):
+        # Check if 'var' is of the scheme 'nickname_i' (or with '_j' or '_k').
+        if len(var) > 2 and var[-2] == "_" and var[-1] in 'ijk':
+            # If so, take the vector 'nickname' and return its component 'i'.
             vector = getattr(self, var[:-2])
-            field = getattr(vector, suffix[1])
+            return getattr(vector, var[-1])
         else:
-            field = getattr(self, var)
-        return field
+            # Otherwise, return the requested variable.
+            return getattr(self, var)
 
     def duplicate(self):
         """
@@ -224,9 +229,7 @@ class State(object):
         return a new state (with new allocated arrays)
 
         """
-        listvar = []
-        for var in self.toc.keys():
-            listvar += [getattr(self, var).duplicate()]
+        listvar = [getattr(self, var).duplicate() for var in self.toc.keys()]
 
         return State(listvar)
 
@@ -324,6 +327,8 @@ if __name__ == '__main__':
         s.get('u')).__name__ == 'Vector', 's.get() does not return a Vector'
     assert type(
         s.get('u').i).__name__ == 'Scalar', 'vector.i does not return a Scalar'
+    assert type(
+        s.get('u_i')).__name__ == 'Scalar', 'vector_i does not return a Scalar'
 
     cov = s.get('u').view()
     contra = s.get('U').view()

@@ -26,7 +26,7 @@ def rhstrac(state, rhs, traclist):
         trac = state.get(tracname)  # trac is a 'Scalar' instance
         dtrac = rhs.get(tracname)
 
-        for k, direction in enumerate('ijk'):
+        for direction in 'ijk':
             ds2 = 1.  # 1/dx**2
             vol = 1.  # vol=dx*dy*dz
             cff = vol/ds2  # for z coordinates
@@ -36,7 +36,7 @@ def rhstrac(state, rhs, traclist):
             dfield = dtrac.view(direction)
             velocity = component.view(direction)
 
-            if k == 0:
+            if direction == 'i':
                 # overwrite rhs
                 fortran.upwind(field, velocity, dfield, cff, 1)
             else:

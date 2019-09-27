@@ -97,7 +97,7 @@ class Scalar(object):
 
         """
         if idx == self.activeview or idx is None:
-            field = self.data[idx]
+            field = self.data[self.activeview]
 
         else:
             current = self.data[self.activeview]

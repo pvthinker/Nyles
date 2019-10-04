@@ -16,22 +16,19 @@ def rhstrac(state, rhs, traclist):
     or a longer list, each variable is present in both state and rhs
 
     """
-    # in sigma coordinates use 'U' the contravariant velocity
-    # U = state.get('U') # U is a 'Velocity' instance
-    # in z coordinates use 'u' the covariant
+    # in sigma coordinates use the contravariant velocity state.U
+    # in z coordinates use the covariant velocity state.u
     # and account for the metric term by tweaking the volume vol=>vol/ds**2
-    U = state.get('U')
-
     for tracname in traclist:
-        trac = state.get(tracname)  # trac is a 'Scalar' instance
-        dtrac = rhs.get(tracname)
+        trac = getattr(state, tracname)  # trac is a 'Scalar' instance
+        dtrac = getattr(rhs, tracname)
 
         for direction in 'ijk':
             ds2 = 1.  # 1/dx**2
             vol = 1.  # vol=dx*dy*dz
             cff = vol/ds2  # for z coordinates
 
-            component = getattr(U, direction)
+            component = state.U[direction]
             field = trac.view(direction)
             dfield = dtrac.view(direction)
             velocity = component.view(direction)

@@ -152,6 +152,8 @@ class Halo_outerdim(object):
         try:
             ierr = MPI.Prequest.Waitall(reqr)
         except:
+            # MR: I think this will always print "IERR 9999",
+            #     because ierr is not overwritten when an exception is raised
             print('IERR', ierr)
         # buffer to halo
         for buf, direc in zip(self.rbuf, self.direcs):
@@ -230,6 +232,8 @@ class Halo(object):
         try:
             ierr = MPI.Prequest.Waitall(reqr)
         except:
+            # MR: I think this will always print "IERR 9999",
+            #     because ierr is not overwritten when an exception is raised
             print('IERR', ierr)
         # buffer to halo
         # TODO: fill the halo, really. Below is a dummy operation

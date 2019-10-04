@@ -4,6 +4,7 @@ from grid import Grid
 
 import numpy as np
 
+
 param = Param()
 param.modelname = 'boussinesq'
 param.expname = 'taylorinst_00'
@@ -59,7 +60,7 @@ nyles = Nyles(param, grid)
 model = nyles.model
 
 xr, yr = grid.xr, grid.yr
-buoy = model.var.get('b')
+buoy = model.var.b
 
 
 def sigmoid(x, delta):
@@ -74,7 +75,7 @@ def stratif():
 
 buoy[:] = (1-stratif() - 0.5)
 # add noise to trigger the instability
-noise = np.random.normal(size=np.shape(yr), scale=1.) * grid.msk
+noise = np.random.normal(size=np.shape(yr), scale=1.0) * grid.msk
 noise -= grid.domain_integration(noise) * grid.msk / grid.area
 grid.fill_halo(noise)
 

@@ -15,8 +15,8 @@ def buoyancyAdv(state) :
 
     """
 
-    b = state.get('b')
-    U = state.get('U')
+    b = state.b
+    U = state.U
 
     """
         Should be dx, dy, dz to calculate the volume. Not sure from where I can get them ??
@@ -27,7 +27,7 @@ def buoyancyAdv(state) :
     db = b.duplicate()
 
     for d in 'ijk':
-        comp = getattr(U, d) #U.i , U.j, U.k
+        comp = U[d]
 
         #upwind(trac, u, dtrac, vol, iflag, l, m, n) what is iflag ??
         fortran.upwind(b.view(d), comp.view(d), db.view(d), vol, b.nx, b.ny, b.nz)

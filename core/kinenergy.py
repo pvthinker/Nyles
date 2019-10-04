@@ -9,23 +9,21 @@ def kinenergy(state):
     compute the kinetic energy function from the model state
 
     """
-    cova = state.get('u')
-    # contra = state.get('U')
-
     # loop over direction
-    for k, direc in enumerate('ijk'):
-        u = getattr(cova, direc).view(direc)
-        # in sigma coordinates, use U, the contravariant velocity
-        # U = getattr(contra, direc).view(direc)
+    for direction in 'ijk':
+        # Get array of covariant velocity u
+        u = state.u[direction].view(direction)
+        # In sigma-coordinates, use the contravariant velocity U
+        # U = state.U[direction].view(direction)
 
-        ke = state.get('ke').view(direc)
-        # in z coordinates, the kinetic energy is ke = u**2 / ds**2
+        # Get array of kinetic energy ke
+        ke = state.ke.view(direction)
+        # In z-coordinates, the kinetic energy is ke = u**2 / ds**2,
         # where ds2 is the diagonal term of the inverse metric tensor
         ds2 = 1.  # TODO: use dx**-2, dy**-2, dz**-2
 
-        if k == 0:
+        if direction == 'i':
             fortran.kin(u, u, ke, ds2, 1)  # overwrite ke
-
         else:
             fortran.kin(u, u, ke, ds2, 0)  # add to ke
 

@@ -15,18 +15,14 @@ class Halo(object):
 
         scalar is an instance of the Scalar object
 
-        create a halo method once we have a scalar available
-        e.g. 'b' the buoyancy
+        create a halo method from the buoyancy b
 
-        b = state.get('b')
-        halo = Halo(b)
+        halo = Halo(state.b)
 
-        we can now fill any Scalar or Vector with
+        we can now fill any Scalar (like b) or Vector (like u) with
 
-        halo.fill(b)
-        halo.fill(u)
-
-        where u is a vector, e.g. u = state.get('u')
+        halo.fill(state.b)
+        halo.fill(state.u)
 
         halo defines it own preallocated buffers and MPI requests
 
@@ -50,21 +46,19 @@ class Halo(object):
         self.reqs = {}
         self.reqr = {}
         self.slab = {}
+
+        perm = {
+            'i': ('k', 'j'),
+            'j': ('i', 'k'),
+            'k': ('j', 'i'),
+        }
         for direc in neighbours.keys():
             yourrank = neighbours[direc]
             if yourrank is None:
                 slab = [0, 0]
 
             else:
-                if direc[0] == 'i':
-                    slab = [size[2], size[1]]
-
-                if direc[0] == 'j':
-                    slab = [size[0], size[2]]
-
-                if direc[0] == 'k':
-                    slab = [size[1], size[0]]
-
+                slab = [size[d] for d in perm[direc[0]]]
                 shape = [nh] + slab
                 sbuf = np.zeros(shape)
                 rbuf = np.zeros(shape)
@@ -213,18 +207,16 @@ if __name__ == '__main__':
 
     state = var.get_state(param)
 
-    b = state.get('b')
     # we can define the halo toolbox
-    halo = Halo(b)
+    halo = Halo(state.b)
 
     # set the field equal to myrank
     # making clear that the halo is wrong
-    b.view('i')[:, :, :] = myrank
-    halo.fill(b)
+    state.b.view('i')[:, :, :] = myrank
+    halo.fill(state.b)
     # now in the halo we'd have the rank of the neighbour
-    x = b.view('i')
+    x = state.b.view('i')
     print('myrank %i' % myrank, x[5, 5, :])
 
     # check that halo.fill() also accepts a vector
-    u = state.get('u')
-    halo.fill(u)
+    halo.fill(state.u)

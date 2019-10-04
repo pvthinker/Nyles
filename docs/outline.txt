@@ -50,20 +50,23 @@
 
 * More important things to address:
 
-  - MR: see file core/variables.py, class Vector, l. 170.
-
-  - MR: the class State in core/variables.py is confusing.
-        It claims to pack variables in a dictionary 'state',
-        but actually that dictionary is neither used nor filled.
-        Instead, the variables are stored directly as attributes of
-        the State class.  Which way is the intended way?  The one given
-        in the docstring or the one implemented?
+  - n/a
 
 
 * Questions and minor things to address:
 
-  - MR: file core/variables.py: line 49 is commented for no obvious
-    reason and thereby confusing.
+  - MR: file core/variables.py, class Vector: is the method "view"
+    necessary?
+
+  - MR: file core/timescheme.py: write the for-loops on prognostic
+    variables in a nicer way.
+
+  - MR: file core/tracer.py: maybe one can optimize the loop on traclist
+    so that it does not need to use getattr().
+
+  - MR: file core/mpi/halo.py: lines 157, 237 ("fill" of Halo_outerdim
+    and Halo): when an exception is raised, I think always 9999 will be
+    printed -> to be checked.
 
   - MR: file core/defaults.json, line 19 ("doc" of "expname") contains
     the statement "the history (2D snapshots)".  Should it be 3D?

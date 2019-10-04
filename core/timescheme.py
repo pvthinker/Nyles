@@ -11,19 +11,19 @@ is
     rhs(state, t, dstate)
 
 where 'state' and 'dstate' are 'State' instances
-and t is the model time
+and 't' is the model time
 
 To allow for any time step, a forward() function is
 defined. This function simply points to one of the
-timescheme. See explanations in the code below.
+timeschemes. See explanations in the code below.
 
 To push the model state one time step ahead we simply
 do
 
-model.forward(state, t, dt)
+    model.forward(state, t, dt)
 
 
-note that dstate is actually allocated *within* this
+Note that dstate is actually allocated *within* this
 module during the __init__. The reason is that for multistages
 timeschemes, we need to store more than just one dstate
 
@@ -49,7 +49,7 @@ class Timescheme(object):
         self.prognostic_variables = param['prognostic_variables']
         self.timestepping = param['timestepping']
 
-        # dictionnary of *functions*
+        # dictionary of *functions*
         self.timeschemelist = {'EF': self.EulerForward,
                                # 'LF': self.LeapFrog,
                                # 'Heun': self.Heun,
@@ -84,7 +84,7 @@ class Timescheme(object):
         """
         self.rhs = rhs
         # HUGE trick: forward is a ... function
-        # it points to one of the function defined below
+        # it points to one of the functions defined below
         # its header is
         # forward(state, t, dt, **kwargs)
         # like all functions below!
@@ -93,10 +93,12 @@ class Timescheme(object):
     # ----------------------------------------
     def EulerForward(self, state, t, dt, **kwargs):
         self.rhs(state, t, self.dstate)
+        # MR: the following loop can probably be optimized by making use of the
+        #     new attribute "prognostic" of every variable.
         for v in self.prognostic_variables:
-            s = state.get(v).view(direc)
+            s = getattr(state, v).view(direc)
             # make sure that state and dstate have the same convention
-            ds = self.dstate.get(v).view(direc)
+            ds = getattr(self.dstate, v).view(direc)
             s += dt * ds
 
     # ----------------------------------------
@@ -106,22 +108,26 @@ class Timescheme(object):
 
         if self.first:
             # Euler Forward if very first time step
+            # MR: the following loop can probably be optimized by making use of the
+            #     new attribute "prognostic" of every variable.
             for v in self.prognostic_variables:
-                s = state.get(v).view(direc)
-                ds = self.dstate.get(v).view(direc)
-                sn = self.state.get(v).view(direc)
-                sb = self.stateb.get(v).view(direc)
+                s = getattr(state, v).view(direc)
+                ds = getattr(self.dstate, v).view(direc)
+                sn = getattr(self.state, v).view(direc)
+                sb = getattr(self.stateb, v).view(direc)
                 sn[:] = s
                 sb[:] = s
                 s += dt * ds
             self.first = False
 
         else:
+            # MR: the following loop can probably be optimized by making use of the
+            #     new attribute "prognostic" of every variable.
             for v in self.prognostic_variables:
-                s = state.get(v).view(direc)
-                ds = self.dstate.get(v).view(direc)
-                sb = self.stateb.get(v).view(direc)
-                sn = self.state.get(v).view(direc)
+                s = getattr(state, v).view(direc)
+                ds = getattr(self.dstate, v).view(direc)
+                sb = getattr(self.stateb, v).view(direc)
+                sn = getattr(self.state, v).view(direc)
                 # backup state into 'now' state
                 sn[:] = s
 
@@ -140,10 +146,12 @@ class Timescheme(object):
             self.rhs(state, t+dt*.5, self.dstate)
 
             # move from n to n+1
+            # MR: the following loop can probably be optimized by making use of the
+            #     new attribute "prognostic" of every variable.
             for v in self.prognostic_variables:
-                s = state.get(v).view(direc)
-                sn = self.state.get(v).view(direc)
-                ds = self.dstate.get(v).view(direc)
+                s = getattr(state, v).view(direc)
+                sn = getattr(self.state, v).view(direc)
+                ds = getattr(self.dstate, v).view(direc)
                 s[:] = sn + dt*ds
 
 
@@ -174,7 +182,7 @@ if __name__ == '__main__':
         # this routine should clearly update dstate using state
         # but to test this module, we need nothing more than
         # this empty function
-        print('I''m pretending to compute a rhs but actually I do nothing')
+        print('I am pretending to compute a rhs but actually I do nothing')
 
     timescheme.set(rhs)
 

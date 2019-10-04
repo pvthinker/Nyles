@@ -15,19 +15,15 @@ from timing import timing
 @timing
 def bernoulli(state, rhs):
 
-    du = rhs.get('u')
-    b = state.get('b')
-    ke = state.get('ke')
-
     dz = 1. # the vertical grid size
 
-    for d in 'ijk':
-        comp = getattr(du, d)
-        if d in 'ij':
-            fortran.gradke(ke.view(d), comp.view(d))
-
+    for direction in 'ijk':
+        u_component = rhs.u[direction]
+        if direction in 'ij':
+            fortran.gradke(state.ke.view(direction), u_component.view(direction))
         else:
-            fortran.gradkeandb(ke.view(d), b.view(d), comp.view(d), dz)
+            fortran.gradkeandb(state.ke.view(direction), state.b.view(direction),
+                               u_component.view(direction), dz)
 
 
 # ----------------------------------------------------------------------

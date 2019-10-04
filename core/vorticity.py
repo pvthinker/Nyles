@@ -18,9 +18,6 @@ def vorticity(state):
        carefully handle the boundary condition: no-slip or free-slip
     """
 
-    cova = state.get('u')
-    vort = state.get('vor')
-
     perm = {'i': ('j', 'k'),
             'j': ('k', 'i'),
             'k': ('i', 'j')}
@@ -28,9 +25,9 @@ def vorticity(state):
     for diri in 'ijk':
         dirj, dirk = perm[diri]
 
-        uj = getattr(cova, dirj).view(dirj)
-        uk = getattr(cova, dirk).view(dirj)
-        wi = getattr(vort, diri).view(dirj)
+        uj = state.u[dirj].view(dirj)
+        uk = state.u[dirk].view(dirj)
+        wi = state.vor[diri].view(dirj)
 
         fortran.vorticity(uj, uk, wi)
 
@@ -43,16 +40,13 @@ def vorticity_all_comp(state):
     verdict: it's faster!
     """
 
-    cova = state.get('u')
-    vort = state.get('vor')
+    ui = state.u['i'].view('i')
+    uj = state.u['j'].view('i')
+    uk = state.u['k'].view('i')
 
-    ui = cova.i.view('i')
-    uj = cova.j.view('i')
-    uk = cova.k.view('i')
-
-    wi = vort.i.view('i')
-    wj = vort.j.view('i')
-    wk = vort.k.view('i')
+    wi = state.vor['i'].view('i')
+    wj = state.vor['j'].view('i')
+    wk = state.vor['k'].view('i')
 
     fortran.vorticity_all_comp(ui, uj, uk, wi, wj, wk)
 

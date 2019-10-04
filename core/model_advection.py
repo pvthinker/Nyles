@@ -38,6 +38,8 @@ if __name__ == '__main__':
     nz, ny, nx = 32, 32, 128
     param = {'nx': nx, 'ny': ny, 'nz': nz, 'nh': 2,
              'timestepping': 'LFAM3',
+             # For test purposes, you can also try the following:
+             # 'timestepping': 'EF',
              'prognostic_variables': ['b']}
 
     model = Advection(param)
@@ -46,8 +48,7 @@ if __name__ == '__main__':
     # It does not enforce the no-flow BC,
     # but who cares as long as we don't
     # integrate too long
-    contra = model.state.get('U')
-    Ui = contra.i.view()
+    Ui = model.state.U['i'].view()
     Ui[:, :, :] = 1.
 
     # minimalist grid (dx should be equal to 1 to be consistent
@@ -56,7 +57,7 @@ if __name__ == '__main__':
     Lx = nx*dx
 
     # set up a gaussian 'b' along i
-    b = model.state.get('b').view()
+    b = model.state.b.view()
     for i in range(nx):
         x = (i+0.5)*dx-0.2*Lx
         b[:, :, i] = np.exp(-0.5*(x/(dx*5))**2)

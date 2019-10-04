@@ -175,8 +175,8 @@ class Halo(object):
 
         TODO: see if it's worth optimizing
         """
-        for direc in 'ijk':
-            self.fillscalar(getattr(vector, direc))
+        for direction in 'ijk':
+            self.fillscalar(vector[direction])
 
     def _print(self):
         """

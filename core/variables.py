@@ -202,7 +202,6 @@ class Vector(dict):
 
     Methods:
      - duplicate
-     - view
      - get_nature
     """
     def __init__(self, param, name, nickname, unit, prognostic: bool, is_velocity):
@@ -242,22 +241,6 @@ class Vector(dict):
         """
         return Vector(self.param, self.name, self.nickname, self.unit,
                       self.prognostic, self.is_velocity)
-
-    def view(self, idx=None):
-        """Return a pointer to the data with idx as inner direction.
-
-        This method returns a list with three elements corresponding to
-        the three components of the vector.  For each component, a
-        pointer to the array with its data is returned, such that 'idx'
-        is the inner direction of the 3D array.  If 'idx' is None, take
-        the activeview of the i-component as the inner direction.
-
-        See Scalar.view for more information.
-        """
-        # MR: is this method necessary?
-        if idx is None:
-            idx = self['i'].activeview
-        return [self['i'].view(idx), self['j'].view(idx), self['k'].view(idx)]
 
     def get_nature(self):
         """Return the string 'velocity' or 'vorticity'.

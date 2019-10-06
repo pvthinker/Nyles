@@ -55,8 +55,6 @@
 
 * Questions and minor things to address:
 
-  - MR: file core/variables.py, class Vector: is the method "view"
-    necessary?
 
   - MR: file core/timescheme.py: write the for-loops on prognostic
     variables in a nicer way.

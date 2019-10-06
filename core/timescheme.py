@@ -29,8 +29,6 @@ timeschemes, we need to store more than just one dstate
 
 """
 
-direc = 'i'
-
 
 class Timescheme(object):
     """
@@ -96,9 +94,10 @@ class Timescheme(object):
         # MR: the following loop can probably be optimized by making use of the
         #     new attribute "prognostic" of every variable.
         for v in self.prognostic_variables:
-            s = getattr(state, v).view(direc)
-            # make sure that state and dstate have the same convention
-            ds = getattr(self.dstate, v).view(direc)
+            # Get a view on the data without changing its orientation
+            s = getattr(state, v).view()
+            # Get a view on dstate in the same orientation as state
+            ds = getattr(self.dstate, v).viewlike(getattr(state, v))
             s += dt * ds
 
     # ----------------------------------------
@@ -111,10 +110,10 @@ class Timescheme(object):
             # MR: the following loop can probably be optimized by making use of the
             #     new attribute "prognostic" of every variable.
             for v in self.prognostic_variables:
-                s = getattr(state, v).view(direc)
-                ds = getattr(self.dstate, v).view(direc)
-                sn = getattr(self.state, v).view(direc)
-                sb = getattr(self.stateb, v).view(direc)
+                s = getattr(state, v).view()
+                ds = getattr(self.dstate, v).viewlike(getattr(state, v))
+                sb = getattr(self.stateb, v).viewlike(getattr(state, v))
+                sn = getattr(self.state, v).viewlike(getattr(state, v))
                 sn[:] = s
                 sb[:] = s
                 s += dt * ds
@@ -124,10 +123,10 @@ class Timescheme(object):
             # MR: the following loop can probably be optimized by making use of the
             #     new attribute "prognostic" of every variable.
             for v in self.prognostic_variables:
-                s = getattr(state, v).view(direc)
-                ds = getattr(self.dstate, v).view(direc)
-                sb = getattr(self.stateb, v).view(direc)
-                sn = getattr(self.state, v).view(direc)
+                s = getattr(state, v).view()
+                ds = getattr(self.dstate, v).viewlike(getattr(state, v))
+                sb = getattr(self.stateb, v).viewlike(getattr(state, v))
+                sn = getattr(self.state, v).viewlike(getattr(state, v))
                 # backup state into 'now' state
                 sn[:] = s
 
@@ -149,9 +148,9 @@ class Timescheme(object):
             # MR: the following loop can probably be optimized by making use of the
             #     new attribute "prognostic" of every variable.
             for v in self.prognostic_variables:
-                s = getattr(state, v).view(direc)
-                sn = getattr(self.state, v).view(direc)
-                ds = getattr(self.dstate, v).view(direc)
+                s = getattr(state, v).view()
+                ds = getattr(self.dstate, v).viewlike(getattr(state, v))
+                sn = getattr(self.state, v).viewlike(getattr(state, v))
                 s[:] = sn + dt*ds
 
 

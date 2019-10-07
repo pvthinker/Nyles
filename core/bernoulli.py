@@ -33,6 +33,6 @@ if __name__ == '__main__':
     
     param = {'nx': 40, 'ny': 50, 'nz': 60, 'nh': 2}
     state = var.get_state(param)
-    ds = state.duplicate()
+    ds = state.duplicate_prognostic_variables()
 
     bernoulli(state, ds)

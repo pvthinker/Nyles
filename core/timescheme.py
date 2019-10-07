@@ -31,73 +31,87 @@ timeschemes, we need to store more than just one dstate
 
 
 class Timescheme(object):
-    """
+    """Catalogue and handler of timeschemes.
 
-    Catalog of time schemes
+    The user mainly interacts with an object of this class through its
+    "forward" method, which uses an "rhs" function to calculate the
+    "right hand side" of the prognostic model equation.  This "rhs"
+    function must be set by calling the "set" method.
 
-    It provides a forward() method that uses a generic 'rhs' function
+    Attributes:
+     - prognostic_scalars: list with the names of prognostic scalars
+        in the model, which can be Scalar variables or the components
+        of Vector variables
+     - dstate: internal instance of the State class used to store
+        intermediate steps in the calculation; this State object
+        contains only prognostic variables
+     - other attributes may exist depending on the chosen timescheme
+
+    Methods:
+     - set
+     - rhs: this method is not defined within this class definition,
+        but must be implemented in the model and given to Timescheme
+        by calling the "set" method
+     - forward: this method is defined in the constructor as an alias
+        for one of the following time stepping methods
+     - EulerForward
+     - LFAM3
 
     """
 
     def __init__(self, param, state):
-        # list of prognostic *scalars* that should be
-        # integrated in time
-        # *scalars* => vectors should be passed as
-        # list of components
-        self.prognostic_variables = param['prognostic_variables']
-        self.timestepping = param['timestepping']
+        """Initialise the time stepping method specified in param."""
+        self.prognostic_scalars = state.get_prognostic_scalars()
 
-        # dictionary of *functions*
-        self.timeschemelist = {'EF': self.EulerForward,
-                               # 'LF': self.LeapFrog,
-                               # 'Heun': self.Heun,
-                               # 'AB2': self.AB2,
-                               # 'AB3': self.AB3,
-                               'LFAM3': self.LFAM3}
-        # 'RK3_SSP': self.RK3_SSP,
-        # 'RK3': self.RK3,
-        # 'RK4_LS': self.RK4_LS}
+        # Activate the timescheme given in param
+        timestepping = param['timestepping']
+        # ... which must be in the following dictionary of *functions*
+        timeschemelist = {
+            'EF': self.EulerForward,
+            # 'LF': self.LeapFrog,
+            # 'Heun': self.Heun,
+            # 'AB2': self.AB2,
+            # 'AB3': self.AB3,
+            'LFAM3': self.LFAM3,
+            # 'RK3_SSP': self.RK3_SSP,
+            # 'RK3': self.RK3,
+            # 'RK4_LS': self.RK4_LS,
+        }
+        try:
+            self.forward = timeschemelist[timestepping]
+            # This is a HUGE trick: forward is a function (and not a
+            # variable).  It points to one of the timestepping
+            # functions defined below.  They all have the same header:
+            # forward(state, t, dt, **kwargs)
+        except KeyError:
+            raise ValueError('unknown time scheme ' + repr(timestepping))
 
-        if self.timestepping in self.timeschemelist.keys():
-            pass
-        else:
-            raise ValueError('Unknown time scheme')
-
-        # internal arrays
-        self.dstate = state.duplicate()
-
-        if self.timestepping == 'LFAM3':
-            self.stateb = state.duplicate()
-            self.state = state.duplicate()
-
-        # for schemes with Leap-Frog time step
-        self.first = True
+        # Create internal arrays
+        self.dstate = state.duplicate_prognostic_variables()
+        if timestepping == 'LFAM3':
+            self.stateb = state.duplicate_prognostic_variables()
+            self.state = state.duplicate_prognostic_variables()
+            self.first = True
 
     def set(self, rhs):
-        """
+        """Assign the right hand side of the model.
 
-        assign the 'rhs' and
-        the 'timestepping' to the 'forward' method
-
+        The argument 'rhs' of this method is a function with the
+        signature rhs(state, t, dstate), where 'state' is the current
+        state of the model and 't' is the current timestep.  The
+        result is written to 'dstate'.
         """
         self.rhs = rhs
-        # HUGE trick: forward is a ... function
-        # it points to one of the functions defined below
-        # its header is
-        # forward(state, t, dt, **kwargs)
-        # like all functions below!
-        self.forward = self.timeschemelist[self.timestepping]
 
     # ----------------------------------------
     def EulerForward(self, state, t, dt, **kwargs):
         self.rhs(state, t, self.dstate)
-        # MR: the following loop can probably be optimized by making use of the
-        #     new attribute "prognostic" of every variable.
-        for v in self.prognostic_variables:
+        for scalar_name in self.prognostic_scalars:
+            scalar = state.get(scalar_name)
             # Get a view on the data without changing its orientation
-            s = getattr(state, v).view()
+            s = scalar.view()
             # Get a view on dstate in the same orientation as state
-            ds = getattr(self.dstate, v).viewlike(getattr(state, v))
+            ds = self.dstate.get(scalar_name).viewlike(scalar)
             s += dt * ds
 
     # ----------------------------------------
@@ -107,26 +121,24 @@ class Timescheme(object):
 
         if self.first:
             # Euler Forward if very first time step
-            # MR: the following loop can probably be optimized by making use of the
-            #     new attribute "prognostic" of every variable.
-            for v in self.prognostic_variables:
-                s = getattr(state, v).view()
-                ds = getattr(self.dstate, v).viewlike(getattr(state, v))
-                sb = getattr(self.stateb, v).viewlike(getattr(state, v))
-                sn = getattr(self.state, v).viewlike(getattr(state, v))
+            for scalar_name in self.prognostic_scalars:
+                scalar = state.get(scalar_name)
+                s = scalar.view()
+                ds = self.dstate.get(scalar_name).viewlike(scalar)
+                sb = self.stateb.get(scalar_name).viewlike(scalar)
+                sn = self.state.get(scalar_name).viewlike(scalar)
                 sn[:] = s
                 sb[:] = s
                 s += dt * ds
             self.first = False
 
         else:
-            # MR: the following loop can probably be optimized by making use of the
-            #     new attribute "prognostic" of every variable.
-            for v in self.prognostic_variables:
-                s = getattr(state, v).view()
-                ds = getattr(self.dstate, v).viewlike(getattr(state, v))
-                sb = getattr(self.stateb, v).viewlike(getattr(state, v))
-                sn = getattr(self.state, v).viewlike(getattr(state, v))
+            for scalar_name in self.prognostic_scalars:
+                scalar = state.get(scalar_name)
+                s = scalar.view()
+                ds = self.dstate.get(scalar_name).viewlike(scalar)
+                sb = self.stateb.get(scalar_name).viewlike(scalar)
+                sn = self.state.get(scalar_name).viewlike(scalar)
                 # backup state into 'now' state
                 sn[:] = s
 
@@ -145,12 +157,11 @@ class Timescheme(object):
             self.rhs(state, t+dt*.5, self.dstate)
 
             # move from n to n+1
-            # MR: the following loop can probably be optimized by making use of the
-            #     new attribute "prognostic" of every variable.
-            for v in self.prognostic_variables:
-                s = getattr(state, v).view()
-                ds = getattr(self.dstate, v).viewlike(getattr(state, v))
-                sn = getattr(self.state, v).viewlike(getattr(state, v))
+            for scalar_name in self.prognostic_scalars:
+                scalar = state.get(scalar_name)
+                s = scalar.view()
+                ds = self.dstate.get(scalar_name).viewlike(scalar)
+                sn = self.state.get(scalar_name).viewlike(scalar)
                 s[:] = sn + dt*ds
 
 
@@ -171,17 +182,22 @@ if __name__ == '__main__':
     param = {'nx': 40, 'ny': 50, 'nz': 60, 'nh': nh,
              'neighbours': neighbours,
              'timestepping': 'LFAM3',
-             'prognostic_variables': ['b', 'u_i', 'u_j', 'u_k']}
+    }
 
     state = var.get_state(param)
 
     timescheme = Timescheme(param, state)
 
+    # A counter to see how often the dummy "rhs" function defined below is invoked.
+    i = 0
+
     def rhs(state, t, dstate):
         # this routine should clearly update dstate using state
         # but to test this module, we need nothing more than
         # this empty function
-        print('I am pretending to compute a rhs but actually I do nothing')
+        global i
+        print(i, 'I am pretending to compute a rhs but actually I am just counting.')
+        i += 1
 
     timescheme.set(rhs)
 

@@ -55,16 +55,12 @@
 
 * Questions and minor things to address:
 
-
-  - MR: file core/timescheme.py: write the for-loops on prognostic
-    variables in a nicer way.
-
-  - MR: file core/tracer.py: maybe one can optimize the loop on traclist
-    so that it does not need to use getattr().
-
   - MR: file core/mpi/halo.py: lines 157, 237 ("fill" of Halo_outerdim
     and Halo): when an exception is raised, I think always 9999 will be
     printed -> to be checked.
+
+
+* Necessary changes to the file file core/defaults.json
 
   - MR: file core/defaults.json, line 19 ("doc" of "expname") contains
     the statement "the history (2D snapshots)".  Should it be 3D?

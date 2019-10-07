@@ -13,15 +13,16 @@ def rhstrac(state, rhs, traclist):
 
     traclist = ['b']
 
-    or a longer list, each variable is present in both state and rhs
+    or a longer list, each variable is present in both state and rhs,
+    i.e., each variable in traclist must be prognostic
 
     """
     # in sigma coordinates use the contravariant velocity state.U
     # in z coordinates use the covariant velocity state.u
     # and account for the metric term by tweaking the volume vol=>vol/ds**2
     for tracname in traclist:
-        trac = getattr(state, tracname)  # trac is a 'Scalar' instance
-        dtrac = getattr(rhs, tracname)
+        trac = state.get(tracname)  # trac is a 'Scalar' instance
+        dtrac = rhs.get(tracname)
 
         for direction in 'ijk':
             ds2 = 1.  # 1/dx**2
@@ -46,6 +47,6 @@ if __name__ == '__main__':
 
     param = {'nx': 40, 'ny': 50, 'nz': 60, 'nh': 2}
     state = var.get_state(param)
-    ds = state.duplicate()
+    ds = state.duplicate_prognostic_variables()
 
     rhstrac(state, ds, ['b'])

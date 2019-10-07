@@ -272,7 +272,9 @@ class State(object):
         name of the attribute
 
     Methods:
-     - duplicate
+     - duplicate_prognostic_variables
+     - get
+     - get_prognostic_scalars
     """
     def __init__(self, listvar):
         """Construct a container for the variables of the model.
@@ -289,13 +291,70 @@ class State(object):
             self.toc[key] = var.get_nature()
             setattr(self, key, var)
 
-    def duplicate(self):
-        """Return a new state with new allocated arrays."""
-        listvar = [getattr(self, var).duplicate() for var in self.toc.keys()]
-        return State(listvar)
-
     def __str__(self):
         return "\n".join(['{:10}: {!r}'.format(var, getattr(self, var)) for var in self.toc])
+
+    def duplicate_prognostic_variables(self):
+        """Return a new state with new arrays for prognostic variables."""
+        list_of_variables = []
+        for variable_name in self.toc:
+            variable = getattr(self, variable_name)
+            if variable.prognostic:
+                list_of_variables.append(variable.duplicate())
+        return State(list_of_variables)
+
+    def get(self, variable):
+        """Return a pointer to the variable with the given name.
+
+        The given variable name can either be the nickname of a
+        (Scalar or Vector) variable or it can be a string like
+        "nickname_i" or "nickname_j" or "nickname_k", in which case
+        the corresponding component of the Vector "nickname" is
+        returned.
+
+        Note:  whenever possible, use the simpler syntax
+            state.nickname               # good!
+        instead of
+            state.get('nickname')        # avoid!
+        or, to access a component of a Vector, use
+            state.nickname['i']          # good!
+        instead of
+            state.get('nickname_i')      # avoid!
+
+        """
+        # Check if a vector component is requested
+        if len(variable) > 2 and variable[-2] == "_" and variable[-1] in 'ijk':
+            vector = getattr(self, variable[:-2])
+            return vector[variable[-1]]
+        else:
+            # Otherwise return the requested variable
+            return getattr(self, variable)
+
+    def get_prognostic_scalars(self):
+        """Return a list of names of prognostic scalars.
+
+        The list contains:
+         - for every prognostic Scalar variable its nickname and
+         - for every prognostic Vector variable the strings "nickname_i"
+           and "nickname_j" and "nickname_k", referring to its three
+           components, with "nickname" replaced by the nickname of the
+           Vector variable.
+
+        Each of the strings in this list can be passed as an argument
+        to the "get" method to receive a pointer to the Scalar object.
+
+        """
+        prognostic_scalars = []
+        for variable in self.toc:
+            if getattr(self, variable).prognostic:
+                if self.toc[variable] == "scalar":
+                    prognostic_scalars.append(variable)
+                else:
+                    prognostic_scalars += [
+                        "{}_{}".format(variable, direction)
+                        for direction in "ijk"
+                    ]
+        return prognostic_scalars
 
 # ----------------------------------------------------------------------
 
@@ -357,7 +416,7 @@ if __name__ == '__main__':
     # define the model's state
     s = get_state(param)
     # and a RHS
-    ds = s.duplicate()
+    ds = s.duplicate_prognostic_variables()
 
     print('-'*40)
     print('Model state table of content:')
@@ -373,11 +432,16 @@ if __name__ == '__main__':
 
     print('-'*40)
     assert type(s.b).__name__ == 'Scalar',\
-        'state.b does not return a Scalar'
+        'state.b is not a Scalar'
     assert type(s.u).__name__ == 'Vector',\
-        'state.u does not return a Vector'
+        'state.u is not a Vector'
     assert type(s.u['i']).__name__ == 'Scalar',\
-        'vector["i"] does not return a Scalar'
+        'u["i"] is not a Scalar'
+    print("no errors in type checking")
 
-    cov = s.u.view()
-    contra = s.U.view()
+    # Check that the list of prognostic scalars is correctly created
+    # and that they can be accessed with the get method.
+    print('-'*40)
+    print("Prognostic scalars:")
+    for scalar in s.get_prognostic_scalars():
+        print(" - {:3}:".format(scalar), s.get(scalar))

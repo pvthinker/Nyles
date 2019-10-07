@@ -36,11 +36,12 @@ class Advection(object):
 if __name__ == '__main__':
 
     nz, ny, nx = 32, 32, 128
-    param = {'nx': nx, 'ny': ny, 'nz': nz, 'nh': 2,
-             'timestepping': 'LFAM3',
-             # For test purposes, you can also try the following:
-             # 'timestepping': 'EF',
-             'prognostic_variables': ['b']}
+    param = {
+        'nx': nx, 'ny': ny, 'nz': nz, 'nh': 2,
+        'timestepping': 'LFAM3',
+        # For test purposes, you can also try the following:
+        # 'timestepping': 'EF',
+    }
 
     model = Advection(param)
 

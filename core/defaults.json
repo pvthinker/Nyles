@@ -231,11 +231,6 @@
             "default": "~/data/fluid2d",
             "doc": "Folder where to store the outputs. Typically a storage disk, not the $HOME. The default is $HOME/data/fluid2d"
         },
-        "expdir": {
-            "type": "str",
-            "default": "none",
-            "doc": "Folder where the experiment outputs are saved. This folder is automatically created by the code."
-        },
         "var_to_save": {
             "type": "str",
             "default": "vorticity",

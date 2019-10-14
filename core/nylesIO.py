@@ -60,8 +60,8 @@ class NylesIO(object):
 
     Attributes for public access:
      - output_directory: path to the output directory
-     - hist_path: path to the history file, containing the path to the
-        output directory.
+     - hist_path: path to the history file; this string contains the
+        path to the output directory
 
     Attributes mostly for private access:
      - hist_variables: list of NetCDFVariable instances, describing the
@@ -154,7 +154,9 @@ class NylesIO(object):
 
         # Create paths for the in- and output
         datadir = os.path.expanduser(param["datadir"])
-        expname = param["expname"].replace("/", "-")
+        expname = param["expname"]
+        if "/" in expname:
+            raise ValueError('expname may not contain a slash: "/"')
         out_dir = os.path.join(datadir, expname)
         if "mode" not in param or param["mode"] == "overwrite":
             # Nothing to do, take the path as it is
@@ -292,54 +294,51 @@ class NylesIO(object):
             # Store the experiment parameters
             ncfile.setncatts(self.experiment_parameters)
 
-            # Create the time dimension with unlimited size
-            ncfile.createDimension("t")
+            # Create the dimensions
+            ncfile.createDimension("t")  # unlimited size
+            ncfile.createDimension("x", dimensions["i"])
+            ncfile.createDimension("y", dimensions["j"])
+            ncfile.createDimension("z", dimensions["k"])
 
-            # Create the variables depending only on time
+            # Create the variables with one dimension
+            v = ncfile.createVariable("n", int, ("t",))
+            v.long_name = "integration step in the model run"
+
+            # TODO: make the units of x,y,z,t more general
             v = ncfile.createVariable("t", float, ("t",))
             v.long_name = "time in the model run"
-            v.units = "s"  # TODO: make this more general
+            v.units = "s"
 
-            v = ncfile.createVariable("n", int, ("t",))
-            v.long_name = "iteration step in the model run"
+            # TODO: explain where the coordinates are taken (cell centre or other)
+            v = ncfile.createVariable("x", float, ("x",))
+            v.long_name = "coordinate in the x-direction"
+            v.units = "m"
 
-            if self.hist_variables:
-                # Create the spatial dimensions
-                ncfile.createDimension("x", dimensions["i"])
-                ncfile.createDimension("y", dimensions["j"])
-                ncfile.createDimension("z", dimensions["k"])
+            v = ncfile.createVariable("y", float, ("y",))
+            v.long_name = "coordinate in the y-direction"
+            v.units = "m"
 
-                # Create variables for the coordinates
-                # TODO: explain where the coordinates are taken (cell centre or other)
-                v = ncfile.createVariable("x", float, ("x",))
-                v.long_name = "coordinate in the x-direction"
-                v.units = "m"  # TODO: make this more general
+            v = ncfile.createVariable("z", float, ("z",))
+            v.long_name = "coordinate in the z-direction"
+            v.units = "m"
 
-                v = ncfile.createVariable("y", float, ("y",))
-                v.long_name = "coordinate in the y-direction"
-                v.units = "m"  # TODO: make this more general
+            # TODO: add mask if a mask is implemented
 
-                v = ncfile.createVariable("z", float, ("z",))
-                v.long_name = "coordinate in the z-direction"
-                v.units = "m"  # TODO: make this more general
+            # Create variables for the model data.
+            # For more information on the attributes of netCDF variables, see
+            # https://www.unidata.ucar.edu/software/netcdf/docs/attribute_conventions.html
+            for variable in self.hist_variables:
+                # Spatial dimensions are in reversed order, because
+                # the arrays are stored like this in the Scalar class
+                v = ncfile.createVariable(variable.nickname, float, ("t", "z", "y", "x"))
+                v.long_name = variable.name
+                v.units = variable.unit
 
-                # TODO: add mask if a mask is implemented
-
-                # Create variables for the model data.
-                # For more information on the attributes of netCDF variables, see
-                # https://www.unidata.ucar.edu/software/netcdf/docs/attribute_conventions.html
-                for variable in self.hist_variables:
-                    # Spatial dimensions are in reversed order, because
-                    # the arrays are stored like this in the Scalar class
-                    v = ncfile.createVariable(variable.nickname, float, ("t", "z", "y", "x"))
-                    v.long_name = variable.name
-                    v.units = variable.unit
-
-                # Save the coordinates
-                # TODO: implement this; I currently don't know how to access the
-                # grid in Nyles, so here is what it looked like in fluid2d:
-                # ncfile['x'][:] = self.grid.xr[0, nh:-nh]
-                # ncfile['y'][:] = self.grid.yr[nh:-nh, 0]
+            # Save the coordinates
+            # TODO: implement this; I currently don't know how to access the
+            # grid in Nyles, so here is what it looked like in fluid2d:
+            # ncfile['x'][:] = self.grid.xr[0, nh:-nh]
+            # ncfile['y'][:] = self.grid.yr[nh:-nh, 0]
 
     def write_history_file(self, state, t, n):
         """Append the given state to the history file.

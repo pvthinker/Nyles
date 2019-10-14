@@ -1,11 +1,10 @@
 !-----------------------------------------
 
-subroutine vortex_force_calc(U, vorticity, res, epsilon ,vol, l, m, n)
+subroutine vortex_force_calc(U, vorticity, res, epsilon, l, m, n)
 
   implicit none
 
   integer, intent(in):: l, m, n, epsilon
-  real*8, intent(in) :: vol
   real*8, dimension(l, m, n), intent(in) :: U, vorticity
   real*8, dimension(l, m, n), intent(inout) :: res
 
@@ -13,7 +12,7 @@ subroutine vortex_force_calc(U, vorticity, res, epsilon ,vol, l, m, n)
 
   integer:: i, j, k
   real*8:: c1,c2,c3
-  real*8:: UU, up, um, qm, qp, fx, fxm, vorticity_interp, U_interp
+  real*8:: UU, up, um, qm, qp, vorticity_interp, U_interp, U_omega
 
   c1 = -1./6.
   c2 =  5./6.
@@ -56,13 +55,14 @@ subroutine vortex_force_calc(U, vorticity, res, epsilon ,vol, l, m, n)
              qm = 0.
           endif
 
-          vorticity_interp = vol*(abs(up)*qp + abs(um)*qm)
+          ! this term is U_j * omega_k
+          U_omega = up*qp + um*qm
 
-          res(k,j,i) = res(k,j,i) - epsilon * U_interp * vorticity_interp
+          res(k,j,i) = res(k,j,i) - epsilon * U_omega
 
         else
 
-          U_interp = 0 !no slip BC => do nothing
+          !no slip BC => do nothing
 
         endif
 

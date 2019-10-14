@@ -48,27 +48,18 @@ def vortex_force(state, rhs):
     TODO : make the function call the fortran subroutine only 3 times.
     """
 
-    positive_triplets = ["ijk","jki","kij"]
-    negative_triplets = ["kji","ikj","jik"]
-
-
-    for i,j,k in positive_triplets :
+    for i, j, k in ["ijk","jki","kij"]:
 
         #Using the convention of taking the inner index as the index of the upwinding of vorticity
-        u_comp = rhs.u[i].view(k)
-        U_comp = state.U[k].view(k)
-        w_comp = state.vor[j].view(k)
-
-        fortran.vortex_force_calc(U_comp, w_comp, u_comp, 1, 1.)
-
-    for i,j,k in negative_triplets :
-
-        u_comp = rhs.u[i].view(k)
-        U_comp = state.U[k].view(k)
-        w_comp = state.vor[j].view(k)
-
-        fortran.vortex_force_calc(U_comp, w_comp, u_comp, -1, 1.)
-
+        u_i = rhs.u[i].view(k)
+        
+        U_k = state.U[k].view(k)
+        w_j = state.vor[j].view(k)
+        fortran.vortex_force_calc(U_k, w_j, u_i, +1)
+        
+        U_j = state.U[j].view(k)
+        w_k = state.vor[k].view(k)
+        fortran.vortex_force_calc(U_j, w_k, u_i, -1)
 
 
 if __name__ == '__main__':

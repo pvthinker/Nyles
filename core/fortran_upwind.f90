@@ -52,9 +52,9 @@ subroutine upwind(trac, u, dtrac, vol, iflag, l, m, n)
 
            fx = vol*(up*qp + um*qm)
            if (iflag.eq.1) then ! overwrite rhs
-              dtrac(k, j, i) = fxm - fx
+              dtrac(k, j, i) = (fxm - fx)/vol
            else
-              dtrac(k, j, i) = dtrac(k, j, i) + fxm - fx
+              dtrac(k, j, i) = dtrac(k, j, i) + (fxm - fx)/vol
            endif
            fxm = fx
         enddo

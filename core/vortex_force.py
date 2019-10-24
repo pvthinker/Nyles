@@ -9,7 +9,7 @@ import fortran_vortex_force as fortran
 from timing import timing
 
 @timing
-def vortex_force(state, rhs):
+def vortex_force(state, rhs, order):
     """
     Calculates the vortex force term
 
@@ -48,18 +48,24 @@ def vortex_force(state, rhs):
     TODO : make the function call the fortran subroutine only 3 times.
     """
 
+    upw_orders = {1,3,5}
+
+    assert(order in upw_orders)
+
+
+
     for i, j, k in ["ijk","jki","kij"]:
 
         #Using the convention of taking the inner index as the index of the upwinding of vorticity
         u_i = rhs.u[i].view(k)
-        
+
         U_k = state.U[k].view(k)
         w_j = state.vor[j].view(k)
-        fortran.vortex_force_calc(U_k, w_j, u_i, +1)
-        
+        fortran.vortex_force_calc(U_k, w_j, u_i, +1, order)
+
         U_j = state.U[j].view(k)
         w_k = state.vor[k].view(k)
-        fortran.vortex_force_calc(U_j, w_k, u_i, -1)
+        fortran.vortex_force_calc(U_j, w_k, u_i, -1, order)
 
 
 if __name__ == '__main__':
@@ -83,7 +89,7 @@ if __name__ == '__main__':
     Uj = state.U['j'].view()
     Uk = state.U['k'].view()
 
-    Uk[:,:,:] = -1
+    Uk[:,:,:] = 1
 
     wi = state.vor['i'].view()
     wj = state.vor['j'].view()
@@ -93,7 +99,7 @@ if __name__ == '__main__':
 
     ds = state.duplicate_prognostic_variables()
 
-    vortex_force(state, ds)
+    vortex_force(state, ds, 5)
 
     ui = ds.u['i'].view()
     uj = ds.u['j'].view()
@@ -104,6 +110,8 @@ if __name__ == '__main__':
     plt.title('ui')
     plt.pcolor(ui[10,:,:])
     plt.colorbar()
+
+    print(ui[10,:,:])
 
     plt.figure()
     plt.title('uj')

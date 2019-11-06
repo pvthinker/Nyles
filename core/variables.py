@@ -85,7 +85,7 @@ class Scalar(object):
         """
         # Copy the necessary information of param to a local dictionary;
         # this will be replaced by an object of a class Param (like in Fluid2d)
-        required_param = ['nx', 'ny', 'nz', 'nh' ,'neighbours']
+        required_param = ['nx', 'ny', 'nz', 'nh', 'neighbours']
         self.param = {k: param[k] for k in required_param}
 
         self.name = name
@@ -110,9 +110,9 @@ class Scalar(object):
         # it might be smarter to remove the halo
         # in the directions where it is not needed
         self.data = {
-            'i': np.zeros((self.size['k'], self.size['j'], self.size['i'])),
-            'j': np.zeros((self.size['i'], self.size['k'], self.size['j'])),
-            'k': np.zeros((self.size['j'], self.size['i'], self.size['k'])),
+            'i': np.zeros((nzl, nyl, nxl)),
+            'j': np.zeros((nxl, nzl, nyl)),
+            'k': np.zeros((nyl, nxl, nzl)),
         }
         self.activeview = 'i'
 
@@ -403,12 +403,12 @@ def get_work(param):
 if __name__ == '__main__':
 
     procs = [4, 2, 1]
-    topology = 'closed'
+    topo.topology = 'closed'
     myrank = 3
     nh = 3
 
     loc = topo.rank2loc(myrank, procs)
-    neighbours = topo.get_neighbours(loc, procs, topology)
+    neighbours = topo.get_neighbours(loc, procs)
 
     param = {'nx': 40, 'ny': 50, 'nz': 60, 'nh': nh,
              'neighbours': neighbours}

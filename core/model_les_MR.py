@@ -37,6 +37,7 @@ from kinenergy import kinenergy
 from vorticity import vorticity_all_comp as vorticity
 from timing import timing
 import fortran_upwind
+import topology as topo
 
 
 class LES(object):
@@ -197,9 +198,18 @@ def calculate_p_from_dU(state, dstate):
 
 
 if __name__ == "__main__":
+    procs = [1, 1, 1]
+    topo.topology = 'closed'
+    myrank = 0
+    nh = 2
+
+    loc = topo.rank2loc(myrank, procs)
+    neighbours = topo.get_neighbours(loc, procs)
+    
     param = {
-        'nx': 40, 'ny': 50, 'nz': 60, 'nh': 2,
+        'nx': 40, 'ny': 50, 'nz': 60, 'nh': nh,
         'timestepping': 'LFAM3',
+        'neighbours': neighbours
     }
     l = LES(param)
     print("step 1")

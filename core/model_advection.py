@@ -10,7 +10,7 @@ import variables as var
 import tracer as tracer
 import timescheme as ts
 from matplotlib import pyplot as plt
-
+import topology as topo
 
 class Advection(object):
     """
@@ -34,11 +34,19 @@ class Advection(object):
 
 
 if __name__ == '__main__':
+    procs = [1, 1, 1]
+    topo.topology = 'closed'
+    myrank = 0
+    nh = 2
+
+    loc = topo.rank2loc(myrank, procs)
+    neighbours = topo.get_neighbours(loc, procs)
 
     nz, ny, nx = 32, 32, 128
     param = {
-        'nx': nx, 'ny': ny, 'nz': nz, 'nh': 2,
+        'nx': nx, 'ny': ny, 'nz': nz, 'nh': nh,
         'timestepping': 'LFAM3',
+        'neighbours': neighbours
         # For test purposes, you can also try the following:
         # 'timestepping': 'EF',
     }

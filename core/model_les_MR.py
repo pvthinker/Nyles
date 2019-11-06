@@ -74,14 +74,15 @@ def compute_rhs(state, t, dstate):
     ds2 = 1.  # 1/dx**2
     vol = 1.  # vol=dx*dy*dz
     cff = vol/ds2  # for z coordinates
-    order = 5
+    orderVF = 5
+    orderB = 5
     for i in 'ijk':
         # Overwrite the value in dstate if i == 'i', otherwise add the new value to dstate
         fortran_upwind.upwind(
-            state.b.view(i), state.U[i].view(i), dstate.b.view(i), cff, int(i == 'i')
+            state.b.view(i), state.U[i].view(i), dstate.b.view(i), orderB, cff, int(i == 'i')
         )
     # Calculate time-derivative of u except for the p-term
-    vortex_force(state, dstate, order)
+    vortex_force(state, dstate, orderVF)
     bernoulli(state, dstate)  # This assumes that KE was already computed!
     # Calculate the p-term, update the delta_u and calculate delta_U
     calculate_U_from_u(dstate)  # This calculates here actually dU
@@ -205,7 +206,7 @@ if __name__ == "__main__":
 
     loc = topo.rank2loc(myrank, procs)
     neighbours = topo.get_neighbours(loc, procs)
-    
+
     param = {
         'nx': 40, 'ny': 50, 'nz': 60, 'nh': nh,
         'timestepping': 'LFAM3',

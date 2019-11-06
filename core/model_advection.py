@@ -23,6 +23,7 @@ class Advection(object):
     def __init__(self, param):
         self.state = var.get_state(param)
         self.traclist = ['b']
+        self.order = 5 #TODO : get it from params
         self.timescheme = ts.Timescheme(param, self.state)
         self.timescheme.set(self.rhs)
 
@@ -30,7 +31,7 @@ class Advection(object):
         self.timescheme.forward(self.state, t, dt)
 
     def rhs(self, state, t, dstate):
-        tracer.rhstrac(state, dstate, self.traclist)
+        tracer.rhstrac(state, dstate, self.traclist, self.order)
 
 
 if __name__ == '__main__':

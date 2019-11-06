@@ -14,7 +14,7 @@ subroutine vortex_force_calc(U, vort, res, epsilon, order, l, m, n)
 
   integer:: i, j, k
   real*8:: c1,c2,c3, b1, b2, b3, b4, b5
-  real*8:: UU, up, um, qm, qp, vorticity_interp, U_interp, U_omega
+  real*8:: UU, up, um, qm, qp, U_interp, U_omega
 
   c1 = -1./6.
   c2 =  5./6.

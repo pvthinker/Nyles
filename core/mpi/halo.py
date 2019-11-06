@@ -8,7 +8,7 @@ import itertools as itert
 import numpy as np
 from mpi4py import MPI
 import topology as topo
-import fortran_halo as fortran
+#import fortran_halo as fortran
 from timing import timing
 
 
@@ -94,7 +94,7 @@ class Halo():
             idx[1] = slice(nh, nh+nh)
             idx[0] = slice(domi[2*l], domi[2*l+1])
             self.iidx += [idx]
-            
+
         # define outer domain slices
         domi = self.domainindices
         size = self.size
@@ -146,7 +146,7 @@ class Halo():
         """
 
         MPI.Prequest.Startall(self.reqr)
-        
+
         # 1) halo to buffer
         idx = self.iidx
         for direc in self.neighbours.keys():
@@ -291,7 +291,7 @@ if __name__ == '__main__':
 
     test_111_domain()
 
-    
+
     topo.topology = 'closed'
     extension = 18
     nz, ny, nx = 1, 2, 2

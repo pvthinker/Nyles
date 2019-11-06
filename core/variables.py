@@ -20,7 +20,7 @@ in the equations:
 """
 
 import numpy as np
-from mpi import topology as topo
+import topology as topo
 from collections import namedtuple
 
 
@@ -85,10 +85,8 @@ class Scalar(object):
         """
         # Copy the necessary information of param to a local dictionary;
         # this will be replaced by an object of a class Param (like in Fluid2d)
-        self.param = {k: param[k] for k in ['nx', 'ny', 'nz', 'nh']}
-        self.param['neighbours'] = (
-            param['neighbours'] if 'neighbours' in param.keys() else topo.noneighbours()
-        )
+        required_param = ['nx', 'ny', 'nz', 'nh' ,'neighbours']
+        self.param = {k: param[k] for k in required_param}
 
         self.name = name
         self.nickname = nickname
@@ -98,14 +96,16 @@ class Scalar(object):
         # Calculate size needed in every direction, taking into account
         # the halo in the direction where there is a neighbour
         neighbours = self.param['neighbours']
-        self.size = {'i': self.param['nx'], 'j': self.param['ny'], 'k': self.param['nz']}
-        for direction in 'ijk':
-            # Check for neighbour in plus-direction
-            if neighbours[direction+'p'] is not None:
-                self.size[direction] += self.param['nh']
-            # Check for neighbour in minus-direction
-            if neighbours[direction+'m'] is not None:
-                self.size[direction] += self.param['nh']
+        p = param
+        nx, ny, nz, nh = p['nx'], p['ny'], p['nz'], p['nh']        
+        shape = [nz, ny, nx]
+
+        size, domainindices =  topo.get_variable_shape(shape, neighbours, nh)
+
+        nzl, nyl, nxl = size
+        self.size = size
+        self.domainindices = domainindices
+        
         # Create arrays extended by the halo;
         # it might be smarter to remove the halo
         # in the directions where it is not needed

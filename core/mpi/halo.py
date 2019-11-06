@@ -1,297 +1,318 @@
-""" 
+"""
 
 Tools that implement the halo filling
 
 """
 
-from mpi4py import MPI
+import itertools as itert
 import numpy as np
-import timeit
+from mpi4py import MPI
+import topology as topo
+import fortran_halo as fortran
+from timing import timing
 
 
-def rank2loc(rank, procs):
-    """ Return the tuple (k, j, i) of subdomain location 
+class Halo():
+    def __init__(self, grid):
+        """
 
-    - rank, the MPI rank
-    - procs, the tuple of number of subdomains in each direction
+        scalar is an instance of the Scalar object
 
-    """
+        create a halo method once we have a scalar available
+        e.g. 'b' the buoyancy
 
-    nbproc = np.prod(procs)
-    ranks = np.reshape(np.arange(nbproc), procs)
-    loc = [idx[0] for idx in np.where(ranks == rank)]
-    return loc
+        b = state.get('b')
+        halo = Halo(b)
 
+        we can now fill any Scalar or Vector with
 
-def loc2rank(loc, procs):
-    """ Return the MPI rank using
-    
-    - loc, the tuple of subdomain location
-    - procs, the tuple of number of subdomains in each direction
+        halo.fill(b)
+        halo.fill(u)
 
-    loc2rank is the reverse operation of rank2loc
-    
-    """
-    nbproc = np.prod(procs)
-    ranks = np.reshape(np.arange(nbproc), procs)
-    rank = ranks[loc[0], loc[1], loc[2]]
-    return rank
+        where u is a vector, e.g. u = state.get('u')
 
+        halo defines it own preallocated buffers and MPI requests
 
-def get_neighbours(loc, procs, topology='cube'):
-    """ Return the neighbours rank in the six directions
+        The local topology is known from param['neighbours'] stored
+        in the scalar. It is worth saying that each halo only needs
+        the local information = who are my neighbours. A halo does
+        not need to know the global topology.
 
-    the result is presented in a dictionnary
-
-    None stands for no neighbour
-
-    """
-    k, j, i = loc
-    nz, ny, nx = procs
-
-    if topology == 'cube':
-        im = loc2rank([k, j, (i-1) % nx], procs)
-        ip = loc2rank([k, j, (i+1) % nx], procs)
-        jm = loc2rank([k, (j-1) % ny, i], procs)
-        jp = loc2rank([k, (j+1) % ny, i], procs)
-        km = loc2rank([(k-1) % nz, j, i], procs)
-        kp = loc2rank([(k+1) % nz, j, i], procs)
-        if nx == 1:
-            im, ip = None, None
-
-        if ny == 1:
-            jm, jp = None, None
-
-        if k == 0:
-            km = None
-        if k == nz-1:
-            kp = None
-    return {'km': km, 'kp': kp, 'jm': jm, 'jp': jp, 'im': im, 'ip': ip}
-
-class Halo_outerdim(object):
-    # STATUS: it's a try, the original one is Halo(object)
-    # Idea behind: do the halo only on the two hyperplanes
-    # (the first and the last, within the convention)
-    """ 
-    Class to fill the halo only in the outer dimension
-
-    The halo to update is therefore contiguous in memory
-
-    the bottom halo is x[:nh, :, :]
-    the top halo is x[-nh:, :, :]
-
-    they get their values from respectively
-    x[nh:nh+nh, :, :] and x[-nh-nh:-nh, :, :]
-
-    - nh is the halo width
-
-    """
-    def __init__(self, comm, grid, neighbours, outerdir='k'):
-        self.nh = grid['nh']
-        self.shape = grid['shape']
-        self.procs = grid['procs']
-        self.comm = comm
-        self.neighbours = neighbours
-
+        """
+        comm = MPI.COMM_WORLD
         myrank = comm.Get_rank()
+        neighbours = grid['neighbours']
+        nh = grid['nh']
+        #extension = grid['extension']
+        self.size = grid['size']
+        self.domainindices = grid['domainindices']
+        self.neighbours = neighbours
         self.myrank = myrank
+        self.nh = nh
+        nz, ny, nx = grid['shape']
+        shape = grid['shape']
+        self.nz, self.ny, self.nx = nz, ny, nx
 
-        nz, ny, nx = self.shape
-        if outerdir == 'k':
-            n2, n1, n0 = nz, ny, nx
-            
-        elif outerdir == 'j':
-            n2, n1, n0 = ny, nx, nz
-            
-        elif outerdir == 'i':
-            n2, n1, n0 = nx, nz, ny
-            
-        nh = self.nh
-        nghb = neighbours
-        
-        self.sbuf = []
-        self.rbuf = []
+        #icase = {6: 1, 18: 2, 26: 3}
+        #assert extension in icase.keys()
+        #self.icase = icase[extension]
+
+        alldirec = [(a, b, c) for a, b, c in itert.product(
+            [-1, 0, 1], [-1, 0, 1], [-1, 0, 1]) if abs(a)+abs(b)+abs(c) > 0]
+
+        # allocate buffers
+        self.sbuf = {}
+        self.rbuf = {}
+        for direc in neighbours.keys():
+            bufshape = [nh, nh, nh]
+            for l in range(3):
+                if abs(direc[l]) == 0:
+                    bufshape[l] = shape[l]
+            self.sbuf[direc] = np.zeros(bufshape)
+            self.rbuf[direc] = np.zeros(bufshape)
+
+        # define MPI requests
         self.reqs = []
         self.reqr = []
-        self.nghbs = []
-        self.direcs = []
-        for direc in neighbours.keys():
-            yourrank = neighbours[direc]
-            if (yourrank is None) or direc[0] != outerdir:
-                pass
-            else:
-                shape = (nh, n1, n0)
-                sbuf = np.zeros(shape)
-                rbuf = np.zeros(shape)
-                reqs = comm.Send_init(sbuf, yourrank, myrank)
-                reqr = comm.Recv_init(rbuf, yourrank, yourrank)
+        for direc, yourrank in neighbours.items():
+            reqs = comm.Send_init(self.sbuf[direc], yourrank, tag=myrank)
+            reqr = comm.Recv_init(self.rbuf[direc], yourrank, tag=yourrank)
+            self.reqs += [reqs]
+            self.reqr += [reqr]
 
-                self.sbuf += [sbuf]
-                self.rbuf += [rbuf]
-                self.reqs += [reqs]
-                self.reqr += [reqr]
-                self.nghbs += [yourrank]
-                self.direcs += [direc]
-
-    def fill(self, x):
-        """ fill the halo of x"""
-
-        reqs = self.reqs
-        reqr = self.reqr
-
-        MPI.Prequest.Startall(reqr)
-        # halo to buffer
-        for buf, direc in zip(self.sbuf, self.direcs):
-            if direc[1] == 'm':
-                buf[:, :] = x[nh:nh+nh, :, :]
-            if direc[1] == 'p':
-                buf[:, :] = x[-nh-nh:-nh, :, :]
+        # define interior domain slices
+        domi = self.domainindices
+        self.iidx = []
+        # self.iidx is a 3 x 3 combined list x dictionary of slices
+        # the list index refers to the dimension 0: k, 1: j, 2: i
+        # the dictionnary entry refers to the direction -1, 0 or 1
+        # slice sweeps in the interior domain = places where to grab
+        # known x to be transfered in the neighbour's halo
+        for l in range(3):
+            idx = {}
+            idx[-1] = slice(-nh-nh, -nh)
+            idx[1] = slice(nh, nh+nh)
+            idx[0] = slice(domi[2*l], domi[2*l+1])
+            self.iidx += [idx]
             
-        MPI.Prequest.Startall(reqs)
-        ierr = 9999
-        try:
-            ierr = MPI.Prequest.Waitall(reqr)
-        except:
-            # MR: I think this will always print "IERR 9999",
-            #     because ierr is not overwritten when an exception is raised
-            print('IERR', ierr)
-        # buffer to halo
-        for buf, direc in zip(self.rbuf, self.direcs):
-            if direc[1] == 'm':
-                x[:nh, :, :] = buf[:, :]
-            if direc[1] == 'p':
-                x[-nh:, :, :] = buf[:, :]
+        # define outer domain slices
+        domi = self.domainindices
+        size = self.size
+        self.oidx = []
+        # self.oidx has the same structure
+        # slice sweeps in the halo domain = places where to fill halo
+        # with known x from the neighbour's interior domain
+        for l in range(3):
+            idx = {}
+            idx[-1] = slice(0, nh)
+            idx[1] = slice(self.size[l]-nh, self.size[l])
+            idx[0] = slice(domi[2*l], domi[2*l+1])
+            self.oidx += [idx]
 
-        MPI.Prequest.Waitall(reqs)
+#    @timing
+    def fill(self, thing):
+        """
+        thing is either a scalar, a numpy array or a vector
+        """
+        nature = type(thing).__name__
+        if nature == 'Scalar':
+            self.fillarray(thing.view('i'))
+
+        elif nature == 'ndarray':
+            self.fillarray(thing)
+
+        elif nature == 'Vector':
+            self.fillvector(thing)
+
+        else:
+            raise ValueError('try to fill halo with unidentified object')
+
+    def fillarray(self, x):
+        """
+        this is where all the MPI instructions are
+
+        there are basically four steps:
+
+        - 1) copy inner values of x into buffers
+        - 2) send buffers
+        - 3) receive buffers
+        - 4) copy buffers into x halo
+
+        we use predefined requests and lauch them with
+        Prequest.Startall(). This must be used in
+        conjunction with Prequest.Waitall()
+        that ensures all requests have been completed
+
+        """
+
+        MPI.Prequest.Startall(self.reqr)
         
-    
-class Halo(object):
-    def __init__(self, comm, grid, neighbours):
-        self.nh = grid['nh']
-        self.shape = grid['shape']
-        self.procs = grid['procs']
-        self.comm = comm
-        self.neighbours = neighbours
+        # 1) halo to buffer
+        idx = self.iidx
+        for direc in self.neighbours.keys():
+            dk, dj, di = direc
+            self.sbuf[direc][:, :, :] = x[idx[0][dk], idx[1][dj], idx[2][di]]
 
-        myrank = comm.Get_rank()
-        self.myrank = myrank
+        # 2)
+        MPI.Prequest.Startall(self.reqs)
 
-        nz, ny, nx = self.shape
-        nh = self.nh
-        nghb = neighbours
+        # 3)
+        MPI.Prequest.Waitall(self.reqr)
 
-        zface = (nx-2*nh)*(ny-2*nh)
-        yface = (nz-2*nh)*(nx-2*nh)
-        xface = (ny-2*nh)*(nz-2*nh)
+        # 4) buffer to halo
+        idx = self.oidx
+        for direc in self.neighbours.keys():
+            dk, dj, di = direc
+            x[idx[0][dk], idx[1][dj], idx[2][di]] = self.rbuf[direc]
 
-        faces = {'k': (nh,(nx-2*nh),(ny-2*nh)),
-                 'j': (nh,(nz-2*nh),(nx-2*nh)),
-                 'i': (nh,(ny-2*nh),(nz-2*nh))}
+        MPI.Prequest.Waitall(self.reqs)
 
-        self.sbuf = []
-        self.rbuf = []
-        self.reqs = []
-        self.reqr = []
-        self.nghbs = []
-        self.direcs = []
-        for direc in neighbours.keys():
-            yourrank = neighbours[direc]
-            if yourrank is None:
-                pass
-            else:
-                shape = faces[direc[0]]
-                sbuf = np.zeros(shape)
-                rbuf = np.zeros(shape)
-                reqs = comm.Send_init(sbuf, yourrank, myrank)
-                reqr = comm.Recv_init(rbuf, yourrank, yourrank)
+    def fillvector(self, vector):
+        """
+        trivial extension to a vector
 
-                self.sbuf += [sbuf]
-                self.rbuf += [rbuf]
-                self.reqs += [reqs]
-                self.reqr += [reqr]
-                self.nghbs += [yourrank]
-                self.direcs += [direc]
+        TODO: see if it's worth optimizing
+        """
+        for direc in 'ijk':
+            self.fillarray(getattr(vector, direc).view('i'))
 
-    def fill(self, x):
-        """ fill the halo of x"""
+    def _print(self):
+        """
+        Print the shape of send buffers
 
-        reqs = self.reqs
-        reqr = self.reqr
+        (for debug purpose)
+        """
+        for key, buf in self.sbuf.items():
+            print(self.myrank, key, np.shape(buf))
 
-        MPI.Prequest.Startall(reqr)
-        # halo to buffer
-        # TODO: really copy the halo into the buffers
-        # This operation is likely to be done in Fortran
-        # We want to update the halo with only one pull of the array
-        # from the memory
-        for buf in self.sbuf:
-            buf[:] = self.myrank
 
-        MPI.Prequest.Startall(reqs)
-        ierr = 9999
-        try:
-            ierr = MPI.Prequest.Waitall(reqr)
-        except:
-            # MR: I think this will always print "IERR 9999",
-            #     because ierr is not overwritten when an exception is raised
-            print('IERR', ierr)
-        # buffer to halo
-        # TODO: fill the halo, really. Below is a dummy operation
-        # this is the reverse operation (=>likely in Fortran)
-        x[:] = 2.
-        MPI.Prequest.Waitall(reqs)
+def test_111_domain():
+    topo.topology = 'perio_xyz'
+    extension = 26
+    nz = 1
+    ny = 1
+    nx = 1
+    nh = 1
+
+    loc = topo.rank2loc(myrank, procs)
+    neighbours = topo.get_neighbours(loc, procs, extension=extension)
+
+    param = {'nx': nx, 'ny': ny, 'nz': nz, 'nh': nh, 'neighbours': neighbours}
+
+    state = var.get_state(param)
+
+    b = state.get('b')
+    # we can define the halo toolbox
+
+    grid = {'shape': [nz, ny, nx],
+            'size': b.size,
+            'nh': nh,
+            'neighbours': neighbours,
+            'domainindices': b.domainindices,
+            'extension': extension}
+
+    halo = Halo(grid)
+
+    # for r, buf in halo.rbuf.items():
+    #     if r in neighbours.keys():
+    #         buf[:] = neighbours[r]*1.
+
+    #     else:
+    #         buf[:] = -1.
+
+    # set the field equal to myrank
+    # making clear that the halo is wrong
+    b.activeview = 'i'
+    # if myrank == 0:
+    #     b.view('i')[:, :, :] = 999
+    # else:
+    #     b.view('i')[:, :, :] = 0.
+    x = b.view('i')
+
+    x[:, :, :] = myrank
+
+    halo.fill(b)
+    # now in the halo we'd have the rank of the neighbour
+
+    y = np.asarray(x.copy(), dtype=int)
+    msg = 'pb withneighbours'
+    for direc, yourrank in neighbours.items():
+        dk, dj, di = direc
+        assert(y[1+dk, 1+dj, 1+di] == yourrank), msg
+    if myrank == 0:
+        print('fill halo of Scalar is okay')
+
+    l = nz+2*nh
+    m = ny+2*nh
+    n = nx+2*nh
+    x = np.zeros((l, m, n))
+
+    grid = {'shape': [nz, ny, nx],
+            'size': np.shape(x),
+            'nh': nh,
+            'neighbours': neighbours,
+            'domainindices': b.domainindices,
+            'extension': extension}
+
+    halox = Halo(grid)
+    x[:] = myrank
+    halox.fill(x)
+    y = np.asarray(x.copy(), dtype=int)
+    for direc, yourrank in neighbours.items():
+        dk, dj, di = direc
+        #print(myrank, y[1+dk, 1+dj, 1+di] , yourrank)
+        assert(y[1+dk, 1+dj, 1+di] == yourrank), msg
+    if myrank == 0:
+        print('fill halo of ndarray is okay')
+
+
+def check_halo_width(procs, shape, nh):
+    msg = 'domain is too narrow to cope with a halo that wide'
+    if (procs[0] > 1) or ('z' in topo.topology):
+        assert shape[0] >= nh, msg
+    if (procs[1] > 1) or ('y' in topo.topology):
+        assert shape[1] >= nh, msg
+    if (procs[2] > 1) or ('x' in topo.topology):
+        assert shape[2] >= nh, msg
 
 
 if __name__ == '__main__':
+
+    import variables as var
+    import sys
+
     comm = MPI.COMM_WORLD
     myrank = comm.Get_rank()
-    nbproc = MPI.COMM_WORLD.Get_size()
 
-    nh = 3
-    nx = 64
-    ny = 48
-    nz = 30
+    procs = [1, 3, 3]
 
-    # procs = [4, 2, 1] stands for 4 subdomains in z, 2 in y, 1 in x
-    # consequently the code should be called with 8 processes
-    procs = [4, 2, 1]
+    msg = 'use mpirun -np %i python ' % np.prod(procs) + ' '.join(sys.argv)
+    assert comm.Get_size() == np.prod(procs), msg
 
-    grid = {}
-    grid['nh'] = nh
-    grid['shape'] = (nz, ny, nx)
-    grid['procs'] = procs
+    test_111_domain()
 
-    msg = 'adjust the number of cores in mpirun -n XXX'
-    assert nbproc == np.prod(procs), msg
-
-    loc = rank2loc(myrank, procs)
-
-    neighbours = get_neighbours(loc, procs)
-    if myrank == 0:
-        print('-'*40)
-        print('neighbours:')
-    comm.Barrier()
-    print(myrank, loc, neighbours)
-    comm.Barrier()
-
-    halo = Halo_outerdim(comm, grid, neighbours)
-#    halo = Halo(comm, grid, neighbours)
-    print('halo is defined')
-    comm.Barrier()
-
-    x = np.zeros(grid['shape']) + myrank
-
-    ntimes = 1000
-    time = timeit.timeit(stmt='halo.fill(x)', number=ntimes,
-                         globals={'halo': halo, 'x': x})
-    comm.Barrier()
-    for b, n, d in zip(halo.rbuf, halo.nghbs, halo.direcs):
-        print('*', myrank, n, b[0, 0, 0], d)
-
-    print(myrank, 'done')
-    #print(myrank, loc, loc2rank(loc, procs))
-
-    comm.Barrier()    
-    if myrank == 0:        
-        print('TIME = %.3e s per call' % (time/ntimes))
     
+    topo.topology = 'closed'
+    extension = 18
+    nz, ny, nx = 1, 2, 2
+    shape = [nz, ny, nx]
+    nh = 2
+    loc = topo.rank2loc(myrank, procs)
+    neighbours = topo.get_neighbours(loc, procs, extension=extension)
+    size, domainindices = var.get_variable_shape([nz, ny, nx], neighbours, nh)
+    grid = {'shape': [nz, ny, nx],
+            'size': size,
+            'nh': nh,
+            'neighbours': neighbours,
+            'domainindices': domainindices,
+            'extension': extension}
+    check_halo_width(procs, shape, nh)
+    halox = Halo(grid)
+    x = np.zeros(size)
+    x[:] = myrank
+    halox.fill(x)
+
+    if myrank in [4, 2]:
+        for k in range(np.shape(x)[0]):
+            print('rank=%i / k=%i' % (myrank, k), domainindices)
+            print(x[k])

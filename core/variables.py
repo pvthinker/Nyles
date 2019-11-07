@@ -29,13 +29,15 @@ from collections import namedtuple
 #  - name is the name of the physical quantity
 #  - unit is the physical unit of the quantity
 #  - prognostic is True for prognostic variables and False for diagnostic variables
-ModelVariable = namedtuple('ModelVariable', ['type', 'name', 'unit', 'prognostic'])
+ModelVariable = namedtuple(
+    'ModelVariable', ['type', 'name', 'unit', 'prognostic'])
 
 # Define the variables in the LES model
 modelvar = {
     'b': ModelVariable('scalar', 'buoyancy', 'm.s^-2', prognostic=True),
     'p': ModelVariable('scalar', 'pressure', 'm.s^-2', prognostic=False),
     'ke': ModelVariable('scalar', 'kinetic energy', 'm^2.s^-2', prognostic=False),
+    'work': ModelVariable('scalar', 'work array', 'context dependent', prognostic=False),
     'u': ModelVariable('velocity', 'covariant velocity', 'm^2.s^-1', prognostic=True),
     'U': ModelVariable('velocity', 'contravariant velocity',  's^-1', prognostic=False),
     'vor': ModelVariable('vorticity', 'vorticity',  'm^2.s^-1', prognostic=False),
@@ -76,6 +78,7 @@ class Scalar(object):
      - viewlike
      - get_nature
     """
+
     def __init__(self, param, name, nickname, unit, prognostic: bool):
         """Construct a scalar field in 3D space for a physical quantity.
 
@@ -97,15 +100,36 @@ class Scalar(object):
         # the halo in the direction where there is a neighbour
         neighbours = self.param['neighbours']
         p = param
-        nx, ny, nz, nh = p['nx'], p['ny'], p['nz'], p['nh']        
+        nx, ny, nz, nh = p['nx'], p['ny'], p['nz'], p['nh']
         shape = [nz, ny, nx]
 
-        size, domainindices =  topo.get_variable_shape(shape, neighbours, nh)
+        size, domainindices = topo.get_variable_shape(shape, neighbours, nh)
 
         nzl, nyl, nxl = size
         self.size = size
         self.domainindices = domainindices
-        
+
+        # define self.mg_idx, the MG array index span
+        # MG arrays have the same halo policy
+        # than Scalars (halo only if necessary)
+        # with the difference that halo width is 1 (nh=1) for MG
+        # also MG arrays all use the same (k,j,i) convention
+        #
+        # if 'field' is a view('i') of a Scalar then
+        # field[mg_idx] returns an array the exact same size
+        # as a MG array
+        k0, k1, j0, j1, i0, i1 = domainindices
+
+        startk, endk = max(0, k0-1), max(nz, k1+1)
+        startj, endj = max(0, j0-1), max(ny, j1+1)
+        starti, endi = max(0, i0-1), max(nx, i1+1)
+
+        kdx = slice(startk, endk)
+        jdx = slice(startj, endj)
+        idx = slice(starti, endi)
+
+        self.mg_idx = (kdx, jdx, idx)
+
         # Create arrays extended by the halo;
         # it might be smarter to remove the halo
         # in the directions where it is not needed
@@ -163,7 +187,8 @@ class Scalar(object):
             x = self.view('i')
         else:
             raise ValueError(
-                'argument idx of Scalar.flipview must be in ["i","j","k"], not ' + repr(idx)
+                'argument idx of Scalar.flipview must be in ["i","j","k"], not ' + repr(
+                    idx)
             )
         return x
 
@@ -204,6 +229,7 @@ class Vector(dict):
      - duplicate
      - get_nature
     """
+
     def __init__(self, param, name, nickname, unit, prognostic: bool, is_velocity):
         """Construct a vector field in 3D space for a physical quantity.
 
@@ -276,6 +302,7 @@ class State(object):
      - get
      - get_prognostic_scalars
     """
+
     def __init__(self, listvar):
         """Construct a container for the variables of the model.
 
@@ -382,11 +409,13 @@ def get_state(param):
             )
         elif var.type == 'velocity':
             listvar.append(
-                Vector(param, var.name, nickname, var.unit, var.prognostic, is_velocity=True)
+                Vector(param, var.name, nickname, var.unit,
+                       var.prognostic, is_velocity=True)
             )
         elif var.type == 'vorticity':
             listvar.append(
-                Vector(param, var.name, nickname, var.unit, var.prognostic, is_velocity=False)
+                Vector(param, var.name, nickname, var.unit,
+                       var.prognostic, is_velocity=False)
             )
     return State(listvar)
 
@@ -445,3 +474,10 @@ if __name__ == '__main__':
     print("Prognostic scalars:")
     for scalar in s.get_prognostic_scalars():
         print(" - {:3}:".format(scalar), s.get(scalar))
+
+    b = s.b.view('i')
+    print('myrank = %i / loc = ' % myrank, loc, ' / procs = ', procs)
+    print('neighbours: ', neighbours)
+    print('shape of the full b             : ', np.shape(b))
+    print('shape of the b matching MG array: ', np.shape(b[s.b.mg_idx]))
+    print('corresponding index span: ', s.b.mg_idx)

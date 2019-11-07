@@ -37,8 +37,8 @@ def calculate_p_from_dU(mg, state, dstate):
     # this is triplet of slices than span the MG domain (inner+MG halo)
     # typically mg_idx = (kidx, jidx, iidx)
     # with kidx = slice(k0, k1) the slice in the k direction
-    # todo: implement that into state [easy once MG is back into the master branch]
-    mg_idx = state.mg_idx
+    # todo: implement that into Scalar [easy once MG is back into the master branch]
+    mg_idx = state.work.mg_idx
     b[:] = div[mg_idx]
 
     # solve

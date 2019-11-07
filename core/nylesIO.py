@@ -105,7 +105,7 @@ class NylesIO(object):
         The following keys must be present in "param":
          ~ variables_in_history: list of nicknames of the scalar
             variables to be saved in the history file or "all" to save
-            all model variables
+            all model variables except "work"
          - timestep_history: target timestep for savings in history file
          - datadir: path to the data directory
          - expname: name of the experiment
@@ -190,8 +190,9 @@ class NylesIO(object):
         The list of variables to be saved in the history file is
         finalised by either checking if every given variable exists in
         the state or by replacing "all" by a list of all the variables
-        in the state.  Every vector is split up into its components, so
-        that the list contains only scalar variables.
+        in the state (without the variable "work" if it exists).  Every
+        vector is split up into its components, so that the list
+        contains only scalar variables.
 
         A new history file is created and the initial state of the model
         is saved.
@@ -204,7 +205,7 @@ class NylesIO(object):
         """
         # Finalise the list of variables to save in the history file
         if self.hist_variables == "all":
-            self.hist_variables = state.toc.keys()
+            self.hist_variables = [v for v in state.toc.keys() if v != "work"]
         # Check each variable for correctness and split vectors into their components
         full_hist_variables = []
         for variable in self.hist_variables:
@@ -359,16 +360,24 @@ class NylesIO(object):
 
 if __name__ == "__main__":
     from variables import get_state
+    import topology as topo
     import numpy as np
+
+    procs = [4, 2, 1]
+    topo.topology = 'closed'
+    myrank = 3
+
+    loc = topo.rank2loc(myrank, procs)
+    neighbours = topo.get_neighbours(loc, procs)
 
     param = {
         ### Parameters necessary for the IO class
         "datadir": "~/data/Nyles",
         "expname": "test_exp",
         "timestep_history": 1.0,
-        ## Choose between a list or "all"
-        "variables_in_history": ["u", "b"],
-        # "variables_in_history": "all",
+        ## Choose between a list or "all" ("all" does not include "work")
+        "variables_in_history": "all",
+        # "variables_in_history": ["u", "b"],
         ## Select one or zero of the following options
         "mode": "overwrite",
         # "mode": "count",
@@ -378,19 +387,24 @@ if __name__ == "__main__":
         "ny": 4,
         "nz": 2,
         "nh": 2,
+        "neighbours": neighbours,
         ### Parameters to test the storage of parameters in the history file
         "a boolean variable": True,
         "a 2nd boolean variable": False,
         "a long list": list(range(50)),
     }
     state = get_state(param)
+    print("* Full state:")
+    print(state)
 
     io = NylesIO(param)
     print("* Output directory:", io.output_directory)
     print("* History file:", io.hist_path)
-    print("* Experiment parameters to save:", io.experiment_parameters)
+    print("* Experiment parameters to save:")
+    print(io.experiment_parameters)
     io.init(state)
-    print("* Variables in the history file:", io.hist_variables)
+    print("* Variables in the history file:")
+    print(io.hist_variables)
     b = state.get("b").view("i")
     for i, t in enumerate([0.2, 0.5, 0.7, 1.0, 1.5, 2.1, 3.0]):
         n = i+1

@@ -30,7 +30,8 @@ from collections import namedtuple
 #  - unit is the physical unit of the quantity
 #  - prognostic is True for prognostic variables and False for diagnostic variables
 ModelVariable = namedtuple(
-    'ModelVariable', ['type', 'name', 'unit', 'prognostic'])
+    'ModelVariable', ['type', 'name', 'unit', 'prognostic']
+)
 
 # Define the variables in the LES model
 modelvar = {
@@ -106,7 +107,7 @@ class Scalar(object):
         size, domainindices = topo.get_variable_shape(shape, neighbours, nh)
 
         nzl, nyl, nxl = size
-        self.size = size
+        self.size = {'i': nxl, 'j': nyl, 'k': nzl}
         self.domainindices = domainindices
 
         # define self.mg_idx, the MG array index span
@@ -187,8 +188,8 @@ class Scalar(object):
             x = self.view('i')
         else:
             raise ValueError(
-                'argument idx of Scalar.flipview must be in ["i","j","k"], not ' + repr(
-                    idx)
+                'argument idx of Scalar.flipview must be in ["i","j","k"], not '
+                + repr(idx)
             )
         return x
 
@@ -409,19 +410,19 @@ def get_state(param):
             )
         elif var.type == 'velocity':
             listvar.append(
-                Vector(param, var.name, nickname, var.unit,
-                       var.prognostic, is_velocity=True)
+                Vector(param, var.name, nickname, var.unit, var.prognostic,
+                       is_velocity=True)
             )
         elif var.type == 'vorticity':
             listvar.append(
-                Vector(param, var.name, nickname, var.unit,
-                       var.prognostic, is_velocity=False)
+                Vector(param, var.name, nickname, var.unit, var.prognostic,
+                       is_velocity=False)
             )
     return State(listvar)
 
 
 def get_work(param):
-    """Create quickly an array to array to work with.
+    """Create quickly an array to work with.
 
     This should not be used apart from debugging purposes.
     """

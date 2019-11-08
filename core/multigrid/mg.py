@@ -61,6 +61,27 @@ class Multigrid(object):
         g.x[:] = x
         g.b[:] = b
 
+        nite, res = self.solve_directly(cycle='V')
+
+        x[:] = g.x
+        
+        return nite, res
+
+    def solve_directly(self, cycle='V'):
+        """
+
+        driver to solve A*x=b using the Vcycle
+
+        the first guess and the rhs have been assigned outside of the routine
+
+        likewise, the solution is to be copied from outside
+
+        """
+        g = self.grid[0]
+
+        # g.x[:] = x
+        # g.b[:] = b
+
         g.residual()
 
         normb = g.norm(which='b')
@@ -107,7 +128,7 @@ class Multigrid(object):
                 print('Abort!')
                 #raise ValueError('solver is not converging')
 
-        x[:] = g.x
+        # x[:] = g.x
         return nite, res
 
     def Vcycle(self, lev0):

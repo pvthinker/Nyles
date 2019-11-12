@@ -58,13 +58,15 @@ class Multigrid(object):
         """
         g = self.grid[0]
 
+        # Copy x (first guess) and b (rhs) to solve directly on local attributes
         g.x[:] = x
         g.b[:] = b
 
         nite, res = self.solve_directly(cycle='V')
 
+        # Copy x (solution) back to the variable which is held by the caller
         x[:] = g.x
-        
+
         return nite, res
 
     def solve_directly(self, cycle='V'):
@@ -79,8 +81,7 @@ class Multigrid(object):
         """
         g = self.grid[0]
 
-        # g.x[:] = x
-        # g.b[:] = b
+        # No need to copy x and b, since they have already been assigned before
 
         g.residual()
 
@@ -128,7 +129,8 @@ class Multigrid(object):
                 print('Abort!')
                 #raise ValueError('solver is not converging')
 
-        # x[:] = g.x
+        # No need to copy x back to an external variable
+
         return nite, res
 
     def Vcycle(self, lev0):

@@ -6,7 +6,11 @@ import vorticity as vort
 import bernoulli as bern
 import kinenergy as kinetic
 import topology as topo
+from timing import timing
 import mg
+
+import numpy as np
+import matplotlib.pyplot as plt
 
 """
 LES model
@@ -32,9 +36,6 @@ class LES(object) :
 
     def rhs(self, state, t, dstate):
 
-        #save previous state
-        self.pstate = state.duplicate_prognostic_variables()
-
         #Diagnostic variables
         vort.vorticity(state)
         kinetic.kinenergy(state)
@@ -46,12 +47,10 @@ class LES(object) :
         vortf.vortex_force(state, dstate, 5) #get order from param
         #bernoulli
         bern.bernoulli(state, dstate)
-        #dU from du
+        #dU from du when enter
         U_from_u(dstate)
         #pressure
-        calculate_p_from_dU(self.mg, state, dstate, self.pstate)
-        #du from dU
-        u_from_U(dstate)
+        calculate_p_from_dU(self.mg, state, dstate)
 
     def forward(self, t, dt):
         self.timescheme.forward(self.state, t, dt)
@@ -89,6 +88,7 @@ def U_from_u(state):
     else:
         pass
 
+#never need that one
 def u_from_U(state):
     metric = 'cartesian'
     idx2, idy2, idz2 = 1., 1., 1.
@@ -111,11 +111,13 @@ def u_from_U(state):
 
 ### Ferziger p.180
 
-def calculate_p_from_dU(multg, state, dstate, pstate):
-    print("mg_idx not implemented yet")
+#
+#def calculate_p_from_dU(multg, state, dstate, pstate):
+#    print("mg_idx not implemented yet")
+#
 
-"""
-def calculate_p_from_dU(multg, state, dstate, pstate):
+@timing
+def calculate_p_from_dU(multg, state, dstate):
 
     #This solves the poisson
     #equation with dU (dstate.U),
@@ -131,21 +133,18 @@ def calculate_p_from_dU(multg, state, dstate, pstate):
     cff = {'i': 1., 'j': 1., 'k': 1.}
     for count, i in enumerate('jki'):
         #div = state.work.view(i)
-        div = state.u['i'].duplicate()
-        div_u_p = state.u['i'].duplicate()
-
-        div = div.view(i)
-        div_u_p = div_u_p.view(i)
+        div = state.work.view(i)
+        div_u_p = state.work.view(i)
 
         dU = dstate.u[i].view(i)*cff[i]
-        u_prev = pstate.u[i].view(i)
+        u_prev = state.u[i].view(i)
         if count == 0:
             div *= 0
             div_u_p *= 0
         div[:, :, 1:] += dU[:, :, 1:]-dU[:, :, :-1]
         div_u_p[:, :, 1:] += u_prev[:, :, 1:]-u_prev[:, :, :-1]
 
-    dt = .1
+    dt = .01
     RHS = div - div_u_p * 1 / dt
 
     # at the end of the loop div and dU are in the 'i' convention
@@ -160,7 +159,7 @@ def calculate_p_from_dU(multg, state, dstate, pstate):
     # typically mg_idx = (kidx, jidx, iidx)
     # with kidx = slice(k0, k1) the slice in the k direction
     # todo: implement that into state [easy once MG is back into the master branch]
-    mg_idx = state.mg_idx
+    mg_idx = state.work.mg_idx
     b[:] = RHS[mg_idx]
 
     # solve
@@ -175,34 +174,50 @@ def calculate_p_from_dU(multg, state, dstate, pstate):
     for i in 'ijk':
         p = state.p.view(i)
         du = dstate.u[i].view(i)
-"""
+        du[:, :, :-1] -= p[:, :, 1:]-p[:, :, :-1]
+
 
 
 if __name__ == "__main__":
     procs = [1, 1, 1]
     topo.topology = 'closed'
     myrank = 0
+    nz = 32
     nh = 2
 
     loc = topo.rank2loc(myrank, procs)
     neighbours = topo.get_neighbours(loc, procs)
 
     param = {
-        'nx': 128, 'ny': 32, 'nz': 32, 'nh': nh,
+        'nx': 128, 'ny': 64, 'nz': nz, 'nh': nh,
         'timestepping': 'LFAM3',
         'neighbours': neighbours,
         'procs': procs, 'topology': topo.topology,
-        'npre': 3, 'npost': 3, 'omega': 0.8, 'ndeepest': 20, 'maxite': 10, 'tol': 1e-6
+        'npre': 3, 'npost': 3, 'omega': 0.8, 'ndeepest': 20, 'maxite': 20, 'tol': 1e-6
     }
 
     t = 0.
     dx = 1.
-    cfl = 0.85
-    dt = cfl*dx
+    cfl = 0.01
+    dt = 0.1
 
     model = LES(param)
 
+    u = model.state.u['i'].view('k')
+    u[:,:,:] = .1
 
     for kt in range(10):
         model.forward(t, dt)
         t += dt
+        u = model.state.u['i'].view('k')
+        plt.figure()
+        plt.pcolor(u[0,:,:])
+        plt.colorbar()
+
+
+
+    plt.figure()
+    plt.pcolor(u[0,:,:])
+    plt.colorbar()
+
+    plt.show()

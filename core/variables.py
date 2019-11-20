@@ -51,7 +51,11 @@ class Scalar(object):
     """A scalar field in 3D space representing a physical quantity.
 
     The physical quantity is defined by a common name, a short name and
-    a physical unit, which will be written in the NetCDF file on save.
+    a unit.  This information is written in the NetCDF file on save.
+
+    The data of the scalar field can be accessed via the "view"-methods,
+    which return a 3D array.  For performance reasons, the data is
+    internally saved three times in three arrays.
 
     Attributes:
      - param: dictionary describing the properties of the 3D space in
@@ -80,7 +84,7 @@ class Scalar(object):
      - get_nature
     """
 
-    def __init__(self, param, name, nickname, unit, prognostic: bool):
+    def __init__(self, param, name, nickname, unit, prognostic: bool=False):
         """Construct a scalar field in 3D space for a physical quantity.
 
         The arguments of the constructor have the same role as the
@@ -231,7 +235,8 @@ class Vector(dict):
      - get_nature
     """
 
-    def __init__(self, param, name, nickname, unit, prognostic: bool, is_velocity):
+    def __init__(self, param, name, nickname, unit, prognostic: bool=False,
+                 is_velocity: bool=True):
         """Construct a vector field in 3D space for a physical quantity.
 
         The arguments of the constructor have the same role as the

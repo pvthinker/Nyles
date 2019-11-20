@@ -1,10 +1,12 @@
+"""The Nyles main class."""
+
+import numpy as np
+
 import model_les_AL as model_LES
 import model_advection as model_adv
 import variables
+import grid
 import nylesIO
-import numpy as np
-
-"The NYLES main class"
 
 
 class Nyles(object) :
@@ -28,7 +30,7 @@ class Nyles(object) :
             in the history files at every step
     """
     def __init__(self, param) :
-        #self.grid = grid(param) #loads the grid
+        self.grid = grid.Grid(param) #loads the grid
         self.IO = nylesIO.NylesIO(param) #loads the IO
         self.initiate(param) #initiates the model, IO and needed variables
 
@@ -39,12 +41,14 @@ class Nyles(object) :
         elif param['modelname'] == 'adv' :
             self.model = model_adv.Advection(param)
 
-        self.IO.init(self.model.state)
         self.tend = param['tend']
         self.cfl = param['cfl']
         self.dhist = param['timestep_history']
 
     def run(self) :
+        print("Creating output file:", self.IO.hist_path)
+        self.IO.init(self.model.state, self.grid)
+
         self.dx = 1. #Hardcoded for now TODO : get it from grid
         self.dt = self.cfl*self.dx
 

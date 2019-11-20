@@ -77,13 +77,13 @@ grid = nyles.grid
 
 # Get access to the coordinates at vorticity point
 # Note that the coordinates are of Scalar type
-x = grid.x_vor.view("i")
-y = grid.y_vor.view("i")
-z = grid.z_vor.view("i")
+x = grid.x_vor["i"].view("i")
+y = grid.y_vor["j"].view("i")
+z = grid.z_vor["k"].view("i")
 # Get access to the three components of the discretized vorticity
 wi = model.state.vor["i"].view("i")
 wj = model.state.vor["j"].view("i")
-wk = model.state.vor["i"].view("i")
+wk = model.state.vor["k"].view("i")
 
 ### Set the initial state of the simulation
 ## Define the radius of the vortices

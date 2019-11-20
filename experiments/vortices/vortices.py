@@ -50,12 +50,15 @@ param = {
     "datadir": "~/data/Nyles",
     "expname": "vortex_{}".format(exp_type),
     "timestep_history": 1.0,
-    "variables_in_history": ["vor"],
+    "variables_in_history": "all",
     "mode": "overwrite",
     # General model options
     "modelname": "LES",
     "geometry": "closed",
     # Grid options
+    "Lx": Lx,
+    "Ly": Ly,
+    "Lz": Lz,
     "nx": nx,
     "ny": ny,
     "nz": nz,
@@ -75,55 +78,61 @@ nyles = Nyles(param)
 model = nyles.model
 grid = nyles.grid
 
-# Get access to the coordinates at vorticity point
-# Note that the coordinates are of Scalar type
-x = grid.x_vor["i"].view("i")
-y = grid.y_vor["j"].view("i")
-z = grid.z_vor["k"].view("i")
-# Get access to the three components of the discretized vorticity
+# Get access to the three components of vorticity and their (x,y,z)-coordinates
 wi = model.state.vor["i"].view("i")
+x_wi = grid.x_vor["i"].view("i")
+y_wi = grid.y_vor["i"].view("i")
+z_wi = grid.z_vor["i"].view("i")
+
 wj = model.state.vor["j"].view("i")
+x_wj = grid.x_vor["j"].view("i")
+y_wj = grid.y_vor["j"].view("i")
+z_wj = grid.z_vor["j"].view("i")
+
 wk = model.state.vor["k"].view("i")
+x_wk = grid.x_vor["k"].view("i")
+y_wk = grid.y_vor["k"].view("i")
+z_wk = grid.z_vor["k"].view("i")
 
 ### Set the initial state of the simulation
 ## Define the radius of the vortices
-R = min([Lx, Ly]) / 2
-R_yz = min([Ly, Lz]) / 2
+R_wk = min([Lx, Ly]) / 4
+R_wi = min([Ly, Lz]) / 4
 ## Define the radial coordinate r of polar coordinates (r, phi) = (x, y)
 # 1) around the center (Lx/2, Ly/2)
-r = np.sqrt((x-Lx/2)**2 + (y-Ly/2)**2)
+r_wk = np.sqrt((x_wk-Lx/2)**2 + (y_wk-Ly/2)**2)
 # 2) shifted to the right by 1/4 of the domain length
-r_right = np.sqrt((x-3*Lx/4)**2 + (y-Ly/2)**2)
+r_right_wk = np.sqrt((x_wk-3*Lx/4)**2 + (y_wk-Ly/2)**2)
 # 3) shifted to the left by 1/4 of the domain length
-r_left = np.sqrt((x-Lx/4)**2 + (y-Ly/2)**2)
+r_left_wk = np.sqrt((x_wk-Lx/4)**2 + (y_wk-Ly/2)**2)
 ## Define vertical polar coordinates (r, phi) = (y, z)
-r_yz = np.sqrt((y-Ly/2)**2 + (z-Lz/2)**2)
-r_up = np.sqrt((y-Ly/2)**2 + (z-3*Lz/4)**2)
-r_down = np.sqrt((y-Ly/2)**2 + (z-Lz/4)**2)
+r_wi = np.sqrt((y_wi-Ly/2)**2 + (z_wi-Lz/2)**2)
+r_up_wi = np.sqrt((y_wi-Ly/2)**2 + (z_wi-3*Lz/4)**2)
+r_down_wi = np.sqrt((y_wi-Ly/2)**2 + (z_wi-Lz/4)**2)
 ## Define the initial vorticity field
 if exp_type == ET.Vor_const:
     wk[...] = 1
-    wk[r > R] = 0
+    wk[r_wk > R_wk] = 0
 elif exp_type == ET.Vor_linear:
-    wk[...] = r/R
-    wk[r > R] = 0
+    wk[...] = r_wk/R_wk
+    wk[r_wk > R_wk] = 0
 elif exp_type == ET.Vor_Gauss:
-    wk[...] = np.exp(-(r/R)**2)
+    wk[...] = np.exp(-(r_wk/R_wk)**2)
 elif exp_type == ET.Dipole:
-    wk[...] = np.exp(-(r_right/R)**2)
-    wk -= np.exp(-(r_left/R)**2)
+    wk[...] = np.exp(-(r_right_wk/R_wk)**2)
+    wk -= np.exp(-(r_left_wk/R_wk)**2)
 elif exp_type == ET.TwoVortices:
-    wk[...] = np.exp(-(r_right/R)**2)
-    wk += np.exp(-(r_left/R)**2)
+    wk[...] = np.exp(-(r_right_wk/R_wk)**2)
+    wk += np.exp(-(r_left_wk/R_wk)**2)
 elif exp_type == ET.VerticalVor_const:
     wi[...] = 1
-    wi[r_yz > R_yz] = 0
+    wi[r_wi > R_wi] = 0
 elif exp_type == ET.VerticalDipole:
-    wi[...] = np.exp(-(r_up/R)**2)
-    wi -= np.exp(-(r_down/R)**2)
+    wi[...] = np.exp(-(r_up_wi/R_wi)**2)
+    wi -= np.exp(-(r_down_wi/R_wi)**2)
 elif exp_type == ET.VerticalTwoVortices:
-    wi[...] = np.exp(-(r_up/R)**2)
-    wi += np.exp(-(r_down/R)**2)
+    wi[...] = np.exp(-(r_up_wi/R_wi)**2)
+    wi += np.exp(-(r_down_wi/R_wi)**2)
 else:
     raise ValueError("No experiment defined for type " + repr(exp_type))
 

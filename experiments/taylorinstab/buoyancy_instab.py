@@ -12,6 +12,9 @@ nh = 2
 nz = 32
 ny = 32
 nx = 128
+Lz = 1.0
+Ly = 1.0
+Lx = 1.0
 
 loc = topo.rank2loc(myrank, procs)
 neighbours = topo.get_neighbours(loc, procs)
@@ -27,6 +30,9 @@ param = {
     "modelname": "LES",
     "geometry": "closed",
     # Grid options
+    "Lx": Lx,
+    "Ly": Ly,
+    "Lz": Lz,
     "nx": nx,
     "ny": ny,
     "nz": nz,

@@ -40,7 +40,9 @@ param = {
     # Timestepping options
     "timestepping": "LFAM3",
     "tend": 10.0,
+    "auto_dt": True,
     "cfl": 1.5,
+    "dt": 0.1,
     # Spatial discretization options
     "orderVF": 5,  # upwind-order for vortex-force term
     "orderA": 5,  # upwind-order for advection term

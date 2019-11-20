@@ -81,6 +81,8 @@ class NylesIO(object):
         history file
      - n_hist: counter for the number of entries in the history file;
         this value can be readout to display a status message
+     - last_saved_frame: integration step of the last entry that was
+        saved in the history file
 
     Constants mostly for private access:
      - MAX_LENGTH_ATTRIBUTE: maximal number of characters for attributes
@@ -91,6 +93,7 @@ class NylesIO(object):
     Methods for public access:
      - init
      - do
+     - finalize
      - save_array_3D
 
     Methods mostly for private access:
@@ -108,10 +111,16 @@ class NylesIO(object):
         history file.
 
         The following keys must be present in "param":
-         ~ variables_in_history: list of nicknames of the scalar
-            variables to be saved in the history file or "all" to save
-            all model variables except "work"
-         - timestep_history: target timestep for savings in history file
+         ~ variables_in_history: list of nicknames of the variables to
+            be saved in the history file; instead of a list, this
+            parameter can have the value "all" to save all model
+            variables (except "work"); for vectors, it is strongly
+            recommended to NOT include individual components in this
+            list; instead, always use the whole vector like "u", "U",
+            or "vor"; only this way, the vector components are saved at
+            the correct coordinates of the staggered grid;
+         - timestep_history: target timestep for saving the model state
+            in the history file; use 0.0 to save every frame;
          - datadir: path to the data directory
          - expname: name of the experiment
 
@@ -130,6 +139,7 @@ class NylesIO(object):
         self.dt_hist = param["timestep_history"]
         self.t_next_hist = 0.0
         self.n_hist = 0
+        self.last_saved_frame = None
 
         # Create a copy of the experiment parameters to save them it in the history file
         # TODO: simplify the next statement, if the implementation is settled
@@ -256,6 +266,18 @@ class NylesIO(object):
         if t >= self.t_next_hist:
             self.write_history_file(state, t, n)
             self.t_next_hist += self.dt_hist
+
+    def finalize(self, state, t, n):
+        """Write the final state to the history file if necessary.
+
+        Arguments:
+         - state: final state of the model run
+         - t: last point in time of the model run
+         - n: total number of integration steps in the model run
+        """
+        # Write data to the history file if it is time to do so
+        if n != self.last_saved_frame:
+            self.write_history_file(state, t, n)
 
     def save_array_3D(self, data, name, description=""):
         """Save a 3D array of data in the history file.
@@ -445,6 +467,7 @@ class NylesIO(object):
             for v in self.hist_variables:
                 ncfile[v.nickname][self.n_hist] = state.get(v.nickname).view("i")
         self.n_hist += 1
+        self.last_saved_frame = n
 
 
 if __name__ == "__main__":

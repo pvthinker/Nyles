@@ -52,6 +52,12 @@ class Grid(object):
         z_b, y_b, x_b = np.meshgrid(
             self.z_b_1D, self.y_b_1D, self.x_b_1D, indexing="ij"
         )
+        # Note: the argument indexing="ij" to meshgrid is crucial to
+        # comply with the [k,j,i]-convention.  Otherwise, if it was
+        # omitted, the default value indexing="xy" would be taken, which
+        # would result in the order [j,k,i], incompatible with the
+        # implementation of the Scalar class.  Further information:
+        # https://docs.scipy.org/doc/numpy/reference/generated/numpy.meshgrid.html
 
         # Define coordinates at velocity-points (cell faces)
         self.x_vel = Vector(param, "x at cell faces", "x_vel", "m", is_velocity=True)

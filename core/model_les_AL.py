@@ -5,6 +5,7 @@ import timescheme as ts
 import vorticity as vort
 import bernoulli as bern
 import kinenergy as kinetic
+import projection
 import topology as topo
 from timing import timing
 import mg
@@ -23,53 +24,54 @@ when mg_idx is implemented
 
 """
 
-class LES(object) :
 
-    def __init__(self, param) :
+class LES(object):
+
+    def __init__(self, param):
         self.state = var.get_state(param)
         self.timescheme = ts.Timescheme(param, self.state)
         self.timescheme.set(self.rhs)
         self.traclist = ['b']
-        self.orderB = 5
+        self.orderB = 1
         self.mg = mg.Multigrid(param)
 
-
     def rhs(self, state, t, dstate):
-
-        #Diagnostic variables
+        U_from_u(state)
+        # Diagnostic variables
         vort.vorticity(state)
         kinetic.kinenergy(state)
 
-        #buoyancy
+        # buoyancy
         tracer.rhstrac(state, dstate, self.traclist, self.orderB)
 
-        #vortex force
-        vortf.vortex_force(state, dstate, 5) #get order from param
-        #bernoulli
+        # vortex force
+        vortf.vortex_force(state, dstate, 1)  # get order from param
+        # bernoulli
         bern.bernoulli(state, dstate)
-        #dU from du when enter
-        U_from_u(dstate)
-        #pressure
-        calculate_p_from_dU(self.mg, state, dstate)
+        # dU from du when enter
+        # U_from_u(dstate)
+        # pressure
+        #calculate_p_from_dU(self.mg, state, dstate)
+        projection.calculate_p_from_dU(self.mg, state, dstate)
 
     def forward(self, t, dt):
         self.timescheme.forward(self.state, t, dt)
 
 
 def U_from_u(state):
-    #copied from lotsofstuff
+    # copied from lotsofstuff
     idx2, idy2, idz2 = 1., 1., 1.
-    #for now implements only cartesian
-    metric = 'cartesian' # dx, dy and dz are uniform, though not necessarily equal
+    # for now implements only cartesian
+    metric = 'cartesian'  # dx, dy and dz are uniform, though not necessarily equal
 
     if metric == 'cartesian':
         u = state.u['i'].view('k')
         v = state.u['j'].view('k')
         w = state.u['k'].view('k')
 
-        U = state.u['i'].view('k')
-        V = state.u['j'].view('k')
-        W = state.u['k'].view('k')
+        U = state.U['i'].view('k')
+        V = state.U['j'].view('k')
+        W = state.U['k'].view('k')
 
         U[:] = u*idx2
         V[:] = v*idy2
@@ -84,11 +86,14 @@ def U_from_u(state):
         V[:] = v*idy2
         for j in range(ny):
             U[j][:, :] = u[j][:, :] - sxp(slope[j][:, :]*sym(w[j][:, :]))
-            W[j][:, :] = gamma[j][:, :]*w[j][:, :] - syp(slope[j][:, :]*sxm(u[j][:, :]))
+            W[j][:, :] = gamma[j][:, :]*w[j][:, :] - \
+                syp(slope[j][:, :]*sxm(u[j][:, :]))
     else:
         pass
 
-#never need that one
+# never need that one
+
+
 def u_from_U(state):
     metric = 'cartesian'
     idx2, idy2, idz2 = 1., 1., 1.
@@ -105,27 +110,27 @@ def u_from_U(state):
         v[:] = V/idy2
         w[:] = W/idz2
 
-    else :
-        raise NotImplementedError("Only Cartesian coordinates are implemented for now")
+    else:
+        raise NotImplementedError(
+            "Only Cartesian coordinates are implemented for now")
 
 
-### Ferziger p.180
+# Ferziger p.180
 
 #
-#def calculate_p_from_dU(multg, state, dstate, pstate):
+# def calculate_p_from_dU(multg, state, dstate, pstate):
 #    print("mg_idx not implemented yet")
 #
 
 @timing
 def calculate_p_from_dU(multg, state, dstate):
 
-    #This solves the poisson
-    #equation with dU (dstate.U),
-    #stores the result in p
-    #(state.p) and updates dU
+    # This solves the poisson
+    # equation with dU (dstate.U),
+    # stores the result in p
+    # (state.p) and updates dU
 
-    #mg is the multigrid object (with all data and methods)
-
+    # mg is the multigrid object (with all data and methods)
 
     # compute divergence
     # cff is the inverse metric tensor
@@ -177,7 +182,6 @@ def calculate_p_from_dU(multg, state, dstate):
         du[:, :, :-1] -= p[:, :, 1:]-p[:, :, :-1]
 
 
-
 if __name__ == "__main__":
     procs = [1, 1, 1]
     topo.topology = 'closed'
@@ -189,7 +193,7 @@ if __name__ == "__main__":
     neighbours = topo.get_neighbours(loc, procs)
 
     param = {
-        'nx': 128, 'ny': 64, 'nz': nz, 'nh': nh,
+        'nx': 48, 'ny': 64, 'nz': nz, 'nh': nh,
         'timestepping': 'LFAM3',
         'neighbours': neighbours,
         'procs': procs, 'topology': topo.topology,
@@ -204,20 +208,15 @@ if __name__ == "__main__":
     model = LES(param)
 
     u = model.state.u['i'].view('k')
-    u[:,:,:] = .1
+    u[:, :, :] = .1
 
     for kt in range(10):
         model.forward(t, dt)
         t += dt
         u = model.state.u['i'].view('k')
-        plt.figure()
-        plt.pcolor(u[0,:,:])
-        plt.colorbar()
-
-
 
     plt.figure()
-    plt.pcolor(u[0,:,:])
+    plt.pcolor(u[0, :, :])
     plt.colorbar()
 
     plt.show()

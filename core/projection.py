@@ -5,6 +5,20 @@ Projection functions to enforce div U = 0
 """
 
 
+def compute_div(work, dstate):
+    # compute divergence
+    # cff is the inverse metric tensor
+    # TODO: handle this information more neatly
+    cff = {'i': 1., 'j': 1., 'k': 1.}
+    for count, i in enumerate('jki'):
+        div = work.view(i)
+        dU = dstate.u[i].view(i)
+        if count == 0:
+            div *= 0
+        div[:, :, 0] += dU[:, :, 0]*cff[i]
+        div[:, :, 1:] += (dU[:, :, 1:]-dU[:, :, :-1])*cff[i]
+
+
 def calculate_p_from_dU(mg, state, dstate):
     """ 
     This solves the poisson
@@ -14,17 +28,8 @@ def calculate_p_from_dU(mg, state, dstate):
 
     mg is the multigrid object (with all data and methods)
     """
-
-    # compute divergence
-    # cff is the inverse metric tensor
-    # TODO: handle this information more neatly
-    cff = {'i': 1., 'j': 1., 'k': 1.}
-    for count, i in enumerate('jki'):
-        div = state.work.view(i)
-        dU = dstate.u[i].view(i)*cff[i]
-        if count == 0:
-            div *= 0
-        div[:, :, 1:] += dU[:, :, 1:]-dU[:, :, :-1]
+    div = state.work
+    compute_div(div, dstate)
 
     # at the end of the loop div and dU are in the 'i' convention
     # this is mandatory because MG only works with the 'i' convention
@@ -38,7 +43,7 @@ def calculate_p_from_dU(mg, state, dstate):
     # typically mg_idx = (kidx, jidx, iidx)
     # with kidx = slice(k0, k1) the slice in the k direction
     mg_idx = state.work.mg_idx
-    b[:] = div[mg_idx]
+    b[:] = div.view('i')[mg_idx]
 
     # solve
     mg.solve_directly()
@@ -53,3 +58,72 @@ def calculate_p_from_dU(mg, state, dstate):
         p = state.p.view(i)
         du = dstate.u[i].view(i)
         du[:, :, :-1] -= p[:, :, 1:]-p[:, :, :-1]
+
+
+if __name__ == "__main__":
+    import numpy as np
+    import topology as topo
+    import mg
+    import variables as var
+    import matplotlib.pyplot as plt
+
+    procs = [1, 1, 1]
+    topo.topology = 'closed'
+    myrank = 0
+    nx, ny, nz = 48, 24, 32
+    nh = 2
+
+    loc = topo.rank2loc(myrank, procs)
+    neighbours = topo.get_neighbours(loc, procs)
+
+    param = {
+        'nx': nx, 'ny': ny, 'nz': nz, 'nh': nh,
+        'timestepping': 'LFAM3',
+        'neighbours': neighbours,
+        'procs': procs, 'topology': topo.topology,
+        'npre': 3, 'npost': 3, 'omega': 0.8, 'ndeepest': 20, 'maxite': 20, 'tol': 1e-12
+    }
+
+    s = var.get_state(param)
+    ds = s.duplicate_prognostic_variables()
+    mg = mg.Multigrid(param)
+    u = ds.u['i'].view('i')
+    v = ds.u['j'].view('i')
+    w = ds.u['k'].view('i')
+
+    print('set up a localized jet along the i-direction')
+    k1 = nz//3
+    k2 = 2*nz//3
+    j1 = ny//3
+    j2 = 2*ny//3
+    u[k1:k2, j1:j2, :-1] = 1.
+    v[:, :-1, :] = 0
+    w[:-1, :, :] = 0
+
+    print('and make it divergent-free')
+    calculate_p_from_dU(mg, s, ds)
+
+    p = s.p.view('i')
+
+    div = s.work
+    compute_div(div, ds)
+
+    u = ds.u['i'].view('i')
+    v = ds.u['j'].view('i')
+    w = ds.u['k'].view('i')
+
+    plt.ion()
+    plt.close('all')
+
+    d = div.view('i')
+    fields = [('div', d), ('u', u), ('v', v), ('w', w)]
+    fig, ax = plt.subplots(2, 2)
+    fig.set_size_inches([15,  8])
+    for i in range(4):
+        a = ax[i//2, i % 2]
+        name, f = fields[i]
+        im = a.imshow(f[10, :, :], origin='xy')
+        a.set_xlabel('x')
+        a.set_ylabel('y')
+        a.set_title(name)
+        plt.colorbar(im, ax=a)

@@ -49,7 +49,7 @@ class Grid(object):
         x_b = self.x_b.view("i")
         y_b = self.y_b.view("i")
         z_b = self.z_b.view("i")
-        z_b, y_b, x_b = np.meshgrid(
+        z_b[:,:,:], y_b[:,:,:], x_b[:,:,:] = np.meshgrid(
             self.z_b_1D, self.y_b_1D, self.x_b_1D, indexing="ij"
         )
         # Note: the argument indexing="ij" to meshgrid is crucial to

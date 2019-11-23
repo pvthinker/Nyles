@@ -53,10 +53,53 @@ def vorticity_all_comp(state):
 
 # ----------------------------------------------------------------------
 if __name__ == '__main__':
+    import topology as topo
+    import matplotlib.pyplot as plt
+    import numpy as np
 
-    param = {'nx': 40, 'ny': 50, 'nz': 60, 'nh': 2}
+    procs = [1, 1, 1]
+    topo.topology = "closed"
+    myrank = 0
+
+    loc = topo.rank2loc(myrank, procs)
+    neighbours = topo.get_neighbours(loc, procs)
+
+    nx = 128
+    ny = 128
+    nz = 128
+
+    param = {'nx': nx, 'ny': ny, 'nz': nz, 'nh': 2, 'neighbours' : neighbours}
     state = var.get_state(param)
+
+    u = state.u['i'].view('k')
+    v = state.u['j'].view('k')
+
+    x = np.linspace(0,nx,nx)
+    y = np.linspace(0,ny,ny)
+
+    x = np.repeat(x[np.newaxis,:], ny, axis = 0)
+    x = np.repeat(x[:,:,np.newaxis], nz, axis = 2)
+    y = np.repeat(y[:,np.newaxis], nx, axis = 1)
+    y = np.repeat(y[:,:,np.newaxis], nz, axis = 2)
+
+    print(np.shape(u))
+    print(np.shape(x))
+    print(np.shape(y))
+
+    Omega = 2
+
+    u[...] = - Omega * y
+    v[...] = Omega * x
 
     vorticity(state)
 
     vorticity_all_comp(state)
+
+    vort = state.vor['k'].view('k')
+    print(np.shape(vort))
+    print(np.mean(vort)) #should be 2*omega
+
+    plt.figure()
+    plt.pcolor(vort[:,:,0])
+    plt.colorbar()
+    plt.show()

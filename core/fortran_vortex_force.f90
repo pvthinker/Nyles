@@ -43,25 +43,22 @@ subroutine vortex_force_calc(U, vort, res, epsilon, order, l, m, n)
           up = 0.5*(U_interp+UU) ! right-going flux
           um = 0.5*(U_interp-UU) ! left-going flux
 
-          if ((i.gt.2).and.(order.eq.5)) then
+          if ((i.gt.2).and.(i.le.(n-2)).and.(order.eq.5)) then
              qp = b1*vort(k,j,i-2) + b2*vort(k,j,i-1) + b3*vort(k,j,i) + b4*vort(k,j,i+1) + b5*vort(k,j,i+2)
-
-          elseif ((i.gt.1).and.(order.ge.3)) then
+          elseif ((i.gt.1).and.(i.le.(n-1)).and.(order.ge.3)) then
              ! 3rd order upwind
              qp = c1*vort(k,j,i-1) + c2*vort(k,j,i) + c3*vort(k,j,i+1)
-
           else
              ! 1st order
              qp = vort(k,j,i)
           endif
 
-          if ((i.le.(n-3)).and.(order.eq.5)) then
-             qm = b5*vort(k,j,i-1) + b4*vort(k,j,i) + b3*vort(k,j,i+1) + b2*vort(k,j,i+2) + b1*vort(k,j,i+3)
 
+          if ((i.gt.1).and.(i.le.(n-3)).and.(order.eq.5)) then
+             qm = b5*vort(k,j,i-1) + b4*vort(k,j,i) + b3*vort(k,j,i+1) + b2*vort(k,j,i+2) + b1*vort(k,j,i+3)
           elseif ((i.le.(n-2)).and.(order.ge.3)) then
              ! 3rd order upwind
              qm = c3*vort(k,j,i) + c2*vort(k,j,i+1) + c1*vort(k,j,i+2)
-
           elseif (i.le.(n-1)) then
              ! 1st order
              qm = vort(k,j,i+1)

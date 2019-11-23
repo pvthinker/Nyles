@@ -45,7 +45,7 @@ class LES(object):
         tracer.rhstrac(state, dstate, self.traclist, self.orderB)
 
         # vortex force
-        vortf.vortex_force(state, dstate, 1)  # get order from param
+        vortf.vortex_force(state, dstate, 5)  # get order from param
         # bernoulli
         bern.bernoulli(state, dstate)
         # dU from du when enter
@@ -56,6 +56,9 @@ class LES(object):
 
     def forward(self, t, dt):
         self.timescheme.forward(self.state, t, dt)
+        div = self.state.work
+        projection.compute_div(div, self.state)
+        print("Divergence :", np.mean(div.view()))
 
 
 def U_from_u(state):

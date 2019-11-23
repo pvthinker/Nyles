@@ -31,7 +31,41 @@ def kinenergy(state):
 # ----------------------------------------------------------------------
 if __name__ == '__main__':
 
-    param = {'nx': 40, 'ny': 50, 'nz': 60, 'nh': 2}
+    import topology as topo
+    import matplotlib.pyplot as plt
+    import numpy as np
+
+    procs = [1, 1, 1]
+    topo.topology = "closed"
+    myrank = 0
+
+    loc = topo.rank2loc(myrank, procs)
+    neighbours = topo.get_neighbours(loc, procs)
+
+    nx = 128
+    ny = 128
+    nz = 128
+
+    param = {'nx': nx, 'ny': ny, 'nz': nz, 'nh': 2, 'neighbours' : neighbours}
     state = var.get_state(param)
 
+    u = state.u['i'].view('k')
+    v = state.u['j'].view('k')
+    w = state.u['k'].view('k')
+
+    u[...] = 4
+    v[...] = 8
+    w[...] = 6
+
     kinenergy(state)
+
+    ke = state.ke.view('k')
+
+    print(np.max(ke))
+    print("should be : ", np.max(u)**2/2 + np.max(v)**2/2 + np.max(w)**2/2)
+
+    plt.figure()
+    plt.pcolor(ke[:,:,10])
+    plt.colorbar()
+
+    plt.show()

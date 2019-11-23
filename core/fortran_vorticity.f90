@@ -1,7 +1,7 @@
 !----------------------------------------
-subroutine vorticity(uj, uk, wi, l, m, n)
+subroutine vorticity(ui, uj, wk, l, m, n)
   !
-  ! omega_i = delta_j[u_k] - delta_k[u_j]
+  ! omega_k = delta_i[u_j] - delta_j[u_i]
   !
   ! direction i should be the first one,
   ! imposing to view arrays in the j direction
@@ -9,17 +9,17 @@ subroutine vorticity(uj, uk, wi, l, m, n)
   implicit none
 
   integer, intent(in):: l, m, n
-  real*8, dimension(l, m, n), intent(in) :: uj, uk
-  real*8, dimension(l, m, n), intent(inout) :: wi
+  real*8, dimension(l, m, n), intent(in) :: ui, uj
+  real*8, dimension(l, m, n), intent(inout) :: wk
 
-  !f2py intent(inplace):: uj, uk, wi
+  !f2py intent(inplace):: ui, uj, wk
 
   integer:: i, j, k
   
   do k = 1, l
      do j = 1, m-1
         do i = 1, n-1
-           wi(k,j,i) = uk(k,j,i+1) - uk(k,j,i) - uj(k,j+1,i) + uj(k,j,i)
+           wk(k,j,i) = uj(k,j,i+1) - uj(k,j,i) - ui(k,j+1,i) + ui(k,j,i)
         enddo
      enddo
   enddo

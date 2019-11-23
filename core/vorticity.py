@@ -8,7 +8,7 @@ def vorticity(state):
     """
     compute the vorticity
 
-    omega_i = delta_j[u_k] - delta_k[u_j]
+    omega_k = delta_i[u_] - delta_j[u_i]
 
     direction i should be the first one,
     imposing to view arrays in the j direction
@@ -18,18 +18,18 @@ def vorticity(state):
        carefully handle the boundary condition: no-slip or free-slip
     """
 
-    perm = {'i': ('j', 'k'),
-            'j': ('k', 'i'),
-            'k': ('i', 'j')}
+    perm = {'i': ('k', 'j'),
+            'j': ('i', 'k'),
+            'k': ('j', 'i')}
 
-    for diri in 'ijk':
-        dirj, dirk = perm[diri]
+    for dirk in 'ijk':
+        dirj, diri = perm[dirk]
 
-        uj = state.u[dirj].view(dirj)
-        uk = state.u[dirk].view(dirj)
-        wi = state.vor[diri].view(dirj)
+        ui = state.u[diri].flipview(dirk)
+        uj = state.u[dirj].flipview(dirk)
+        wk = state.vor[dirk].flipview(dirk)
 
-        fortran.vorticity(uj, uk, wi)
+        fortran.vorticity(ui, uj, wk)
 
 
 @timing

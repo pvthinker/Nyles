@@ -30,6 +30,7 @@ subroutine kin(u, v, ke, ds2, iflag, l, m, n)
      do k = 1, l
         do j = 1, m
            u2 = cff*u(k, j, 1)*v(k, j, 1)
+           ke(k, j, 1) = u2 
            do i = 2, n
               u22 = cff*u(k, j, i)*v(k, j, i)
               ke(k, j, i) = u2 + u22
@@ -41,6 +42,7 @@ subroutine kin(u, v, ke, ds2, iflag, l, m, n)
      do k = 1, l
         do j = 1, m
            u2 = cff*u(k, j, 1)*v(k, j, 1)
+           ke(k, j, 1) = ke(k, j, 1) + u2
            do i = 2, n
               u22 = cff*u(k, j, i)*v(k, j, i)
               ke(k, j, i) = ke(k, j, i) + u2 + u22

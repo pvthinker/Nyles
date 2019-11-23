@@ -65,6 +65,7 @@ if __name__ == "__main__":
     import topology as topo
     import mg
     import variables as var
+    import vorticity as vort
     import matplotlib.pyplot as plt
 
     procs = [1, 1, 1]
@@ -112,8 +113,8 @@ if __name__ == "__main__":
     v = ds.u['j'].view('i')
     w = ds.u['k'].view('i')
 
-    plt.ion()
     plt.close('all')
+    plt.ion()
 
     d = div.view('i')
     fields = [('div', d), ('u', u), ('v', v), ('w', w)]
@@ -127,3 +128,14 @@ if __name__ == "__main__":
         a.set_ylabel('y')
         a.set_title(name)
         plt.colorbar(im, ax=a)
+
+    plt.show()
+    for direc in 'ijk':
+        s.u[direc].view('i')[:] = ds.u[direc].view('i')[:]
+        
+    vort.vorticity(s)    
+    vor = s.vor
+    wy = vor['j'].view('i')
+    plt.figure()
+    plt.imshow(wy[:, :, 10], origin='xy')
+    plt.colorbar()

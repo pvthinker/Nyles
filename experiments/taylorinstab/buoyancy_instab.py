@@ -2,6 +2,7 @@ import model_les_AL as LES
 import topology as topo
 import numpy as np
 import matplotlib.pyplot as plt
+import grid
 
 import nyles
 
@@ -11,7 +12,7 @@ myrank = 0
 nh = 2
 nz = 32
 ny = 32
-nx = 128
+nx = 48
 Lz = 1.0
 Ly = 1.0
 Lx = 1.0
@@ -23,8 +24,8 @@ param = {
     # I/O options
     "datadir": "~/data/Nyles",
     "expname": "buoyancy instab",
-    "timestep_history": 1.0,
-    "variables_in_history": ["vor","b"],
+    "timestep_history": 0.0,
+    "variables_in_history": "all",
     "mode": "overwrite",
     # General model options
     "modelname": "LES",
@@ -36,16 +37,16 @@ param = {
     "nx": nx,
     "ny": ny,
     "nz": nz,
-    "nh": nh,
+"nh": nh,
     # Timestepping options
-    "timestepping": "LFAM3",
-    "tend": 10.0,
-    "auto_dt": True,
-    "cfl": 1.5,
+    "timestepping": "EF",
+    "tend": 1.0,
+    "auto_dt": False,
+    "cfl": 0.5,
     "dt": 0.1,
     # Spatial discretization options
-    "orderVF": 5,  # upwind-order for vortex-force term
-    "orderA": 5,  # upwind-order for advection term
+    "orderVF": 1,  # upwind-order for vortex-force term
+    "orderA": 1,  # upwind-order for advection term
 
     "neighbours": neighbours,
     "procs": procs, "topology": topo.topology,
@@ -59,20 +60,23 @@ cfl = 0.85
 dt = cfl*dx
 
 nyles = nyles.Nyles(param)
+grd = grid.Grid(param)
 
-b = nyles.model.state.b.view('k')
-b[:,:,:nz//2] = 20
-b[:,:,nz//2:] = 10
+b = nyles.model.state.b.view('i')
+z = grd.z_b.view('i')
+x = grd.x_b.view('i')
 
-noise = np.random.normal(size = np.shape(b))
-noise = noise/np.max(noise)
+b[:] = 15+ 5*np.tanh((np.cos(np.pi*x)*0.1+z-0.5)/.02)
 
-b = b + noise
+noise = np.random.uniform(size = np.shape(b))
+noise = noise*2-1
+
+b += noise*.1
 
 nyles.run()
 
 plt.figure()
-plt.pcolor(b[0,:,:])
+plt.pcolor(b[:,10,:])
 plt.colorbar()
 
 plt.show()

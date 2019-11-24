@@ -5,8 +5,9 @@ TODO : Test that is performs what is expected
 
 """
 
-import fortran_vortex_force as fortran
+import fortran_vortex_force_test as fortran
 from timing import timing
+import numpy as np
 
 @timing
 def vortex_force(state, rhs, order):
@@ -39,13 +40,15 @@ def vortex_force(state, rhs, order):
         U(i,k,j)
         vort(i,k,j)
         u(i,k,j)
-        And the interpolation of the velocity will need to be in k and i
+        And the interpolation of the velocity will need to be in j and i
 
 
     The fortran subroutine imposes 0 velocity at the boudaries.
 
 
     TODO : make the function call the fortran subroutine only 3 times.
+
+
     """
 
     upw_orders = {1,3,5}
@@ -55,72 +58,132 @@ def vortex_force(state, rhs, order):
 
 
     for k, j, i in ["kji", "ikj", "jik"]:
+        """
+        Old routine : calculate separately both epsilon = 1 and epsilon = -1
 
+        print(k)
+        print(j)
+        print(i)
         #Using the convention of taking the inner index as the index of the upwinding of vorticity
-        u_k = rhs.u[k].flipview(k)
-
-        U_j = state.U[j].flipview(k)
-        w_i = state.vor[i].flipview(k)
+        u_k = rhs.u[k].flipview(i)
+        U_j = state.U[j].flipview(i)
+        w_i = state.vor[i].flipview(i)
+        print(np.shape(u_k))
+        print(np.shape(w_i))
+        print(np.shape(U_j))
         fortran.vortex_force_calc(U_j, w_i, u_k, +1, order)
 
+        u_k = rhs.u[k].flipview(k)
         U_i = state.U[i].flipview(k)
         w_j = state.vor[j].flipview(k)
+        print(np.shape(u_k))
+        print(np.shape(w_j))
+        print(np.shape(U_i))
         fortran.vortex_force_calc(U_i, w_j, u_k, -1, order)
+        """
+
+        """
+        New routine : calculates both term in the same fortran routine
+        """
+
+        #print(k)
+        #print(j)
+        #print(i)
+
+        u_k = rhs.u[k].flipview(k)
+        U_j = state.U[j].flipview(k)
+        U_i = state.U[i].flipview(k)
+        w_i = state.vor[i].flipview(k)
+        w_j = state.vor[j].flipview(k)
+        #print(np.shape(u_k))
+        #print(np.shape(w_i))
+        #print(np.shape(U_j))
+        fortran.vortex_force_calc(U_j, U_i, w_j, w_i, u_k, order)
 
 
 if __name__ == '__main__':
-
     import variables as var
     import vorticity
+    import topology as topo
     import matplotlib.pyplot as plt
     import numpy as np
 
-    #Verify that the cross product works
+    procs = [1, 1, 1]
+    topo.topology = "closed"
+    myrank = 0
 
-    nx = 40
-    ny = 50
-    nz = 60
-    nh = 2
+    loc = topo.rank2loc(myrank, procs)
+    neighbours = topo.get_neighbours(loc, procs)
 
-    param = {'nx': nx, 'ny': ny, 'nz': nz, 'nh': nh}
+    nx = 16
+    ny = 32
+    nz = 64
+
+    param = {'nx': nx, 'ny': ny, 'nz': nz, 'nh': 2, 'neighbours' : neighbours}
     state = var.get_state(param)
 
-    Ui = state.U['i'].view()
-    Uj = state.U['j'].view()
-    Uk = state.U['k'].view()
+    Ui = state.U['i'].view('k')
+    Uj = state.U['j'].view('k')
+    Uk = state.U['k'].view('k')
 
-    Uk[:,:,:] = 1
+    Curr = 4
+    Uk[...] = Curr
 
-    wi = state.vor['i'].view()
-    wj = state.vor['j'].view()
-    wk = state.vor['k'].view()
+    wi = state.vor['i'].view('k')
+    wj = state.vor['j'].view('k')
+    wk = state.vor['k'].view('k')
 
-    wj[:,:,:] = 2
+    x = np.linspace(0,nx,nx)
+    y = np.linspace(0,ny,ny)
+
+    X, Y = np.meshgrid(x,y)
+    x0 = nx//2
+    y0 = ny//2
+
+    x1 = nx//2 + 5
+    y1 = ny//2 + 5
+
+    X = np.repeat(X[:,:,np.newaxis], nz, axis = 2)
+    Y = np.repeat(Y[:,:,np.newaxis], nz, axis = 2)
+
+    Omega = 2
+    wj[...] = Omega * np.exp(-((X-x0)**2/20 + (Y-y0)**2/20))
 
     ds = state.duplicate_prognostic_variables()
 
-    vortex_force(state, ds, 5)
+    vortex_force(state, ds, 1)
 
     ui = ds.u['i'].view()
     uj = ds.u['j'].view()
     uk = ds.u['k'].view()
 
-
     plt.figure()
     plt.title('ui')
-    plt.pcolor(ui[10,:,:])
-    plt.colorbar()
-
-    print(ui[10,:,:])
+    cs = plt.pcolor(ui[:,:,10])
+    #plt.contour(wj[:,:,10], 5, colors = 'k')
+    plt.colorbar(cs)
 
     plt.figure()
     plt.title('uj')
-    plt.pcolor(uj[10,:,:])
-    plt.colorbar()
+    cs = plt.pcolor(uj[:,:,10])
+    #plt.contour(wj[:,:,10], 5, colors = 'k')
+    plt.colorbar(cs)
 
     plt.figure()
-    plt.title('uk')
-    plt.pcolor(uk[10,:,:])
+    plt.title('ui')
+    cs = plt.pcolor(uk[:,:,10])
+    #plt.contour(wj[:,:,10], 5, colors = 'k')
+    plt.colorbar(cs)
+
+    plt.figure()
+    plt.title('wj')
+    plt.pcolor(wj[:,:,10])
     plt.colorbar()
+
+
+    plt.figure()
+    plt.plot(ui[:,8,10], label = 'vf_i')
+    plt.plot(wj[:,8,10], label = 'w_j')
+    plt.legend()
 
     plt.show()

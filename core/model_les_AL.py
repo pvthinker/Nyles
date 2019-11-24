@@ -32,7 +32,8 @@ class LES(object):
         self.timescheme = ts.Timescheme(param, self.state)
         self.timescheme.set(self.rhs)
         self.traclist = ['b']
-        self.orderB = 1
+        self.orderA = param["orderA"]
+        self.orderVF = param["orderVF"]
         self.mg = mg.Multigrid(param)
 
     def rhs(self, state, t, dstate):
@@ -42,10 +43,10 @@ class LES(object):
         kinetic.kinenergy(state)
 
         # buoyancy
-        tracer.rhstrac(state, dstate, self.traclist, self.orderB)
+        tracer.rhstrac(state, dstate, self.traclist, self.orderA)
 
         # vortex force
-        vortf.vortex_force(state, dstate, 5)  # get order from param
+        vortf.vortex_force(state, dstate, self.orderVF)
         # bernoulli
         bern.bernoulli(state, dstate)
         # dU from du when enter

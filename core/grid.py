@@ -77,19 +77,19 @@ class Grid(object):
         x_u = self.x_vel["i"].view("i")
         y_u = self.y_vel["i"].view("i")
         z_u = self.z_vel["i"].view("i")
-        z_u, y_u, x_u = np.meshgrid(
+        z_u[:,:,:], y_u[:,:,:], x_u[:,:,:] = np.meshgrid(
             self.z_u_1D, self.y_u_1D, self.x_u_1D, indexing="ij"
         )
         x_v = self.x_vel["j"].view("i")
         y_v = self.y_vel["j"].view("i")
         z_v = self.z_vel["j"].view("i")
-        z_v, y_v, x_v = np.meshgrid(
+        z_v[:,:,:], y_v[:,:,:], x_v[:,:,:] = np.meshgrid(
             self.z_v_1D, self.y_v_1D, self.x_v_1D, indexing="ij"
         )
         x_w = self.x_vel["k"].view("i")
         y_w = self.y_vel["k"].view("i")
         z_w = self.z_vel["k"].view("i")
-        z_w, y_w, x_w = np.meshgrid(
+        z_w[:,:,:], y_w[:,:,:], x_w[:,:,:] = np.meshgrid(
             self.z_w_1D, self.y_w_1D, self.x_w_1D, indexing="ij"
         )
 
@@ -111,42 +111,82 @@ class Grid(object):
         x_vor_i = self.x_vor["i"].view("i")
         y_vor_i = self.y_vor["i"].view("i")
         z_vor_i = self.z_vor["i"].view("i")
-        z_vor_i, y_vor_i, x_vor_i = np.meshgrid(
+        z_vor_i[:,:,:], y_vor_i[:,:,:], x_vor_i[:,:,:] = np.meshgrid(
             self.z_vor_i_1D, self.y_vor_i_1D, self.x_vor_i_1D, indexing="ij"
         )
         x_vor_j = self.x_vor["j"].view("i")
         y_vor_j = self.y_vor["j"].view("i")
         z_vor_j = self.z_vor["j"].view("i")
-        z_vor_j, y_vor_j, x_vor_j = np.meshgrid(
+        z_vor_j[:,:,:], y_vor_j[:,:,:], x_vor_j[:,:,:] = np.meshgrid(
             self.z_vor_j_1D, self.y_vor_j_1D, self.x_vor_j_1D, indexing="ij"
         )
         x_vor_k = self.x_vor["k"].view("i")
         y_vor_k = self.y_vor["k"].view("i")
         z_vor_k = self.z_vor["k"].view("i")
-        z_vor_k, y_vor_k, x_vor_k = np.meshgrid(
+        z_vor_k[:,:,:], y_vor_k[:,:,:], x_vor_k[:,:,:] = np.meshgrid(
             self.z_vor_k_1D, self.y_vor_k_1D, self.x_vor_k_1D, indexing="ij"
         )
 
 
 if __name__ == "__main__":
-    import topology as topo
-
-    procs = [4, 2, 1]
-    topo.topology = "closed"
-    myrank = 3
-
-    loc = topo.rank2loc(myrank, procs)
-    neighbours = topo.get_neighbours(loc, procs)
-
     param = {
-        "Lx": 50,
-        "Ly": 60,
+        "Lx": 20,
+        "Ly": 15,
         "Lz": 10,
-        "nx": 5,
-        "ny": 4,
-        "nz": 3,
-        "nh": 2,
-        "neighbours": neighbours,
+        "nx": 20,
+        "ny": 15,
+        "nz": 10,
+        "nh": 3,
+        "neighbours": {},
     }
 
     grid = Grid(param)
+
+    from matplotlib import pyplot as plt
+
+    fig, ((axl1, axr1), (axl2, axr2), (axl3, axr3)) = plt.subplots(
+        nrows=3, ncols=2, sharex=True, sharey=True, tight_layout=True
+    )
+    axl1.set_title("z at b-point")
+    axl1.set_xlabel("y")
+    axl1.set_ylabel("z")
+    axl1.imshow(
+        grid.z_b.view("i")[:,:,0], extent=[0, param["Ly"], 0, param["Lz"]],
+        origin="lower",
+    )
+    axl2.set_title("y at b-point")
+    axl2.set_xlabel("y")
+    axl2.set_ylabel("z")
+    axl2.imshow(
+        grid.y_b.view("i")[:,:,0], extent=[0, param["Ly"], 0, param["Lz"]],
+        origin="lower",
+    )
+    axl3.set_title("x at b-point")
+    axl3.set_xlabel("x")
+    axl3.set_ylabel("z")
+    axl3.imshow(
+        grid.x_b.view("i")[:,0,:], extent=[0, param["Lx"], 0, param["Lz"]],
+        origin="lower",
+    )
+    axr1.set_title("z at b-point")
+    axr1.set_xlabel("x")
+    axr1.set_ylabel("z")
+    axr1.imshow(
+        grid.z_b.view("i")[:,0,:], extent=[0, param["Lx"], 0, param["Lz"]],
+        origin="lower",
+    )
+    axr2.set_title("y at b-point")
+    axr2.set_xlabel("x")
+    axr2.set_ylabel("y")
+    axr2.imshow(
+        grid.y_b.view("i")[0,:,:], extent=[0, param["Lx"], 0, param["Ly"]],
+        origin="lower",
+    )
+    axr3.set_title("x at b-point")
+    axr3.set_xlabel("x")
+    axr3.set_ylabel("y")
+    axr3.imshow(
+        grid.x_b.view("i")[0,:,:], extent=[0, param["Lx"], 0, param["Ly"]],
+        origin="lower",
+    )
+    plt.show()

@@ -18,7 +18,7 @@ subroutine gradke(ke, du, l, m, n)
   do k = 1, l
      do j = 1, m
         do i = 1, n-1
-           du(k,j,i) = du(k,j,i) + ke(k,j,i+1)-ke(k,j,i)
+           du(k,j,i) = du(k,j,i) -( ke(k,j,i+1)-ke(k,j,i))
         enddo
      enddo
   enddo
@@ -49,7 +49,7 @@ subroutine gradkeandb(ke, b, du, dz, l, m, n)
   do k = 1, l
      do j = 1, m
         do i = 1, n-1
-           du(k,j,i) = du(k,j,i) + ke(k,j,i+1)-ke(k,j,i) &
+           du(k,j,i) = du(k,j,i) - (ke(k,j,i+1)-ke(k,j,i)) &
                 + 0.5*(b(k,j,i+1)+b(k,j,i))
         enddo
      enddo

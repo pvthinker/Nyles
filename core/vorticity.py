@@ -8,10 +8,10 @@ def vorticity(state):
     """
     compute the vorticity
 
-    omega_k = delta_i[u_] - delta_j[u_i]
+    omega_k = delta_i[u_j] - delta_j[u_i]
 
-    direction i should be the first one,
-    imposing to view arrays in the j direction
+    direction 'k' should be the first one,
+    flipview('k') does that
 
     TODO:
        add the Coriolis term

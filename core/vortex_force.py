@@ -54,18 +54,18 @@ def vortex_force(state, rhs, order):
 
 
 
-    for i, j, k in ["ijk","jki","kij"]:
+    for k, j, i in ["kji", "ikj", "jik"]:
 
         #Using the convention of taking the inner index as the index of the upwinding of vorticity
-        u_i = rhs.u[i].view(k)
+        u_k = rhs.u[k].flipview(k)
 
-        U_k = state.U[k].view(k)
-        w_j = state.vor[j].view(k)
-        fortran.vortex_force_calc(U_k, w_j, u_i, +1, order)
+        U_j = state.U[j].flipview(k)
+        w_i = state.vor[i].flipview(k)
+        fortran.vortex_force_calc(U_j, w_i, u_k, +1, order)
 
-        U_j = state.U[j].view(k)
-        w_k = state.vor[k].view(k)
-        fortran.vortex_force_calc(U_j, w_k, u_i, -1, order)
+        U_i = state.U[i].flipview(k)
+        w_j = state.vor[j].flipview(k)
+        fortran.vortex_force_calc(U_i, w_j, u_k, -1, order)
 
 
 if __name__ == '__main__':

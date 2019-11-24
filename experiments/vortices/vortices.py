@@ -8,6 +8,7 @@ import numpy as np
 
 # Local Nyles imports
 from nyles import Nyles
+from parameters import UserParameters
 
 
 class ET(Enum):
@@ -31,51 +32,36 @@ class ET(Enum):
 # Select a type of experiment
 exp_type = ET.Vor_const
 
-# Set size and resolution of the domain
-nx = 64
-ny = 64
-nz = 64
-Lx = 1.0
-Ly = 1.0
-Lz = 1.0
+
+# Get the default parameters, then modify them as needed
+param = UserParameters()
+
+# Choose a name for the experiment
+param.IO["expname"] = "vortex_{}".format(exp_type)
+
+# Set the size of the domain
+param.model["Lx"] = 1.0
+param.model["Ly"] = 1.0
+param.model["Lz"] = 1.0
+
+# Choose the resolution of the domain
+param.discretization["global_nx"] = 32
+param.discretization["global_ny"] = 32
+param.discretization["global_nz"] = 32
+
+# Set the total length (in time) of the simulation
+param.time["tend"] = 20.0
 
 # Choose number of cores used
-npx = 1
-npy = 1
-npz = 1
+param.MPI["npx"] = 1
+param.MPI["npy"] = 1
+param.MPI["npz"] = 1
 
-# Set user-defined parameters
-param = {
-    # I/O options
-    "datadir": "~/data/Nyles",
-    "expname": "vortex_{}".format(exp_type),
-    "timestep_history": 1.0,
-    "variables_in_history": "all",
-    "mode": "overwrite",
-    # General model options
-    "modelname": "LES",
-    "geometry": "closed",
-    # Grid options
-    "Lx": Lx,
-    "Ly": Ly,
-    "Lz": Lz,
-    "nx": nx,
-    "ny": ny,
-    "nz": nz,
-    "nh": 0,
-    # Timestepping options
-    "timestepping": "LFAM3",
-    "tend": 10.0,
-    "auto_dt": True,
-    "cfl": 1.5,
-    "dt": 0.1,
-    # Spatial discretization options
-    "orderVF": 5,  # upwind-order for vortex-force term
-    "orderA": 5,  # upwind-order for advection term
-}
+# Set halo size
+param.MPI["nh"] = 3
 
 
-# Initialize Nyles with the pre-defined parameters
+# Initialize Nyles
 nyles = Nyles(param)
 model = nyles.model
 grid = nyles.grid
@@ -98,19 +84,19 @@ z_wk = grid.z_vor["k"].view("i")
 
 ### Set the initial state of the simulation
 ## Define the radius of the vortices
-R_wk = min([Lx, Ly]) / 4
-R_wi = min([Ly, Lz]) / 4
+R_wk = min([grid.Lx, grid.Ly]) / 4
+R_wi = min([grid.Ly, grid.Lz]) / 4
 ## Define the radial coordinate r of polar coordinates (r, phi) = (x, y)
 # 1) around the center (Lx/2, Ly/2)
-r_wk = np.sqrt((x_wk-Lx/2)**2 + (y_wk-Ly/2)**2)
+r_wk = np.sqrt((x_wk-grid.Lx/2)**2 + (y_wk-grid.Ly/2)**2)
 # 2) shifted to the right by 1/4 of the domain length
-r_right_wk = np.sqrt((x_wk-3*Lx/4)**2 + (y_wk-Ly/2)**2)
+r_right_wk = np.sqrt((x_wk-3*grid.Lx/4)**2 + (y_wk-grid.Ly/2)**2)
 # 3) shifted to the left by 1/4 of the domain length
-r_left_wk = np.sqrt((x_wk-Lx/4)**2 + (y_wk-Ly/2)**2)
+r_left_wk = np.sqrt((x_wk-grid.Lx/4)**2 + (y_wk-grid.Ly/2)**2)
 ## Define vertical polar coordinates (r, phi) = (y, z)
-r_wi = np.sqrt((y_wi-Ly/2)**2 + (z_wi-Lz/2)**2)
-r_up_wi = np.sqrt((y_wi-Ly/2)**2 + (z_wi-3*Lz/4)**2)
-r_down_wi = np.sqrt((y_wi-Ly/2)**2 + (z_wi-Lz/4)**2)
+r_wi = np.sqrt((y_wi-grid.Ly/2)**2 + (z_wi-grid.Lz/2)**2)
+r_up_wi = np.sqrt((y_wi-grid.Ly/2)**2 + (z_wi-3*grid.Lz/4)**2)
+r_down_wi = np.sqrt((y_wi-grid.Ly/2)**2 + (z_wi-grid.Lz/4)**2)
 ## Define the initial vorticity field
 if exp_type == ET.Vor_const:
     wk[...] = 1

@@ -7,6 +7,7 @@ import model_advection as model_adv
 import variables
 import grid
 import nylesIO
+from timing import timing
 
 
 class Nyles(object) :
@@ -16,23 +17,48 @@ class Nyles(object) :
         - self.model
         - self.IO
         - self.tend
-        - self.auto_dt: boolean
-        - self.cfl
+        - self.auto_dt
         - self.dt0
+        - self.cfl
+        - self.dt_max
 
     Methods :
         *private :
-            - initiate(param) : loads the desired model and initiates the IO
-            defines tend and cfl from the param
+            - initiate(param): loads the desired model and copies the
+            time variables from param
             - compute_dt(): calculate the timestep
         *public :
             - run() : main loop. Iterates the model forward and saves the state
             in the history file
     """
     def __init__(self, param):
-        self.grid = grid.Grid(param) #loads the grid
-        self.IO = nylesIO.NylesIO(param) #loads the IO
-        self.initiate(param) #initiates the model and needed variables
+        param = param.view_parameters()
+
+        # Add parameters that are automatically set
+        param["nx"] = param["global_nx"] // param["npx"]
+        param["ny"] = param["global_ny"] // param["npy"]
+        param["nz"] = param["global_nz"] // param["npz"]
+        # TODO: make the following general
+        # for reference (taken from an experiment file; remove when done):
+        # import topology as topo
+        # topo.topology = 'closed'
+        # procs = [1, 1, 1]
+        # myrank = 0
+        # loc = topo.rank2loc(myrank, procs)
+        # neighbours = topo.get_neighbours(loc, procs)
+        param.update({
+            "procs": [1, 1, 1], "neighbours": {},
+            "topology": "closed",  # is this always the same as param["geometry"]?
+            "npre": 3, "npost": 3, "omega": 0.8, "ndeepest": 20, "maxite": 20,
+            "tol": 1e-6,
+        })
+
+        # Load the grid and the IO
+        self.grid = grid.Grid(param)
+        self.IO = nylesIO.NylesIO(param)
+
+        # Initiate the model and needed variables
+        self.initiate(param)
 
     def initiate(self, param):
         if param['modelname'] == 'LES' :
@@ -41,9 +67,10 @@ class Nyles(object) :
             self.model = model_adv.Advection(param)
 
         self.tend = param['tend']
-        self.auto_dt = bool(param['auto_dt'])  # enforce boolean type
-        self.cfl = param['cfl']
+        self.auto_dt = param['auto_dt']
         self.dt0 = param['dt']
+        self.cfl = param['cfl']
+        self.dt_max = param['dt_max']
 
     def run(self):
         t = 0.0
@@ -63,17 +90,18 @@ class Nyles(object) :
 
         self.IO.finalize(self.model.state, t, n)
 
+    @timing
     def compute_dt(self):
         """Calculate timestep dt from contravariant velocity U and cfl.
 
         The fixed value self.dt0 is returned if and only if self.auto_dt
-        is False or the velocity is zero everywhere (this is an
-        extremely rare case, but must be included to avoid division by
-        zero).  Otherwise, the timestep is calculated as
+        is False.  Otherwise, the timestep is calculated as
             dt = cfl / max(|U|) .
         Note that the "dx" is hidden in the contravariant velocity U,
         which has units of 1/T.  In the formula, |U| denotes the norm of
-        the contravariant velocity vector.
+        the contravariant velocity vector.  If the velocity is zero
+        everywhere, self.dt_max is returned.  Otherwise, the smaller
+        value of dt and dt_max is returned.
         """
         if self.auto_dt:
             # Get U, V, and W in the same orientation
@@ -98,64 +126,38 @@ class Nyles(object) :
             # because U_max is a numpy-float which throws a warning
             # instead of an error in case of division by zero.
             if U_max == 0.0:
-                return self.dt0
+                return self.dt_max
             else:
-                return self.cfl / U_max
+                dt = self.cfl / U_max
+                return min(dt, self.dt_max)
         else:
             return self.dt0
 
 
 if __name__ == "__main__":
-    import topology as topo
+    from parameters import UserParameters
 
-    procs = [1, 1, 1]
-    topo.topology = "closed"
-    myrank = 0
-    loc = topo.rank2loc(myrank, procs)
-    neighbours = topo.get_neighbours(loc, procs)
+    param = UserParameters()
 
-    param = {
-        # IO parameters
-        "datadir": "~/data/Nyles",
-        "expname": "test_exp",
-        "timestep_history": 1.0,
-        "variables_in_history": "all",
-        "mode": "overwrite",
-        # Grid parameters
-        "Lx": 1.0,
-        "Ly": 1.0,
-        "Lz": 1.0,
-        "nx": 32,
-        "ny": 32,
-        "nz": 16,
-        "nh": 0,
-        # Other parameters
-        "neighbours": neighbours,
-        "modelname": "LES",
-        "timestepping": "LFAM3",
-        "tend": 10.0,
-        "auto_dt": True,
-        "cfl": 1.0,
-        "dt": 0.2,
-    }
+    param.time["dt_max"] = 1.5
 
     nyles = Nyles(param)
     U = nyles.model.state.U["i"].view()
     V = nyles.model.state.U["j"].view()
     W = nyles.model.state.U["k"].view()
-    if param["auto_dt"]:
+    if param.time["auto_dt"]:
         print("Case 1: U = 0, V = 0, W = 0")
         print("    dt is", nyles.compute_dt())
-        print("should be", param["dt"])
+        print("should be", param.time["dt_max"])
         U += 1
         print("Case 2: U = 1, V = 0, W = 0")
         print("    dt is", nyles.compute_dt())
-        print("should be", param["cfl"] / np.sqrt(1))
+        print("should be", param.time["cfl"] / np.sqrt(1))
         V += 1
         print("Case 3: U = 1, V = 1, W = 0")
         print("    dt is", nyles.compute_dt())
-        print("should be", param["cfl"] / np.sqrt(2))
+        print("should be", param.time["cfl"] / np.sqrt(2))
         W += 1
         print("Case 4: U = 1, V = 1, W = 1")
         print("    dt is", nyles.compute_dt())
-        print("should be", param["cfl"] / np.sqrt(3))
+        print("should be", param.time["cfl"] / np.sqrt(3))

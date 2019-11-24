@@ -170,8 +170,6 @@ class NylesIO(object):
         # Create paths for the in- and output
         datadir = os.path.expanduser(param["datadir"])
         expname = param["expname"]
-        if "/" in expname:
-            raise ValueError('expname may not contain a slash: "/"')
         out_dir = os.path.join(datadir, expname)
         if "mode" not in param or param["mode"] == "overwrite":
             # Nothing to do, take the path as it is

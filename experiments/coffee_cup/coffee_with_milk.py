@@ -5,6 +5,7 @@ import numpy as np
 
 # Local Nyles imports
 from nyles import Nyles
+from parameters import UserParameters
 
 
 # Densities in kg m^-3
@@ -27,45 +28,25 @@ Lz = 10.0
 # Gravity acceleration in m/s²
 g = 9.81
 
-# Choose resolution
-nx = 8
-ny = 8
-nz = 16
-# Choose number of CPU cores used
-npx = 1
-npy = 1
-npz = 1
 
-# Set user-defined parameters
-param = {
-    # I/O options
-    "datadir": "~/data/Nyles",
-    "expname": "coffee_with_milk",
-    "timestep_history": 1.0,
-    "variables_in_history": ["b", "ke", "u"],
-    "mode": "count",
-    # General model options
-    "modelname": "LES",
-    "geometry": "closed",
-    # Domain options
-    "Lx": Lx,
-    "Ly": Ly,
-    "Lz": Lz,
-    # Grid options
-    "nx": nx,
-    "ny": ny,
-    "nz": nz,
-    "nh": 0,
-    # Timestepping options
-    "timestepping": "LFAM3",
-    "tend": 20.0,
-    "auto_dt": True,
-    "cfl": 1.5,
-    "dt": 0.1,
-    # Spatial discretization options
-    "orderVF": 5,  # upwind-order for vortex-force term
-    "orderA": 5,  # upwind-order for advection term
-}
+# Get the default parameters, then modify them as needed
+param = UserParameters()
+
+param.IO["expname"] = "coffee_with_milk"
+param.IO["variables_in_history"] = ["b", "ke", "u"]
+
+# Set total length of the simulation
+param.time["tend"] = 60.0  # 60 seconds, 1 minute
+
+# Set domain size
+param.model["Lx"] = Lx
+param.model["Ly"] = Ly
+param.model["Lz"] = Lz
+
+# Set resolution of the domain
+param.discretization["global_nx"] = 32
+param.discretization["global_ny"] = 32
+param.discretization["global_nz"] = 64
 
 
 # Initialize Nyles with the pre-defined parameters

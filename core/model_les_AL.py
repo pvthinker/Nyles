@@ -40,14 +40,14 @@ class LES(object):
     def rhs(self, state, t, dstate):
         # Diagnostic variables
         U_from_u(state, self.grid)
-        vort.vorticity(state)
-        kinetic.kinenergy(state, self.grid)
+        #vort.vorticity(state)
+        #kinetic.kinenergy(state, self.grid)
 
         # buoyancy
         tracer.rhstrac(state, dstate, self.grid, self.traclist, self.orderA)
 
         # vortex force
-        vortf.vortex_force(state, dstate, self.orderVF)
+        #vortf.vortex_force(state, dstate, self.orderVF)
         # bernoulli
         bern.bernoulli(state, dstate, self.grid)
         # dU from du when enter

@@ -16,3 +16,10 @@ These three cases should behave like the following three, which seem to work:
  - with timestepping = EF    and orderA = 1, the advection seems to work
  - with timestepping = LFAM3 and orderA = 3, the advection seems to work
  - with timestepping = LFAM3 and orderA = 5, the advection seems to work
+
+
+
+Observations AL :
+ - LFAM3 and orderA = 1 seems to work when cfl <= 0.6 (very diffusive but stable)
+ - EF and orderA = 5 stable for a limited time when cfl <= 0.5 (as expected from EF)
+ - EF and order1 = 3 stable for a limited time when cfl <= 0.6 (as expected from EF as well)

@@ -94,7 +94,7 @@
             "type": "float",
             "default": 1.0,
             "avail": "> 0.0",
-            "doc": "In the case of an automatic timestep, this is the coefficient that sets the timestep; it is usually on the order of 1.0, but can be reduced if the model is otherwise unstable, e.g., in situations dominated by waves"
+            "doc": "In the case of an automatic timestep, this is the coefficient that sets the timestep; it is usually on the order of 1.0; reduce it to have a more stable model, e.g., in situations dominated by waves; increase it to have a faster but coarser integration in time"
         },
         "dt_max": {
             "type": "float",

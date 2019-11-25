@@ -31,8 +31,13 @@ class Nyles(object) :
             - run() : main loop. Iterates the model forward and saves the state
             in the history file
     """
-    def __init__(self, param):
-        param = param.view_parameters()
+    def __init__(self, user_param):
+        # Check and get user parameters
+        user_param.check()
+        param = user_param.view_parameters()
+
+        # Load the IO; only the parameters modifiable by the user are saved
+        self.IO = nylesIO.NylesIO(param)
 
         # Add parameters that are automatically set
         param["nx"] = param["global_nx"] // param["npx"]
@@ -53,9 +58,8 @@ class Nyles(object) :
             "tol": 1e-6,
         })
 
-        # Load the grid and the IO
+        # Load the grid with the extended parameters
         self.grid = grid.Grid(param)
-        self.IO = nylesIO.NylesIO(param)
 
         # Initiate the model and needed variables
         self.initiate(param)

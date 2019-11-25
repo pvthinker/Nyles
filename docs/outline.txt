@@ -11,28 +11,25 @@
           trivial in Cartesian coordinates.
 
   - computation of the model r.h.s.
-        * our guidelines are:
-          data contiguity + maximize computational intensity
-
-### MR: what does "maximize computational intensity" mean?
+        * our guidelines are
+            data contiguity + maximize computational intensity,
+          i.e., maximal number of calculations for a single call of a
+          Fortran function
 
   - multigrid
 
   - parallelization
 
         * write things to be as general as possible:
-          subdomain partition can be anything (but power of 2)
-
-### MR: this is unclear! "anything but" means "anything apart from";
-        I think it should say "anything, but it must be a power of 2";
-        please clarify.
+          subdomain partition can be anything (but must be a power of 2)
 
         * halo fill: it should be flexible: fill only two faces,
           fill the 6 faces, fill the 6 faces and the 8 corners etc.
 
         * gather arrays and matrix A [for the multigrid]
 
-* for each subroutine we should systematically
+
+* For each subroutine we should systematically
 
   - write the docstring
 
@@ -42,47 +39,10 @@
 
         * of its interaction with other parts of the software
 
+  - use the tests before commiting changes
+
 
 * At this stage of the development, don't be afraid to rewrite things
   completely => e.g. the data structure is central and impacts a lot
   the way the rest of the code is written
-
-
-* More important things to address:
-
-  - n/a
-
-
-* Questions and minor things to address:
-
-  - MR: file core/mpi/halo.py: lines 157, 237 ("fill" of Halo_outerdim
-    and Halo): when an exception is raised, I think always 9999 will be
-    printed -> to be checked.
-
-
-* Necessary changes to the file file core/defaults.json
-
-  - MR: file core/defaults.json, line 19 ("doc" of "expname") contains
-    the statement "the history (2D snapshots)".  Should it be 3D?
-
-  - MR: file core/defaults.json, line 41 ("doc" of "order") says that
-    centered fluxes require diffusion.  Is that correct or a leftover
-    from fluid2d?
-
-  - MR: file core/defaults.json, line 129 ("geometry") should probably
-    be removed or maybe adopted (remove disc, add zperiodic?).
-
-  - MR: file core/defaults.json, line 141 ("isisland") should probably
-    be removed or adopted, since there is no streamfunction anymore.
-
-  - MR: file core/defaults.json, line 167 ("plotting_options") has to
-    be adopted.
-
-  - MR: file core/defaults.json, line 234 ("expdir"): are "expdir" and
-    "datadir" both needed?
-
-  - MR: file core/defaults.json, lines 276, 301, 306 ("hydroepsilon",
-    "ageostrophic", "bottom_torque") have probably no use in a 3D model
-    and should be removed.
-
 

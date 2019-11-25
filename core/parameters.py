@@ -7,11 +7,15 @@ class InextensibleDict(dict):
     """A dictionary that refuses adding new keys -- safe against common typos."""
     def __setitem__(self, key, item):
         if key not in self:
-            raise KeyError(
+            raise UserParameterError(
                 "not possible to add new key {!r} to the parameters."
                 .format(key)
             )
         dict.__setitem__(self, key, item)
+
+
+class UserParameterError(Exception):
+    """An error occured with the user-set parameters."""
 
 
 class DefaultsFileError(Exception):
@@ -38,9 +42,6 @@ class UserParameters(object):
      - possible_values
      - view_parameters
      - check
-
-    Methods mostly for private access:
-     - check_defaults
     """
 
     DEFAULTS_FILE = "defaults.json"
@@ -129,7 +130,7 @@ class UserParameters(object):
 
     def check(self):
         """Raise an exception if the value of any parameter is wrong."""
-        # List of Values that are recognized as powers of two.  Rationale:
+        # List of values that are recognized as powers of two.  Rationale:
         # In 2019, it seems ridicoulous to use 2^19 for any parameter in the
         # model, so this number raises a "too large" error.  Assuming that
         # this limit doubles every year (which is faster growth than
@@ -140,49 +141,49 @@ class UserParameters(object):
             # Check type of value
             param_type = self.types[parameter]
             if not isinstance(value, self.TYPES[param_type]):
-                raise ValueError(
-                    "parameter {} is of type {} but should be {}"
-                    .format(parameter, type(value), param_type)
+                raise UserParameterError(
+                    "parameter {} must be a {}, not {}"
+                    .format(parameter, param_type, type(value))
                 )
             # Check if value is among the options
             options = self.options[parameter]
             if isinstance(options, list):
                 if not value in options:
-                    raise ValueError(
-                        "parameter {} is {!r} but should be one of {}"
-                        .format(parameter, value, options)
+                    raise UserParameterError(
+                        "parameter {} must be one of {}, not {!r}"
+                        .format(parameter, options, value)
                     )
             elif options == "> 0.0":
                 if not value > 0.0:
-                    raise ValueError(
+                    raise UserParameterError(
                         "parameter {} must be positive".format(parameter)
                     )
             elif options == ">= 0.0" or options == ">= 0":
                 if not value >= 0.0:
-                    raise ValueError(
+                    raise UserParameterError(
                         "parameter {} must be non-negative".format(parameter)
                     )
             elif options == "2^n":
                 if value not in POWERS_OF_2:
-                    if value > max(POWERS_OF_2):
-                        raise ValueError(
+                    if value < max(POWERS_OF_2):
+                        raise UserParameterError(
+                            "parameter {} must be a power of 2"
+                            .format(parameter)
+                        )
+                    else:
+                        raise UserParameterError(
                             "parameter {} is very large; if you are sure to "
                             "use it, extend the variable POWERS_OF_2 in this "
                             "class to include your value".format(parameter)
                         )
-                    else:
-                        raise ValueError(
-                            "parameter {} must be a power of 2"
-                            .format(parameter)
-                        )
             elif options == "any valid filename":
                 if "/" in value:
-                    raise ValueError(
+                    raise UserParameterError(
                         'parameter {} must not contain a "/"'.format(parameter)
                     )
             elif parameter == "variables_in_history":
                 if not isinstance(value, (list, tuple)) and value != "all":
-                    raise ValueError(
+                    raise UserParameterError(
                         'parameter {} must be a list or "all", not {!r}'
                         .format(parameter, value)
                     )
@@ -195,14 +196,16 @@ class UserParameters(object):
         # Check that every CPU has at least one grid point
         for x in "xyz":
             if self.MPI["np" + x] > self.discretization["global_n" + x]:
-                raise ValueError(
+                raise UserParameterError(
                     "parameter np{} cannot be larger than global_n{}"
                     .format(x, x)
                 )
 
     @classmethod
     def check_defaults(cls, defaults):
-        """Raise an exception if an error with the defaults are found."""
+        """Raise an exception if an error with the defaults is found.
+
+        This does not check if the given default value is valid."""
         # List of categories that are needed in the defaults
         CATEGORIES = ["model", "IO", "time", "discretization", "MPI"]
         # List of attributes that are needed for every parameter
@@ -246,17 +249,8 @@ class UserParameters(object):
                             "unknown attribute {} for parameter {}"
                             .format(attribute, parameter),
                         )
-                # Check parameter type is recognized and consistent
-                param_type = attributes["type"]
-                param_value = attributes["default"]
-                if param_type in cls.TYPES:
-                    if not isinstance(param_value, cls.TYPES[param_type]):
-                        raise DefaultsFileError(
-                            cls.DEFAULTS_FILE,
-                            "default value of parameter {} is not of specified"
-                            " type {}".format(parameter, param_type),
-                        )
-                else:
+                # Check parameter type is recognized
+                if attributes["type"] not in cls.TYPES:
                     raise DefaultsFileError(
                         cls.DEFAULTS_FILE,
                         "unknown type {} of parameter {}"
@@ -274,10 +268,10 @@ if __name__ == "__main__":
     param.IO["expname"] = "2nd_experiment"
     # Changing a parameter that does not exist
     try: param.IO["epxname"] = "3rd_experiment"  # intentional typo
-    except KeyError as e: print("KeyError:", e)
+    except UserParameterError as e: print("UserParameterError:", e)
     # Changing a parameter in the wrong set
     try: param.model["expname"] = "4th_experiment"
-    except KeyError as e: print("KeyError:", e)
+    except UserParameterError as e: print("UserParameterError:", e)
     print("-"*80)
 
     print("Model parameters:", param.model)
@@ -294,64 +288,79 @@ if __name__ == "__main__":
 
     param.check()
 
+    # Count the exceptions to make it easy to check if all were raised
+    i = 0
+
     # Some examples that create a failing check
+    i += 1
     param.model["geometry"] = "open"
     try: param.check()
-    except ValueError as e: print(" 1. ValueError:", e)
+    except UserParameterError as e: print("{:2d}. UserParameterError: {}".format(i, e))
     param.model["geometry"] = "closed"
 
+    i += 1
     param.model["Lx"] = -3
     try: param.check()
-    except ValueError as e: print(" 2. ValueError:", e)
+    except UserParameterError as e: print("{:2d}. UserParameterError: {}".format(i, e))
     param.model["Lx"] = 3
 
+    i += 1
     param.model["Ly"] = "5"
     try: param.check()
-    except ValueError as e: print(" 3. ValueError:", e)
+    except UserParameterError as e: print("{:2d}. UserParameterError: {}".format(i, e))
     param.model["Ly"] = 5
 
+    i += 1
     param.IO["expname"] = "foo/bar"
     try: param.check()
-    except ValueError as e: print(" 4. ValueError:", e)
+    except UserParameterError as e: print("{:2d}. UserParameterError: {}".format(i, e))
     param.IO["expname"] = "foo-bar"
 
+    i += 1
     param.IO["variables_in_history"] = "any"
     try: param.check()
-    except ValueError as e: print(" 5. ValueError:", e)
+    except UserParameterError as e: print("{:2d}. UserParameterError: {}".format(i, e))
     param.IO["variables_in_history"] = "all"
 
+    i += 1
     param.IO["timestep_history"] = -1.0
     try: param.check()
-    except ValueError as e: print(" 6. ValueError:", e)
+    except UserParameterError as e: print("{:2d}. UserParameterError: {}".format(i, e))
     param.IO["timestep_history"] = 0.0
 
+    i += 1
     param.time["cfl"] = 0
     try: param.check()
-    except ValueError as e: print(" 7. ValueError:", e)
+    except UserParameterError as e: print("{:2d}. UserParameterError: {}".format(i, e))
     param.time["cfl"] = 1
 
+    i += 1
     param.discretization["global_nx"] = 3
     try: param.check()
-    except ValueError as e: print(" 8. ValueError:", e)
+    except UserParameterError as e: print("{:2d}. UserParameterError: {}".format(i, e))
     param.discretization["global_nx"] = 2
 
+    i += 1
     param.discretization["global_ny"] = 2**1000
     try: param.check()
-    except ValueError as e: print(" 9. ValueError:", e)
+    except UserParameterError as e: print("{:2d}. UserParameterError: {}".format(i, e))
     param.discretization["global_ny"] = 2**10
 
+    i += 1
     param.discretization["global_nz"] = 1
     param.MPI["npz"] = 2
     try: param.check()
-    except ValueError as e: print("10. ValueError:", e)
+    except UserParameterError as e: print("{:2d}. UserParameterError: {}".format(i, e))
     param.MPI["npz"] = 1
 
+    i += 1
     param.MPI["npx"] = 1.5
     try: param.check()
-    except ValueError as e: print("11. ValueError:", e)
+    except UserParameterError as e: print("{:2d}. UserParameterError: {}".format(i, e))
     param.MPI["npx"] = 1
 
+    i += 1
     param.MPI["nh"] = -1
     try: param.check()
-    except ValueError as e: print("12. ValueError:", e)
+    except UserParameterError as e: print("{:2d}. UserParameterError: {}".format(i, e))
     param.MPI["nh"] = 1

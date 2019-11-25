@@ -123,11 +123,8 @@ class NylesIO(object):
             in the history file; use 0.0 to save every frame;
          - datadir: path to the data directory
          - expname: name of the experiment
-
-        The following key can be present in "param":
-         - mode: can be "overwrite" or "count" or "continue"; if the key
-            is not present, "overwrite" is used; "continue" is not yet
-            implemented
+         - mode: one out of ["overwrite", "count", "continue"];
+            "continue" is not yet implemented
 
         Every key-value-pair in "param" is saved in the history file.
         Values of type int, float or string are saved as they are.
@@ -142,14 +139,14 @@ class NylesIO(object):
         self.last_saved_frame = None
 
         # Create a copy of the experiment parameters to save them it in the history file
-        # TODO: simplify the next statement, if the implementation is settled
-        # on param being a dictionary or param being an object of a Param class.
-        self.experiment_parameters = param.copy() if isinstance(param, dict) else vars(param)
+        self.experiment_parameters = param.copy()
         # Convert experiment parameters to something that can be saved in a netCDF file
         for key, value in self.experiment_parameters.items():
             if isinstance(value, bool):
                 # Convert True and False to strings for saving.
-                # Caution: you cannot use bool("False") to convert them back to Boolean type!
+                # Caution: it is not possible to use bool() to convert
+                # the strings back to Boolean type, because
+                # bool("False") returns True
                 self.experiment_parameters[key] = str(value)
             elif isinstance(value, (int, float, str)):
                 # These types can be saved in the netCDF file directly.
@@ -171,7 +168,7 @@ class NylesIO(object):
         datadir = os.path.expanduser(param["datadir"])
         expname = param["expname"]
         out_dir = os.path.join(datadir, expname)
-        if "mode" not in param or param["mode"] == "overwrite":
+        if param["mode"] == "overwrite":
             # Nothing to do, take the path as it is
             pass
         elif param["mode"] == "count":
@@ -472,14 +469,7 @@ if __name__ == "__main__":
     import numpy as np
 
     from variables import get_state
-    import topology as topo
 
-    procs = [4, 2, 1]
-    topo.topology = 'closed'
-    myrank = 3
-
-    loc = topo.rank2loc(myrank, procs)
-    neighbours = topo.get_neighbours(loc, procs)
 
     param = {
         ### Parameters necessary for the IO class
@@ -489,19 +479,19 @@ if __name__ == "__main__":
         ## Choose between a list or "all" ("all" does not include "work")
         "variables_in_history": "all",
         # "variables_in_history": ["u", "b"],
-        ## Select one or zero of the following options
+        ## Select one of the following options
         "mode": "overwrite",
         # "mode": "count",
         # "mode": "continue",
         ### Parameters necessary for State and/or Grid
-        "Lx": 50,
-        "Ly": 60,
+        "Lx": 60,
+        "Ly": 50,
         "Lz": 10,
-        "nx": 5,
-        "ny": 4,
-        "nz": 3,
-        "nh": 0,  # TODO: try different values when halo is implemented
-        "neighbours": neighbours,
+        "nx": 6,
+        "ny": 5,
+        "nz": 4,
+        "nh": 3,
+        "neighbours": {},  # TODO: try with neighbours when halo-handling is implemented
         ### Parameters to test the storage of parameters in the history file
         "a boolean variable": True,
         "a 2nd boolean variable": False,

@@ -16,9 +16,9 @@ rho_milk = 1100  # at 5 °C (density of fresh water multiplied by 1.1)
 # from -1 to +1 and (0, 0) is the center of the cup
 x_milk, y_milk = 0, 0
 # Initial depth of the milk: 0 is the surface (no milk), 1 is the bottom
-z_milk = 0.5
+z_milk = 0.3
 # Initial extent of the milk: must be greater than zero
-r_milk = 0.2
+r_milk = 0.5
 
 # Size of coffee cup (in centimeter, makes a volume of 225 ml)
 Lx = 5.0
@@ -69,7 +69,7 @@ rho_0 = rho_coffee
 # Fill the cup with coffee
 b[...] = -g * rho_coffee/rho_0
 # Add milk
-b[z > Lz - Lz * z_milk * np.exp(r**2/r_milk**2)] = -g * rho_milk/rho_0
+b[z >= Lz - Lz * z_milk * np.exp(-r**2/r_milk**2)] = -g * rho_milk/rho_0
 
 # TODO: optionally add stirring
 

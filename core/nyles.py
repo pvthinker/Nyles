@@ -7,6 +7,7 @@ import model_advection as model_adv
 import variables
 import grid
 import nylesIO
+import plotting
 from timing import timing
 
 
@@ -76,6 +77,9 @@ class Nyles(object) :
         self.cfl = param['cfl']
         self.dt_max = param['dt_max']
 
+        # Load the plotting module
+        self.plotting = plotting.Plotting(param, self.model.state, self.grid)
+
     def run(self):
         t = 0.0
         n = 0
@@ -83,12 +87,23 @@ class Nyles(object) :
         print("Creating output file:", self.IO.hist_path)
         self.IO.init(self.model.state, self.grid, t, n)
 
+        # Open the plotting window and draw the initial state
+        self.plotting.init(t, n)
+        # Give the user some time to enjoy the first frame.
+        # The rest of the simulation won't get prettier,
+        # as long as we haven't fixed the numerics.
+        print("Resize the window to a suitable size,")
+        print("move the camera into a good angle,")
+        print("lean back in your seat and ...")
+        input("... press Enter to start! ")
+
         while True:
             dt = self.compute_dt()
             self.model.forward(t, dt)
             t += dt
             n += 1
             self.IO.do(self.model.state, t, n)
+            self.plotting.update(t, n)
             if t >= self.tend:
                 break
 

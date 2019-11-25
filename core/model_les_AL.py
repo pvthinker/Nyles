@@ -44,7 +44,7 @@ class LES(object):
         #kinetic.kinenergy(state, self.grid)
 
         # buoyancy
-        tracer.rhstrac(state, dstate, self.grid, self.traclist, self.orderA)
+        tracer.rhstrac(state, dstate, self.traclist, self.orderA)
 
         # vortex force
         #vortf.vortex_force(state, dstate, self.orderVF)

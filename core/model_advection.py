@@ -20,8 +20,7 @@ class Advection(object):
     contravariant velocity
 
     """
-    def __init__(self, param, grid):
-        self.grid = grid
+    def __init__(self, param):
         self.state = var.get_state(param)
         self.traclist = ['b']
         self.order = param['orderA']
@@ -32,13 +31,10 @@ class Advection(object):
         self.timescheme.forward(self.state, t, dt)
 
     def rhs(self, state, t, dstate):
-        tracer.rhstrac(state, dstate, self.grid, self.traclist, self.order)
+        tracer.rhstrac(state, dstate, self.traclist, self.order)
 
 
 if __name__ == '__main__':
-    from grid import Grid
-
-
     procs = [1, 1, 1]
     topo.topology = 'closed'
     myrank = 0
@@ -48,9 +44,11 @@ if __name__ == '__main__':
     neighbours = topo.get_neighbours(loc, procs)
 
     nz, ny, nx = 32, 32, 128
+    Lx, Ly, Lz = 1.0, 1.0, 1.0
+    dx, dy, dz = Lx/nx, Ly/ny, Lz/nz
     param = {
         'nx': nx, 'ny': ny, 'nz': nz, 'nh': nh,
-        'Lx': 1.0, 'Ly': 1.0, 'Lz': 1.0,
+        'Lx': Lx, 'Ly': Ly, 'Lz': Lz,
         'neighbours': neighbours,
         # Choose a timestepping method
         'timestepping': 'LFAM3',
@@ -61,21 +59,15 @@ if __name__ == '__main__':
         #'orderA': 1,
     }
 
-    grid = Grid(param)
-
-    model = Advection(param, grid)
+    model = Advection(param)
 
     # set up a uniform velocity along i
     # It does not enforce the no-flow BC,
     # but who cares as long as we don't
     # integrate too long
+    U0 = 1.0
     Ui = model.state.U['i'].view()
-    Ui[:, :, :] = 1.
-
-    # minimalist grid (dx should be equal to 1 to be consistent
-    # with the hard-coded dx in tracer.py)
-    dx = 1.
-    Lx = nx*dx
+    Ui[...] = U0
 
     # set up a gaussian 'b' along i
     b = model.state.b.view()
@@ -85,8 +77,8 @@ if __name__ == '__main__':
 
     plt.figure()
     t = 0.
-    cfl = 0.85
-    dt = cfl*dx
+    cfl = 0.5
+    dt = cfl * U0
     for kt in range(41):
         model.forward(t, dt)
         t += dt

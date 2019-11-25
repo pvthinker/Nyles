@@ -1,7 +1,7 @@
 !----------------------------------------
-subroutine upwind(trac, u, dtrac, vol, order, iflag, l, m, n)
+subroutine upwind(trac, u, dtrac, order, iflag, l, m, n)
   !
-  ! compute dtrac = delta[ vol*trac*u ]
+  ! compute dtrac = delta[ trac*u ]
   ! where delta[ ] is the finite difference in the 'u' direction
   ! the 'u' direction is the third entry of the 3D array
   ! trac is upwinded at U point
@@ -9,7 +9,6 @@ subroutine upwind(trac, u, dtrac, vol, order, iflag, l, m, n)
   implicit none
 
   integer, intent(in):: order, iflag, l, m, n
-  real*8 :: vol
   real*8, dimension(l, m, n), intent(in) :: trac, u
   real*8, dimension(l, m, n), intent(inout) :: dtrac
 
@@ -64,11 +63,11 @@ subroutine upwind(trac, u, dtrac, vol, order, iflag, l, m, n)
               qm = 0.
            endif
 
-           fx = vol*(up*qp + um*qm)
+           fx = up*qp + um*qm
            if (iflag.eq.1) then ! overwrite rhs
-              dtrac(k, j, i) = (fxm - fx)/vol
+              dtrac(k, j, i) = fxm - fx
            else
-              dtrac(k, j, i) = dtrac(k, j, i) + (fxm - fx)/vol
+              dtrac(k, j, i) = dtrac(k, j, i) + fxm - fx
            endif
            fxm = fx
         enddo

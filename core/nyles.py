@@ -66,9 +66,9 @@ class Nyles(object) :
 
     def initiate(self, param):
         if param['modelname'] == 'LES' :
-            self.model = model_LES.LES(param)
-        elif param['modelname'] == 'adv' :
-            self.model = model_adv.Advection(param)
+            self.model = model_LES.LES(param, self.grid)
+        elif param['modelname'] == 'advection':
+            self.model = model_adv.Advection(param, self.grid)
 
         self.tend = param['tend']
         self.auto_dt = param['auto_dt']

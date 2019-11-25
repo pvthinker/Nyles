@@ -35,7 +35,23 @@ class Grid(object):
         self.idy = 1 / self.dy
         self.idz = 1 / self.dz
 
+        self.idx2 = 1 / self.dx**2
+        self.idy2 = 1 / self.dy**2
+        self.idz2 = 1 / self.dz**2
+
         self.vol = self.dx * self.dy * self.dz
+
+        # Provided for convenience
+        self.ids2 = {
+            "i": self.idx2,
+            "j": self.idy2,
+            "k": self.idz2,
+        }
+        self.vol_per_ds2 = {
+            "i": self.vol / self.dx2,
+            "j": self.vol / self.dy2,
+            "k": self.vol / self.dz2,
+        }
 
         # Define coordinates at buoyancy-point (cell centers)
         self.x_b = Scalar(param, "x at cell centers", "x_b", "m")

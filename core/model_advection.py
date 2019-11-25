@@ -20,10 +20,11 @@ class Advection(object):
     contravariant velocity
 
     """
-    def __init__(self, param):
+    def __init__(self, param, grid):
+        self.grid = grid
         self.state = var.get_state(param)
         self.traclist = ['b']
-        self.order = 5 #TODO : get it from params
+        self.order = param['orderA']
         self.timescheme = ts.Timescheme(param, self.state)
         self.timescheme.set(self.rhs)
 
@@ -31,10 +32,13 @@ class Advection(object):
         self.timescheme.forward(self.state, t, dt)
 
     def rhs(self, state, t, dstate):
-        tracer.rhstrac(state, dstate, self.traclist, self.order)
+        tracer.rhstrac(state, dstate, self.grid, self.traclist, self.order)
 
 
 if __name__ == '__main__':
+    from grid import Grid
+
+
     procs = [1, 1, 1]
     topo.topology = 'closed'
     myrank = 0
@@ -46,13 +50,20 @@ if __name__ == '__main__':
     nz, ny, nx = 32, 32, 128
     param = {
         'nx': nx, 'ny': ny, 'nz': nz, 'nh': nh,
+        'Lx': 1.0, 'Ly': 1.0, 'Lz': 1.0,
+        'neighbours': neighbours,
+        # Choose a timestepping method
         'timestepping': 'LFAM3',
-        'neighbours': neighbours
-        # For test purposes, you can also try the following:
-        # 'timestepping': 'EF',
+        #'timestepping': 'EF',
+        # Set the order of the upwind scheme
+        'orderA': 5,
+        #'orderA': 3,
+        #'orderA': 1,
     }
 
-    model = Advection(param)
+    grid = Grid(param)
+
+    model = Advection(param, grid)
 
     # set up a uniform velocity along i
     # It does not enforce the no-flow BC,

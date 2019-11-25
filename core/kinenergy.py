@@ -4,36 +4,36 @@ from timing import timing
 
 
 @timing
-def kinenergy(state):
-    """
-    compute the kinetic energy function from the model state
+def kinenergy(state, grid):
+    """Compute kinetic energy from the model state.
 
+    In z-coordinates, the kinetic energy is
+      ke = 1/2 * (u**2 / dx**2 + v**2 / dy**2 + w**2 / dz**2).
     """
-    # loop over direction
     for direction in 'ijk':
-        # Get array of covariant velocity u
+        # Get array of covariant velocity
         u = state.u[direction].view(direction)
-        # In sigma-coordinates, use the contravariant velocity U
+        # In sigma-coordinates, use the contravariant velocity
         # U = state.U[direction].view(direction)
-
-        # Get array of kinetic energy ke
+        # Get array of kinetic energy
         ke = state.ke.view(direction)
-        # In z-coordinates, the kinetic energy is ke = u**2 / ds**2,
-        # where ds2 is the diagonal term of the inverse metric tensor
-        ds2 = 1.  # TODO: use dx**-2, dy**-2, dz**-2
-
+        # Get the metric term 1/dx**2 or 1/dy**2 or 1/dz**2
+        ids2 = grid.ids2[direction]
         if direction == 'i':
-            fortran.kin(u, u, ke, ds2, 1)  # overwrite ke
+            fortran.kin(u, u, ke, ids2, 1)  # overwrite ke
         else:
-            fortran.kin(u, u, ke, ds2, 0)  # add to ke
+            fortran.kin(u, u, ke, ids2, 0)  # add to ke
 
 
 # ----------------------------------------------------------------------
 if __name__ == '__main__':
 
-    import topology as topo
     import matplotlib.pyplot as plt
     import numpy as np
+
+    import topology as topo
+    from grid import Grid
+
 
     procs = [1, 1, 1]
     topo.topology = "closed"
@@ -46,23 +46,36 @@ if __name__ == '__main__':
     ny = 128
     nz = 128
 
-    param = {'nx': nx, 'ny': ny, 'nz': nz, 'nh': 2, 'neighbours' : neighbours}
+    Lx = 1.0
+    Ly = 1.0
+    Lz = 1.0
+
+    param = {
+        'nx': nx, 'ny': ny, 'nz': nz,
+        'Lx': Lx, 'Ly': Ly, 'Lz': Lz,
+        'nh': 2, 'neighbours': neighbours,
+    }
     state = var.get_state(param)
+    grid = Grid(param)
 
-    u = state.u['i'].view('k')
-    v = state.u['j'].view('k')
-    w = state.u['k'].view('k')
+    u0 = 0.8
+    v0 = -4
+    w0 = 0.6
 
-    u[...] = 4
-    v[...] = 8
-    w[...] = 6
+    u = state.u['i'].view()
+    v = state.u['j'].view()
+    w = state.u['k'].view()
 
-    kinenergy(state)
+    u[...] = u0
+    v[...] = v0
+    w[...] = w0
+
+    kinenergy(state, grid)
 
     ke = state.ke.view('k')
 
-    print(np.max(ke))
-    print("should be : ", np.max(u)**2/2 + np.max(v)**2/2 + np.max(w)**2/2)
+    print("max value:", np.max(ke))
+    print("should be:", 1/2 * (u0**2/(Lx/nx)**2 + v0**2/(Ly/ny)**2 + w0**2/(Lz/nz)**2))
 
     plt.figure()
     plt.pcolor(ke[:,:,10])

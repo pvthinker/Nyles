@@ -29,6 +29,8 @@ between prognostic and diagnostic variables almost completely, except
 for p.
 """
 
+raise NotImplementedError("recent changes were not implemented here; use model_les_AL.")
+
 from variables import get_state
 from timescheme import Timescheme
 from vortex_force import vortex_force

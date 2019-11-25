@@ -364,3 +364,9 @@ if __name__ == "__main__":
     try: param.check()
     except UserParameterError as e: print("{:2d}. UserParameterError: {}".format(i, e))
     param.MPI["nh"] = 1
+
+    i += 1
+    param.discretization["orderA"] = 4
+    try: param.check()
+    except UserParameterError as e: print("{:2d}. UserParameterError: {}".format(i, e))
+    param.discretization["orderA"] = 3

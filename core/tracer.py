@@ -8,7 +8,7 @@ import variables as var
 from timing import timing
 
 @timing
-def rhstrac(state, rhs, traclist, order):
+def rhstrac(state, rhs, grid, traclist, order):
     """
 
     traclist = ['b']
@@ -30,14 +30,11 @@ def rhstrac(state, rhs, traclist, order):
         dtrac = rhs.get(tracname)
 
         for direction in 'ijk':
-            ds2 = 1.  # 1/dx**2
-            vol = 1.  # vol=dx*dy*dz
-            cff = vol/ds2  # for z coordinates
+            cff = grid.vol_per_ds2[direction]  # for z coordinates
 
-            component = state.U[direction]
+            velocity = state.U[direction].view(direction)
             field = trac.view(direction)
             dfield = dtrac.view(direction)
-            velocity = component.view(direction)
 
             if direction == 'i':
                 # overwrite rhs
@@ -50,8 +47,17 @@ def rhstrac(state, rhs, traclist, order):
 # ----------------------------------------------------------------------
 if __name__ == '__main__':
 
-    param = {'nx': 40, 'ny': 50, 'nz': 60, 'nh': 2}
+    from grid import Grid
+
+
+    param = {
+        'nx': 64, 'ny': 32, 'nz': 128,
+        'Lx': 1.0, 'Ly': 1.0, 'Lz': 1.0,
+        'nh': 2, 'neighbours': {},
+    }
     state = var.get_state(param)
+    grid = Grid(param)
+
     ds = state.duplicate_prognostic_variables()
 
-    rhstrac(state, ds, ['b'], 3)
+    rhstrac(state, ds, grid, ['b'], order=3)

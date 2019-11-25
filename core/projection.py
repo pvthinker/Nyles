@@ -5,21 +5,19 @@ Projection functions to enforce div U = 0
 """
 
 
-def compute_div(work, dstate):
-    # compute divergence
-    # cff is the inverse metric tensor
-    # TODO: handle this information more neatly
-    cff = {'i': 1., 'j': 1., 'k': 1.}
+def compute_div(work, dstate, grid):
+    """Compute divergence."""
     for count, i in enumerate('jki'):
         div = work.view(i)
         dU = dstate.u[i].view(i)
         if count == 0:
             div *= 0
-        div[:, :, 0] += dU[:, :, 0]*cff[i]
-        div[:, :, 1:] += (dU[:, :, 1:]-dU[:, :, :-1])*cff[i]
+        # grid.ids2 is the inverse metric tensor
+        div[:, :, 0] += dU[:, :, 0] * grid.ids2[i]
+        div[:, :, 1:] += (dU[:, :, 1:] - dU[:, :, :-1]) * grid.ids2[i]
 
 
-def calculate_p_from_dU(mg, state, dstate):
+def calculate_p_from_dU(mg, state, dstate, grid):
     """ 
     This solves the poisson
     equation with dU (dstate.U),
@@ -27,9 +25,11 @@ def calculate_p_from_dU(mg, state, dstate):
     (state.p) and updates dU
 
     mg is the multigrid object (with all data and methods)
+
+    grid is the Grid object with the metric tensor
     """
     div = state.work
-    compute_div(div, dstate)
+    compute_div(div, dstate, grid)
 
     # at the end of the loop div and dU are in the 'i' convention
     # this is mandatory because MG only works with the 'i' convention
@@ -62,11 +62,13 @@ def calculate_p_from_dU(mg, state, dstate):
 
 if __name__ == "__main__":
     import numpy as np
+    import matplotlib.pyplot as plt
+
     import topology as topo
     import mg
     import variables as var
     import vorticity as vort
-    import matplotlib.pyplot as plt
+    import grid as grid_module
 
     procs = [1, 1, 1]
     topo.topology = 'closed'
@@ -79,11 +81,14 @@ if __name__ == "__main__":
 
     param = {
         'nx': nx, 'ny': ny, 'nz': nz, 'nh': nh,
+        'Lx': 1.0, 'Ly': 1.0, 'Lz': 1.0,
         'timestepping': 'LFAM3',
         'neighbours': neighbours,
         'procs': procs, 'topology': topo.topology,
         'npre': 3, 'npost': 3, 'omega': 0.8, 'ndeepest': 20, 'maxite': 20, 'tol': 1e-12
     }
+
+    grid = grid_module.Grid(param)
 
     s = var.get_state(param)
     ds = s.duplicate_prognostic_variables()
@@ -102,12 +107,12 @@ if __name__ == "__main__":
     w[:-1, :, :] = 0
 
     print('and make it divergent-free')
-    calculate_p_from_dU(mg, s, ds)
+    calculate_p_from_dU(mg, s, ds, grid)
 
     p = s.p.view('i')
 
     div = s.work
-    compute_div(div, ds)
+    compute_div(div, ds, grid)
 
     u = ds.u['i'].view('i')
     v = ds.u['j'].view('i')

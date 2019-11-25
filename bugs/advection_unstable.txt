@@ -1,0 +1,18 @@
+Title: Advection model is unstable
+
+Found: 2019-11-25
+
+Reporter: Markus
+
+Module: model_advection.py
+
+Description:
+ - with timestepping = LFAM3 and orderA = 1, the advection is unstable and explodes quickly.
+ - with timestepping = EF and orderA = 5, the advection is unstable.  It stays on the order of unity but creates big oscillations
+ - with timestepping = EF and orderA = 3, the advection is unstable.  It stays on the order of unity but creates oscillations (though less than as with 5)
+
+Expected behaviour:
+These three cases should behave like the following three, which seem to work:
+ - with timestepping = EF    and orderA = 1, the advection seems to work
+ - with timestepping = LFAM3 and orderA = 3, the advection seems to work
+ - with timestepping = LFAM3 and orderA = 5, the advection seems to work

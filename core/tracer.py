@@ -1,30 +1,27 @@
-"""
+"""Module to compute -div( tracer * U ) for Cartesian coordinates."""
 
-module to compute -div( vol * trac )
-
-"""
 import fortran_upwind as fortran
 import variables as var
 from timing import timing
 
+
 @timing
 def rhstrac(state, rhs, traclist, order):
+    """Compute negative advection of a tracer in Cartesian coordinates.
+
+    Arguments:
+     - state: State instance containing the current value of the tracer
+       and the contravariant velocity
+     - rhs: State instance containing prognostic variables to save the
+       result within
+     - traclist: list of prognostic variables that are advected, e.g.,
+       traclist = ['b']
+     - order: can be 1, 3, or 5; sets the order of the upwind scheme
+       used to calculate the advection of the tracer
     """
 
-    traclist = ['b']
+    assert(order in {1, 3, 5})
 
-    or a longer list, each variable is present in both state and rhs,
-    i.e., each variable in traclist must be prognostic
-
-    """
-
-    upw_orders = {1,3,5}
-
-    assert(order in upw_orders)
-
-    # in sigma coordinates use the contravariant velocity state.U
-    # in z coordinates use the covariant velocity state.u
-    # and account for the metric term by tweaking the volume vol=>vol/ds**2
     for tracname in traclist:
         trac = state.get(tracname)  # trac is a 'Scalar' instance
         dtrac = rhs.get(tracname)

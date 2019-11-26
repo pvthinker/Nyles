@@ -1,25 +1,16 @@
-"""
+"""All the tools needed to advect a tracer with an imposed velocity field."""
 
-provides all the tools to advect a tracer with
-an imposed velocity field
-
-"""
-
-import numpy as np
 import variables as var
 import tracer as tracer
 import timescheme as ts
-from matplotlib import pyplot as plt
-import topology as topo
+
 
 class Advection(object):
-    """
-    Pure advection model
+    """Pure advection model.
 
-    It advects the buoyancy with a prescribed
-    contravariant velocity
-
+    It advects the buoyancy with a prescribed contravariant velocity.
     """
+
     def __init__(self, param):
         self.state = var.get_state(param)
         self.traclist = ['b']
@@ -35,6 +26,10 @@ class Advection(object):
 
 
 if __name__ == '__main__':
+    import numpy as np
+    from matplotlib import pyplot as plt
+    import topology as topo
+
     procs = [1, 1, 1]
     topo.topology = 'closed'
     myrank = 0
@@ -61,22 +56,23 @@ if __name__ == '__main__':
 
     model = Advection(param)
 
-    # set up a uniform velocity along i
-    # It does not enforce the no-flow BC,
-    # but who cares as long as we don't
-    # integrate too long
+    # Set up a uniform velocity along i.
+    # This does not enforce the no-flow BC,
+    # but that's not a problem if we don't
+    # integrate too long.
     U0 = 1.0
     Ui = model.state.U['i'].view()
     Ui[...] = U0
 
-    # set up a gaussian 'b' along i
-    b = model.state.b.view()
+    # Set up a Gaussian shape of the buoyancy along x
+    b = model.state.b.view('i')
     for i in range(nx):
         x = (i+0.5)*dx-0.2*Lx
         b[:, :, i] = np.exp(-0.5*(x/(dx*5))**2)
 
+    # Integrate the model forward in time and show the result
     plt.figure()
-    t = 0.
+    t = 0.0
     cfl = 0.5
     dt = cfl * U0
     for kt in range(41):

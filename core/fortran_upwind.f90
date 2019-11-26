@@ -1,10 +1,10 @@
 !----------------------------------------
 subroutine upwind(trac, u, dtrac, order, iflag, l, m, n)
   !
-  ! compute dtrac = delta[ trac*u ]
+  ! compute dtrac = -delta[ trac*u ]
   ! where delta[ ] is the finite difference in the 'u' direction
   ! the 'u' direction is the third entry of the 3D array
-  ! trac is upwinded at U point
+  ! trac is upwinded at u-point
   !
   implicit none
 

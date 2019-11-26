@@ -38,6 +38,11 @@ class LES(object):
         self.mg = mg.Multigrid(param)
 
     def rhs(self, state, t, dstate):
+        reset_state(dstate)
+        # TODO: if this function call stays here, the flag in rhstrac
+        # can be removed.  Other possibility: remove the reset_state and
+        # add the reset to the vortex_force term.
+
         # Diagnostic variables
         U_from_u(state, self.grid)
         #vort.vorticity(state)
@@ -60,9 +65,11 @@ class LES(object):
         self.timescheme.forward(self.state, t, dt)
         div = self.state.work
         projection.compute_div(div, self.state, self.grid)
-        print("Divergence:", np.max(np.abs(div.view())))
+        print("Maximum divergence: {:20.8f}".format(np.max(np.abs(div.view()))))
+        print("Mean of abs of div: {:20.8f}".format(np.mean(np.abs(div.view()))))
 
 
+@timing
 def U_from_u(state, grid):
     # copied from lotsofstuff
     # for now implements only cartesian
@@ -100,6 +107,18 @@ def U_from_u(state, grid):
                 syp(slope[j][:, :]*sxm(u[j][:, :]))
     else:
         raise ValueError("unknown metric")
+
+
+@timing
+def reset_state(state):
+    for var_name, var_type in state.toc.items():
+        if var_type == "scalar":
+            var = state.get(var_name).view()
+            var *= 0.0
+        else:
+            for i in "ijk":
+                var = state.get(var_name)[i].view()
+                var *= 0.0
 
 
 @timing

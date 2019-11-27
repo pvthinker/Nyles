@@ -97,8 +97,17 @@ class Nyles(object) :
         print("lean back in your seat and ...")
         input("... press Enter to start! ")
 
+        time_length = len(str(int(self.tend))) + 3
+        time_string = ", ".join([
+            "n = {:3d}",
+            "t = {:"+ str(time_length) + ".2f}/{:" + str(time_length) + ".2f}",
+            "dt = {:.4f}",
+        ])
+
         while True:
             dt = self.compute_dt()
+            print("-"*50)
+            print(time_string.format(n, t, self.tend, dt))
             self.model.forward(t, dt)
             t += dt
             n += 1
@@ -107,6 +116,7 @@ class Nyles(object) :
             if t >= self.tend:
                 break
 
+        print(time_string.format(n, t, self.tend, dt), "-- finished.")
         self.IO.finalize(self.model.state, t, n)
 
     @timing

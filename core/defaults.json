@@ -94,13 +94,13 @@
             "type": "float",
             "default": 1.0,
             "avail": "> 0.0",
-            "doc": "In the case of an automatic timestep, this is the coefficient that sets the timestep; it is usually on the order of 1.0; reduce it to have a more stable model, e.g., in situations dominated by waves; increase it to have a faster but coarser integration in time"
+            "doc": "In the case of an automatic timestep, this is the coefficient that sets the timestep; it is usually on the order of 1.0; reduce it to have a more stable integration in time, increase it to have a faster but coarser integration in time"
         },
         "dt_max": {
             "type": "float",
             "default": 1.0,
             "avail": "> 0.0",
-            "doc": "In the case of an automatic timestep, this is the maximal timestep; also used for the first iteration if the model is initialized with zero velocity"
+            "doc": "In the case of an automatic timestep, this is the maximal timestep (and the inital timestep if the initial velocity is zero); this parameter is important in situations where the dominant velocity is not the local velocity of the fluid parcels, e.g., in experiments with waves"
         }
     },
 

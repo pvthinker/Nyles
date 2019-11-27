@@ -83,6 +83,8 @@ class NylesIO(object):
         this value can be readout to display a status message
      - last_saved_frame: integration step of the last entry that was
         saved in the history file
+     - disk_limit: if the available disk space drops below this value,
+        display a warning
 
     Constants mostly for private access:
      - MAX_LENGTH_ATTRIBUTE: maximal number of characters for attributes
@@ -99,6 +101,7 @@ class NylesIO(object):
     Methods mostly for private access:
      - create_history_file
      - write_history_file
+     - get_disk_space_in_GB
     """
 
     MAX_LENGTH_ATTRIBUTE = 100
@@ -125,6 +128,8 @@ class NylesIO(object):
          - expname: name of the experiment
          - mode: one out of ["overwrite", "count", "continue"];
             "continue" is not yet implemented
+         - disk_space_warning: limit in GB at which to display a warning
+            about low disk space
 
         Every key-value-pair in "param" is saved in the history file.
         Values of type int, float or string are saved as they are.
@@ -132,6 +137,7 @@ class NylesIO(object):
         Every other variable is converted to a string and shortened to
         MAX_LENGTH_ATTRIBUTE characters if necessary.
         """
+        self.disk_limit = param["disk_space_warning"]
         self.hist_variables = param["variables_in_history"]  # this will be finalised on "init"
         self.dt_hist = param["timestep_history"]
         self.t_next_hist = 0.0
@@ -252,6 +258,13 @@ class NylesIO(object):
     def do(self, state, t, n):
         """Write the current state to the history file if it is time.
 
+        When new data was written to the disk, check if the available
+        disk space is still above the limit.  Otherwise display a
+        warning and pause until the user has decided to continue.
+
+        Return True if the user decides to stop the simulation after a
+        low-disk-space warning.  Return False if everything is fine.
+
         Arguments:
          - state: current state of the model run
          - t: current time of the model run
@@ -261,6 +274,35 @@ class NylesIO(object):
         if t >= self.t_next_hist:
             self.write_history_file(state, t, n)
             self.t_next_hist += self.dt_hist
+            # Check if the remaining disk space is sufficient
+            if self.disk_limit > 0:
+                try:
+                    free_space = self.get_disk_space_in_GB()
+                except Exception as e:
+                    print("Cannot determine available disk space.  Error message:", e)
+                    print("Disabling further disk space checks.")
+                    self.disk_limit = 0
+                else:
+                    if free_space < self.disk_limit:
+                        print("!"*50)
+                        print("Warning, low disk space:")
+                        print(
+                            "{:.2f} GB remaining in the output directory {}."
+                            .format(free_space, self.output_directory)
+                        )
+                        while True:
+                            answer = input(
+                                "Do you want to continue? [Y/n] "
+                            ).lower()
+                            if answer == "y" or answer == "":
+                                print("Ok, disabling further disk space checks.")
+                                self.disk_limit = 0
+                                break
+                            elif answer == "n":
+                                return True  # stop
+                            else:
+                                print('Unknown answer.  Please answer with "y" or "n".')
+        return False  # no problem
 
     def finalize(self, state, t, n):
         """Write the final state to the history file if necessary.
@@ -463,6 +505,14 @@ class NylesIO(object):
                 ncfile[v.nickname][self.n_hist] = state.get(v.nickname).view("i")
         self.n_hist += 1
         self.last_saved_frame = n
+
+    def get_disk_space_in_GB(self):
+        """Return the available disk space of the output directory in GB.
+
+        Explanation: https://stackoverflow.com/a/12327880/3661532
+        """
+        statvfs = os.statvfs(self.output_directory)
+        return statvfs.f_frsize * statvfs.f_bavail / 1e9
 
 
 if __name__ == "__main__":

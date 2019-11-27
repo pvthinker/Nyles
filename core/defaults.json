@@ -3,8 +3,8 @@
         "modelname": {
             "type": "str",
             "default": "LES",
-            "avail": ["advection", "LES"],
-            "doc": "Type of the model"
+            "avail": ["LES", "linear", "advection"],
+            "doc": "Type of the model: (1) LES (Large Eddy Simulation): full 3D incompressible Navier-Stokes equations (2) linear: 3D incompressible Navier-Stokes equations linearized around a stationary mean state, i.e., without the vortex-force and kinetic-energy terms, which are quadratic in velocity (3) advection: 3D advection equations applied on a passive tracer in a steady flow"
         },
         "geometry": {
             "type": "str",
@@ -62,6 +62,12 @@
             "default": 1.0,
             "avail": ">= 0.0",
             "doc": "Desired timestep for saving the model state in the history file; use 0.0 to save every iteration step of the model"
+        },
+        "disk_space_warning": {
+            "type": "float",
+            "default": 0.5,
+            "avail": ">= 0.0",
+            "doc": "Minimal amount of free disk space in GB; if the available space in the output directory (datadir) drops below this value, the simulation is paused and the user is asked whether they want to continue or stop the experiment; the user is only asked once per run; set this parameter to zero to disable checks"
         }
     },
 

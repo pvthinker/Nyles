@@ -11,9 +11,9 @@ nx = 64
 # It must be possible to set the following lengths to arbitrary values,
 # but currently, due to a problem in the handling of the metric in the
 # calculation of p, it is necessary to ensure dx = dy = dz = 1. #TODO
-Lz = nz * 1.0
-Ly = ny * 1.0
-Lx = nx * 1.0
+Lz = 1.0 * nz
+Ly = 1.0 * ny
+Lx = 1.0 * nx
 
 
 # Get the default parameters, then modify them as needed
@@ -26,10 +26,11 @@ param.model["Ly"] = Ly
 param.model["Lz"] = Lz
 
 param.IO["datadir"] = "~/data/Nyles"
-param.IO["expname"] = "linear_wave"
+param.IO["expname"] = "buoyancy_instab"
 param.IO["mode"] = "overwrite"
 param.IO["variables_in_history"] = "all"
 param.IO["timestep_history"] = 0.0  # 0.0 saves every frame
+param.IO["disk_space_warning"] = 0.5  # in GB
 
 param.time["timestepping"] = "LFAM3"
 param.time["tend"] = 40.0
@@ -59,7 +60,7 @@ x = nyles.grid.x_b.view('i') / Lx
 y = nyles.grid.y_b.view('i') / Ly
 z = nyles.grid.z_b.view('i') / Lz
 
-b[:] = 1 + np.tanh((np.cos(4*np.pi*(x+y))*0.05 + z - 0.5)/.02)
+b[:] = 1 - np.tanh((np.cos(2*np.pi*(x+y))*0.05 + z - 0.5)/0.02)
 
 # Another initial buoyancy profile (as in Fluid2D):
 # def sigmoid(x, delta):
@@ -69,9 +70,8 @@ b[:] = 1 + np.tanh((np.cos(4*np.pi*(x+y))*0.05 + z - 0.5)/.02)
 #     return sigmoid(z/nyles.grid.Lz, sigma/nyles.grid.Lz)
 # b[:] = (1 - stratif() - 0.5)
 
-# Optionally add noise
-# noise = np.random.uniform(size = np.shape(b))
-# noise = noise*2-1
-# b += noise*.1
+# Add noise, uniformly distributed from -1 to +1 (times a factor)
+noise = np.random.uniform(size = np.shape(b)) * 2 - 1
+b += noise * 0.1
 
 nyles.run()

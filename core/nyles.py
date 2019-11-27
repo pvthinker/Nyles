@@ -66,8 +66,10 @@ class Nyles(object) :
         self.initiate(param)
 
     def initiate(self, param):
-        if param['modelname'] == 'LES' :
+        if param['modelname'] == 'LES':
             self.model = model_LES.LES(param, self.grid)
+        elif param['modelname'] == 'linear':
+            self.model = model_LES.LES(param, self.grid, linear=True)
         elif param['modelname'] == 'advection':
             self.model = model_adv.Advection(param, self.grid)
 
@@ -111,13 +113,18 @@ class Nyles(object) :
             self.model.forward(t, dt)
             t += dt
             n += 1
-            self.IO.do(self.model.state, t, n)
+            stop = self.IO.do(self.model.state, t, n)
             self.plotting.update(t, n)
-            if t >= self.tend:
+            if t >= self.tend or stop:
                 break
+        print(time_string.format(n, t, self.tend, dt), end=" ")
+        if stop:
+            print("-- aborted.")
+        else:
+            print("-- finished.")
 
-        print(time_string.format(n, t, self.tend, dt), "-- finished.")
         self.IO.finalize(self.model.state, t, n)
+        print("Output written to:", self.IO.hist_path)
 
     @timing
     def compute_dt(self):

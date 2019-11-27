@@ -19,15 +19,13 @@ LES model
 At each step n, this model doesn't suppose that the velocity at step n-1 had 0 divergence.
 It follows the procedure from the Ferziger p.180
 
-To follow that, changes have been made to the calculate_p_from_dU subroutine, and should be tested
-when mg_idx is implemented
-
 """
 
 
 class LES(object):
 
-    def __init__(self, param, grid):
+    def __init__(self, param, grid, linear=False):
+        self.nonlinear = not linear
         self.grid = grid
         self.state = var.get_state(param)
         self.timescheme = ts.Timescheme(param, self.state)
@@ -45,20 +43,21 @@ class LES(object):
 
         # Diagnostic variables
         U_from_u(state, self.grid)
-        #vort.vorticity(state)
-        #kinetic.kinenergy(state, self.grid)
+        if self.nonlinear:
+            vort.vorticity(state)
+            kinetic.kinenergy(state, self.grid)
 
         # buoyancy
         tracer.rhstrac(state, dstate, self.traclist, self.orderA)
 
         # vortex force
-        #vortf.vortex_force(state, dstate, self.orderVF)
+        if self.nonlinear:
+            vortf.vortex_force(state, dstate, self.orderVF)
         # bernoulli
         bern.bernoulli(state, dstate, self.grid)
         # dU from du when enter
         # U_from_u(dstate)
         # pressure
-        #calculate_p_from_dU(self.mg, state, dstate)
         projection.calculate_p_from_dU(self.mg, state, dstate, self.grid)
 
     def forward(self, t, dt):
@@ -119,67 +118,6 @@ def reset_state(state):
             for i in "ijk":
                 var = state.get(var_name)[i].view()
                 var *= 0.0
-
-
-@timing
-def calculate_p_from_dU(multg, state, dstate):
-    raise NotImplementedError("metric terms are not implemented here; use projection module")
-
-    # This solves the poisson
-    # equation with dU (dstate.U),
-    # stores the result in p
-    # (state.p) and updates dU
-
-    # mg is the multigrid object (with all data and methods)
-
-    # compute divergence
-    # cff is the inverse metric tensor
-    # TODO: handle this information more neatly
-    cff = {'i': 1., 'j': 1., 'k': 1.}
-    for count, i in enumerate('jki'):
-        #div = state.work.view(i)
-        div = state.work.view(i)
-        div_u_p = state.work.view(i)
-
-        dU = dstate.u[i].view(i)*cff[i]
-        u_prev = state.u[i].view(i)
-        if count == 0:
-            div *= 0
-            div_u_p *= 0
-        div[:, :, 1:] += dU[:, :, 1:]-dU[:, :, :-1]
-        div_u_p[:, :, 1:] += u_prev[:, :, 1:]-u_prev[:, :, :-1]
-
-    dt = .01
-    RHS = div - div_u_p * 1 / dt
-
-    # at the end of the loop div and dU are in the 'i' convention
-    # this is mandatory because MG only works with the 'i' convention
-
-    # copy divergence into the multigrid RHS
-    # watch out, halo in MG is nh=1, it's wider for div
-    b = multg.grid[0].toarray('b')
-    x = multg.grid[0].toarray('x')
-
-    # this is triplet of slices than span the MG domain (inner+MG halo)
-    # typically mg_idx = (kidx, jidx, iidx)
-    # with kidx = slice(k0, k1) the slice in the k direction
-    # todo: implement that into state [easy once MG is back into the master branch]
-    mg_idx = state.work.mg_idx
-    b[:] = RHS[mg_idx]
-
-    # solve
-    multg.solve_directly()
-
-    # copy MG solution to pressure
-    p = state.p.view('i')
-    p[mg_idx] = x[:]
-
-    # correct du (the covariant component)
-    # now we start with the 'i' convention
-    for i in 'ijk':
-        p = state.p.view(i)
-        du = dstate.u[i].view(i)
-        du[:, :, :-1] -= p[:, :, 1:]-p[:, :, :-1]
 
 
 if __name__ == "__main__":

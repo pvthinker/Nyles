@@ -281,9 +281,8 @@ if __name__ == "__main__":
     print("MPI parameters:", param.MPI)
     print("-"*80)
 
-    print("Description of variables_in_history:",
-          param.help("variables_in_history"))
-    print("Available models:", param.possible_values("modelname"))
+    print("Possible values for modelname:", param.possible_values("modelname"))
+    print("Description of modelname:", param.help("modelname"))
     print("-"*80)
 
     param.check()

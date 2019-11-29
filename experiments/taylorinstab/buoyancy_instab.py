@@ -26,6 +26,7 @@ param.model["Ly"] = Ly
 param.model["Lz"] = Lz
 
 param.IO["datadir"] = "~/data/Nyles"
+<<<<<<< HEAD
 param.IO["expname"] = "buoyancy_instab"
 param.IO["mode"] = "overwrite"
 param.IO["variables_in_history"] = "all"
@@ -40,6 +41,21 @@ param.time["dt"] = 0.5
 # The following parameters are used if auto_dt is True
 param.time["cfl"] = 0.8
 param.time["dt_max"] = 0.5
+=======
+param.IO["expname"] = "taylor1"
+param.IO["mode"] = "overwrite"
+param.IO["variables_in_history"] = "all"
+param.IO["timestep_history"] = 0.1
+
+param.time["timestepping"] = "LFAM3"
+param.time["tend"] = 30.0
+param.time["auto_dt"] = False
+# parameter if auto_dt is False
+param.time["dt"] = 0.03
+# parameters if auto_dt is True
+param.time["cfl"] = 0.4
+param.time["dt_max"] = 1.0
+>>>>>>> Provides the first stable full nonlinear LES
 
 param.discretization["global_nx"] = nx
 param.discretization["global_ny"] = ny
@@ -60,7 +76,11 @@ x = nyles.grid.x_b.view('i') / Lx
 y = nyles.grid.y_b.view('i') / Ly
 z = nyles.grid.z_b.view('i') / Lz
 
+<<<<<<< HEAD
 b[:] = 1 - np.tanh((np.cos(2*np.pi*(x+y))*0.05 + z - 0.5)/0.02)
+=======
+b[:] = 15 - 5*np.tanh((np.cos(np.pi*x/Lx)*0.+z/Lz-0.5)/.05)
+>>>>>>> Provides the first stable full nonlinear LES
 
 # Another initial buoyancy profile (as in Fluid2D):
 # def sigmoid(x, delta):
@@ -71,7 +91,10 @@ b[:] = 1 - np.tanh((np.cos(2*np.pi*(x+y))*0.05 + z - 0.5)/0.02)
 # b[:] = (1 - stratif() - 0.5)
 
 # Add noise, uniformly distributed from -1 to +1 (times a factor)
-noise = np.random.uniform(size = np.shape(b)) * 2 - 1
-b += noise * 0.1
+np.random.seed(1)
+noise = np.random.uniform(size = np.shape(b))
+noise = noise*2-1
+
+b += noise*.01
 
 nyles.run()

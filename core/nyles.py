@@ -56,7 +56,7 @@ class Nyles(object) :
             "procs": [1, 1, 1], "neighbours": {},
             "topology": "closed",  # is this always the same as param["geometry"]?
             "npre": 3, "npost": 3, "omega": 0.8, "ndeepest": 20, "maxite": 20,
-            "tol": 1e-6,
+            "tol": 1e-5,
         })
 
         # Load the grid with the extended parameters
@@ -80,24 +80,24 @@ class Nyles(object) :
         self.dt_max = param['dt_max']
 
         # Load the plotting module
-        self.plotting = plotting.Plotting(param, self.model.state, self.grid)
+        #self.plotting = plotting.Plotting(param, self.model.state, self.grid)
 
     def run(self):
         t = 0.0
         n = 0
-
+        self.model.diagnose_var(self.model.state)
         print("Creating output file:", self.IO.hist_path)
         self.IO.init(self.model.state, self.grid, t, n)
 
         # Open the plotting window and draw the initial state
-        self.plotting.init(t, n)
+        # self.plotting.init(t, n)
         # Give the user some time to enjoy the first frame.
         # The rest of the simulation won't get prettier,
         # as long as we haven't fixed the numerics.
-        print("Resize the window to a suitable size,")
-        print("move the camera into a good angle,")
-        print("lean back in your seat and ...")
-        input("... press Enter to start! ")
+        # print("Resize the window to a suitable size,")
+        # print("move the camera into a good angle,")
+        # print("lean back in your seat and ...")
+        # input("... press Enter to start! ")
 
         time_length = len(str(int(self.tend))) + 3
         time_string = ", ".join([
@@ -114,7 +114,7 @@ class Nyles(object) :
             t += dt
             n += 1
             stop = self.IO.do(self.model.state, t, n)
-            self.plotting.update(t, n)
+            # self.plotting.update(t, n)
             if t >= self.tend or stop:
                 break
         print(time_string.format(n, t, self.tend, dt), end=" ")

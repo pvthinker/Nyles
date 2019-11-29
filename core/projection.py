@@ -44,7 +44,7 @@ def calculate_p_from_dU(mg, state, dstate, grid):
     # with kidx = slice(k0, k1) the slice in the k direction
     mg_idx = state.work.mg_idx
     b[:] = div.view('i')[mg_idx]
-
+    x[:] = 0.
     # solve
     mg.solve_directly()
 

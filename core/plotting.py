@@ -46,7 +46,7 @@ class Plotting(object):
         self.ax.set_ylabel("y")
         self.ax.set_zlabel("z")
 
-        self.ax.set_aspect('equal')
+        #self.ax.set_aspect('equal')
         self.ax.set_xlim(0, self.grid.Lx)
         self.ax.set_ylim(0, self.grid.Ly)
         self.ax.set_zlim(0, self.grid.Lz)

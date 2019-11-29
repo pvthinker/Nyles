@@ -94,6 +94,9 @@ class Multigrid(object):
         else:
             return 0, 0.
 
+        if normb > 1e6:
+            raise ValueError('blowup')
+        
         res = res0
         nite = 0
         nite_diverge = 0

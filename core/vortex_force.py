@@ -5,7 +5,7 @@ TODO : Test that is performs what is expected
 
 """
 
-import fortran_vortex_force_test as fortran
+import fortran_vortex_force as fortran
 from timing import timing
 import numpy as np
 
@@ -57,48 +57,28 @@ def vortex_force(state, rhs, order):
 
 
 
-    for k, j, i in ["kji", "ikj", "jik"]:
-        """
-        Old routine : calculate separately both epsilon = 1 and epsilon = -1
+    # for k, j, i in ["kji", "ikj", "jik"]:
+    for k, j, i in ["ikj", "jik", "kji"]:
+         #Using the convention of taking the inner index as the index of the upwinding of vorticity
 
-        print(k)
-        print(j)
-        print(i)
-        #Using the convention of taking the inner index as the index of the upwinding of vorticity
-        u_k = rhs.u[k].flipview(i)
-        U_j = state.U[j].flipview(i)
-        w_i = state.vor[i].flipview(i)
-        print(np.shape(u_k))
-        print(np.shape(w_i))
-        print(np.shape(U_j))
-        fortran.vortex_force_calc(U_j, w_i, u_k, +1, order)
+        u_i = rhs.u[i].flipview(j)
+        U_k = state.U[k].flipview(j)
+        w_j = state.vor[j].flipview(j)
+        fortran.vortex_force_calc(U_k, w_j, u_i, 1, order)
 
-        u_k = rhs.u[k].flipview(k)
-        U_i = state.U[i].flipview(k)
-        w_j = state.vor[j].flipview(k)
-        print(np.shape(u_k))
-        print(np.shape(w_j))
-        print(np.shape(U_i))
-        fortran.vortex_force_calc(U_i, w_j, u_k, -1, order)
-        """
+        u_k = rhs.u[k].flipview(j)
+        U_i = state.U[i].flipview(j)
+        uk = flipij(u_k)
+        Ui = flipij(U_i)
+        wj = flipij(w_j)
 
-        """
-        New routine : calculates both term in the same fortran routine
-        """
+        fortran.vortex_force_calc(Ui, wj, uk, -1, order)
+        u_k[:] = flipij(uk)
+ 
+ 
+def flipij(phi):
+    return np.transpose(phi, [0, 2, 1])
 
-        #print(k)
-        #print(j)
-        #print(i)
-
-        u_k = rhs.u[k].flipview(k)
-        U_j = state.U[j].flipview(k)
-        U_i = state.U[i].flipview(k)
-        w_i = state.vor[i].flipview(k)
-        w_j = state.vor[j].flipview(k)
-        #print(np.shape(u_k))
-        #print(np.shape(w_i))
-        #print(np.shape(U_j))
-        fortran.vortex_force_calc(U_j, U_i, w_j, w_i, u_k, order)
 
 
 if __name__ == '__main__':

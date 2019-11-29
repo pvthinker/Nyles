@@ -1,14 +1,18 @@
 !-----------------------------------------
+!
+! compute du_i/dt += epsilon * w_j * U^k (epsilon=-1)
+! arrays are in [j, i, k] convention
+! U^k is averaged at i point
+! w_j upwinded in the k direction
+! 
 
-!Add 5th order
-
-subroutine vortex_force_calc(U, vort, res, epsilon, order, l, m, n)
+subroutine vortex_force_calc(U, vort, res, epsilon, order, m, n, l)
 
   implicit none
 
   integer, intent(in):: l, m, n, epsilon, order
-  real*8, dimension(l, m, n), intent(in) :: U, vort
-  real*8, dimension(l, m, n), intent(inout) :: res
+  real*8, dimension(m, n, l), intent(in) :: U, vort
+  real*8, dimension(m, n, l), intent(inout) :: res
 
   !f2py intent(inplace):: vort, res, U
 
@@ -27,58 +31,52 @@ subroutine vortex_force_calc(U, vort, res, epsilon, order, l, m, n)
   b5 = -3./60.
 
 
-  do k = 1,l
-    do j = 1,m
-      do i = 1,n
-
-        if (j.gt.1) then
-
-          if (i.lt.n) then
-            U_interp = 0.25 * ( U(k, j-1, i) + U(k, j-1, i+1) + U(k, j, i) + U(k, j, i+1) )
+  do j = 1,m
+     do i = 1,n-1 ! because u_i[:,:,-1] = 0. (BC)
+        do k = 1,l
+          if (k.gt.1) then
+             U_interp = 0.25 * ( U(j,i,k  ) + U(j,i+1,k) &
+                               + U(j,i,k-1) + U(j,i+1,k-1))
           else
-            U_interp = 0.25 * ( U(k, j-1, i) + U(k, j, i)) !no normal velocity
+            U_interp = 0.25 * ( U(j,i,k) + U(j,i+1,k)) !no normal velocity
           endif
 
           UU = abs(U_interp)
           up = 0.5*(U_interp+UU) ! right-going flux
           um = 0.5*(U_interp-UU) ! left-going flux
 
-          if ((i.gt.2).and.(i.le.(n-2)).and.(order.eq.5)) then
-             qp = b1*vort(k,j,i-2) + b2*vort(k,j,i-1) + b3*vort(k,j,i) + b4*vort(k,j,i+1) + b5*vort(k,j,i+2)
-          elseif ((i.gt.1).and.(i.le.(n-1)).and.(order.ge.3)) then
+          if ((k.gt.3).and.(k.le.(l-1)).and.(order.eq.5)) then
+             qp = b1*vort(j,i,k-3) + b2*vort(j,i,k-2) + b3*vort(j,i,k-1) + b4*vort(j,i,k) + b5*vort(j,i,k+1)
+          elseif ((k.gt.2).and.(k.le.(l)).and.(order.ge.3)) then
              ! 3rd order upwind
-             qp = c1*vort(k,j,i-1) + c2*vort(k,j,i) + c3*vort(k,j,i+1)
-          else
+             qp = c1*vort(j,i,k-2) + c2*vort(j,i,k-1) + c3*vort(j,i,k)
+          elseif (k.gt.1) then
              ! 1st order
-             qp = vort(k,j,i)
+             qp = vort(j,i,k-1)
+          else
+             qp = vort(j,i,k) ! <- very hazardous, CHECK!!!!
           endif
 
 
-          if ((i.gt.1).and.(i.le.(n-3)).and.(order.eq.5)) then
-             qm = b5*vort(k,j,i-1) + b4*vort(k,j,i) + b3*vort(k,j,i+1) + b2*vort(k,j,i+2) + b1*vort(k,j,i+3)
-          elseif ((i.le.(n-2)).and.(order.ge.3)) then
+          if ((k.gt.2).and.(k.le.(l-2)).and.(order.eq.5)) then
+             qm = b5*vort(j,i,k-2) + b4*vort(j,i,k-1) + b3*vort(j,i,k) + b2*vort(j,i,k+1) + b1*vort(j,i,k+2)
+          elseif ((k.gt.1).and.(k.le.(l-1)).and.(order.ge.3)) then
              ! 3rd order upwind
-             qm = c3*vort(k,j,i) + c2*vort(k,j,i+1) + c1*vort(k,j,i+2)
-          elseif (i.le.(n-1)) then
+             qm = c3*vort(j,i,k-1) + c2*vort(j,i,k) + c1*vort(j,i,k+1)
+          elseif (k.le.(l-1)) then
              ! 1st order
-             qm = vort(k,j,i+1)
+             qm = vort(j,i,k)
           else
              ! no flux through the boundary
              ! TODO: change this in case of inflow/outflow
              ! cf Winters 2012
-             qm = 0.
+             qm = vort(j,i,k) ! <- very hazardous, CHECK!!!!
           endif
 
           ! this term is U_j * omega_k
           U_omega = up*qp + um*qm
 
-          res(k,j,i) = res(k,j,i) - epsilon * U_omega
-
-        else
-
-          !no slip BC => do nothing
-
-        endif
+          res(j,i,k) = res(j,i,k) - epsilon * U_omega
 
       end do
     end do

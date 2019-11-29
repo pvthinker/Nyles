@@ -29,43 +29,42 @@ class LES(object):
         self.grid = grid
         self.state = var.get_state(param)
         self.timescheme = ts.Timescheme(param, self.state)
-        self.timescheme.set(self.rhs)
+        self.timescheme.set(self.rhs, self.diagnose_var)
         self.traclist = ['b']
         self.orderA = param["orderA"]
         self.orderVF = param["orderVF"]
         self.mg = mg.Multigrid(param)
 
+    def diagnose_var(self, state):
+        # Diagnostic variables
+        #projection.calculate_p_from_dU(self.mg, state, state, self.grid)
+        projection.calculate_p_from_dU(self.mg, state, state, self.grid)
+        U_from_u(state, self.grid)
+        vort.vorticity(state)
+        kinetic.kinenergy(state, self.grid)
+        
     def rhs(self, state, t, dstate):
         reset_state(dstate)
         # TODO: if this function call stays here, the flag in rhstrac
         # can be removed.  Other possibility: remove the reset_state and
         # add the reset to the vortex_force term.
-
-        # Diagnostic variables
-        U_from_u(state, self.grid)
-        if self.nonlinear:
-            vort.vorticity(state)
-            kinetic.kinenergy(state, self.grid)
-
         # buoyancy
         tracer.rhstrac(state, dstate, self.traclist, self.orderA)
 
         # vortex force
-        if self.nonlinear:
-            vortf.vortex_force(state, dstate, self.orderVF)
+        vortf.vortex_force(state, dstate, self.orderVF)
         # bernoulli
         bern.bernoulli(state, dstate, self.grid)
         # dU from du when enter
         # U_from_u(dstate)
         # pressure
-        projection.calculate_p_from_dU(self.mg, state, dstate, self.grid)
 
     def forward(self, t, dt):
         self.timescheme.forward(self.state, t, dt)
         div = self.state.work
         projection.compute_div(div, self.state, self.grid)
-        print("Maximum divergence: {:20.8f}".format(np.max(np.abs(div.view()))))
-        print("Mean of abs of div: {:20.8f}".format(np.mean(np.abs(div.view()))))
+        print("t=%.2f  /"%t+"Maximum divergence: {:20.8f}".format(np.max(np.abs(div.view()))))
+        #print("Mean of abs of div: {:20.8f}".format(np.mean(np.abs(div.view()))))
 
 
 @timing

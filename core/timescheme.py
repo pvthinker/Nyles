@@ -93,7 +93,7 @@ class Timescheme(object):
             self.state = state.duplicate_prognostic_variables()
             self.first = True
 
-    def set(self, rhs):
+    def set(self, rhs, diagnose_var):
         """Assign the right hand side of the model.
 
         The argument 'rhs' of this method is a function with the
@@ -102,6 +102,7 @@ class Timescheme(object):
         result is written to 'dstate'.
         """
         self.rhs = rhs
+        self.diagnose_var = diagnose_var
 
     # ----------------------------------------
     def EulerForward(self, state, t, dt, **kwargs):
@@ -113,7 +114,8 @@ class Timescheme(object):
             # Get a view on dstate in the same orientation as state
             ds = self.dstate.get(scalar_name).viewlike(scalar)
             s += dt * ds
-
+        self.diagnose_var(state)
+        
     # ----------------------------------------
     def LFAM3(self, state, t, dt, **kwargs):
         # Predictor
@@ -131,7 +133,8 @@ class Timescheme(object):
                 sb[:] = s
                 s += dt * ds
             self.first = False
-
+            self.diagnose_var(state)
+            
         else:
             for scalar_name in self.prognostic_scalars:
                 scalar = state.get(scalar_name)
@@ -153,6 +156,8 @@ class Timescheme(object):
                 # and backup former 'now' state into 'before' state
                 sb[:] = sn
 
+            self.diagnose_var(state)
+
             # Corrector step at n+1/2
             self.rhs(state, t+dt*.5, self.dstate)
 
@@ -164,6 +169,7 @@ class Timescheme(object):
                 sn = self.state.get(scalar_name).viewlike(scalar)
                 s[:] = sn + dt*ds
 
+            self.diagnose_var(state)
 
 # ----------------------------------------------------------------------
 if __name__ == '__main__':

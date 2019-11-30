@@ -9,6 +9,7 @@ import projection
 import topology as topo
 from timing import timing
 import mg
+import pickle
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -34,14 +35,19 @@ class LES(object):
         self.orderA = param["orderA"]
         self.orderVF = param["orderVF"]
         self.mg = mg.Multigrid(param)
+        self.stats = []
 
     def diagnose_var(self, state):
         # Diagnostic variables
         #projection.calculate_p_from_dU(self.mg, state, state, self.grid)
         projection.calculate_p_from_dU(self.mg, state, state, self.grid)
+        div = self.state.work
+        projection.compute_div(div, self.state, self.grid)
+        self.update_stats()
         U_from_u(state, self.grid)
         vort.vorticity(state)
         kinetic.kinenergy(state, self.grid)
+
         
     def rhs(self, state, t, dstate):
         reset_state(dstate)
@@ -61,12 +67,27 @@ class LES(object):
 
     def forward(self, t, dt):
         self.timescheme.forward(self.state, t, dt)
-        div = self.state.work
-        projection.compute_div(div, self.state, self.grid)
-        print("t=%.2f  /"%t+"Maximum divergence: {:20.8f}".format(np.max(np.abs(div.view()))))
+        #div = self.state.work
+        #projection.compute_div(div, self.state, self.grid)
+        #print("t=%.2f  /"%t+"Maximum divergence: {:20.8f}".format(np.max(np.abs(div.view()))))
         #print("Mean of abs of div: {:20.8f}".format(np.mean(np.abs(div.view()))))
+    
+    def update_stats(self):
+        stats = self.mg.stats
+        
+        div = self.state.work
+        maxdiv = np.max(np.abs(div.view()))
+        stats['maxdiv'] = maxdiv
+        if hasattr(self, 'stats'):
+            self.stats += [stats]
+        else:
+            self.stats = [stats]
 
-
+    def write_stats(self, path):
+        fid = open('%s/stats.pkl' % path, 'bw')
+        pickle.dump(self.stats, fid)
+        
+        
 @timing
 def U_from_u(state, grid):
     # copied from lotsofstuff

@@ -100,16 +100,16 @@ class Nyles(object) :
         # input("... press Enter to start! ")
 
         time_length = len(str(int(self.tend))) + 3
-        time_string = ", ".join([
+        time_string = "\r"+", ".join([
             "n = {:3d}",
             "t = {:"+ str(time_length) + ".2f}/{:" + str(time_length) + ".2f}",
             "dt = {:.4f}",
         ])
-
+        
+        print("-"*50)
         while True:
             dt = self.compute_dt()
-            print("-"*50)
-            print(time_string.format(n, t, self.tend, dt))
+            print(time_string.format(n, t, self.tend, dt), end='')
             self.model.forward(t, dt)
             t += dt
             n += 1
@@ -125,6 +125,7 @@ class Nyles(object) :
 
         self.IO.finalize(self.model.state, t, n)
         print("Output written to:", self.IO.hist_path)
+        self.model.write_stats(self.IO.output_directory)
 
     @timing
     def compute_dt(self):

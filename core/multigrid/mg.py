@@ -11,7 +11,7 @@ class Multigrid(object):
 
         for key in ['npre', 'npost', 'maxite', 'tol', 'procs']:
             setattr(self, key, param[key])
-        self.verbose = True
+        self.verbose = False
 
         myrank = mpi.get_myrank(self.procs)
 
@@ -49,6 +49,9 @@ class Multigrid(object):
                 Acoarse = intergrid.Restrict*Afine*intergrid.Interpol
                 g.set_ADS(Acoarse)
 
+        # store the statistics of the last 'solve_directly'
+        self.stats = {}
+        
     def solve(self, x, b, cycle='V'):
         """
 
@@ -96,8 +99,9 @@ class Multigrid(object):
 
         if normb > 1e6:
             raise ValueError('blowup')
-        
+
         res = res0
+        reslist = [res]
         nite = 0
         nite_diverge = 0
         # improve the solution until one of this condition is wrong
@@ -118,6 +122,7 @@ class Multigrid(object):
             conv = res0 / res
 
             res0 = res
+            reslist += [res]
             nite += 1
             if self.verbose:
                 template = ' ite = {} / res = {:.2e} / conv = {:8.4f}'
@@ -133,6 +138,9 @@ class Multigrid(object):
                 #raise ValueError('solver is not converging')
 
         # No need to copy x back to an external variable
+
+        # store the statistics
+        self.stats = {'normb': normb, 'res': reslist}
 
         return nite, res
 

@@ -56,7 +56,7 @@ class Nyles(object) :
             "procs": [1, 1, 1], "neighbours": {},
             "topology": "closed",  # is this always the same as param["geometry"]?
             "npre": 3, "npost": 3, "omega": 0.8, "ndeepest": 20, "maxite": 20,
-            "tol": 1e-5,
+            "tol": 1e-3,
         })
 
         # Load the grid with the extended parameters

@@ -43,11 +43,24 @@ param.model["Lx"] = Lx
 param.model["Ly"] = Ly
 param.model["Lz"] = Lz
 
+param.model["modelname"] = "LES"
+param.model["geometry"] = "closed"
+
 # Set resolution of the domain
 param.discretization["global_nx"] = 32
 param.discretization["global_ny"] = 32
 param.discretization["global_nz"] = 64
 
+param.time["timestepping"] = "LFAM3"
+param.time["auto_dt"] = False
+# parameter if auto_dt is False
+param.time["dt"] = 0.001
+# parameters if auto_dt is True
+param.time["cfl"] = 0.4
+param.time["dt_max"] = 1.0
+
+param.discretization["orderVF"] = 5  # upwind-order for vortex-force term
+param.discretization["orderA"] = 5  # upwind-order for advection term
 
 # Initialize Nyles with the pre-defined parameters
 nyles = Nyles(param)

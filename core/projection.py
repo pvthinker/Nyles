@@ -3,7 +3,7 @@
 Projection functions to enforce div U = 0
 
 """
-
+import numpy as np
 
 def compute_div(work, dstate, grid):
     """Compute divergence."""
@@ -11,10 +11,12 @@ def compute_div(work, dstate, grid):
         div = work.view(i)
         dU = dstate.u[i].view(i)
         if count == 0:
-            div *= 0
-        # grid.ids2 is the inverse metric tensor
-        div[:, :, 0] += dU[:, :, 0] * grid.ids2[i]
-        div[:, :, 1:] += (dU[:, :, 1:] - dU[:, :, :-1]) * grid.ids2[i]
+            # grid.ids2 is the inverse metric tensor
+            div[:, :, 0] = dU[:, :, 0] * grid.ids2[i]
+            div[:, :, 1:] = np.diff(dU) * grid.ids2[i]
+        else:
+            div[:, :, 0] += dU[:, :, 0] * grid.ids2[i]
+            div[:, :, 1:] += np.diff(dU) * grid.ids2[i]
 
 
 def calculate_p_from_dU(mg, state, dstate, grid):
@@ -44,7 +46,7 @@ def calculate_p_from_dU(mg, state, dstate, grid):
     # with kidx = slice(k0, k1) the slice in the k direction
     mg_idx = state.work.mg_idx
     b[:] = div.view('i')[mg_idx]
-    x[:] = 0.
+#    x[:] = 0.
     # solve
     mg.solve_directly()
 
@@ -57,7 +59,7 @@ def calculate_p_from_dU(mg, state, dstate, grid):
     for i in 'ijk':
         p = state.p.view(i)
         du = dstate.u[i].view(i)
-        du[:, :, :-1] -= p[:, :, 1:]-p[:, :, :-1]
+        du[:, :, :-1] -= np.diff(p)
 
 
 if __name__ == "__main__":

@@ -74,13 +74,13 @@ def U_from_u(state, grid):
     metric = 'cartesian'  # dx, dy and dz are uniform, though not necessarily equal
 
     if metric == 'cartesian':
-        u = state.u['i'].view('k')
-        v = state.u['j'].view('k')
-        w = state.u['k'].view('k')
+        u = state.u['i'].view()
+        v = state.u['j'].view()
+        w = state.u['k'].view()
 
-        U = state.U['i'].view('k')
-        V = state.U['j'].view('k')
-        W = state.U['k'].view('k')
+        U = state.U['i'].viewlike(state.u['i'])
+        V = state.U['j'].viewlike(state.u['j'])
+        W = state.U['k'].viewlike(state.u['k'])
 
         U[:] = u * grid.idx2
         V[:] = v * grid.idy2

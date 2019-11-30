@@ -4,8 +4,10 @@ Projection functions to enforce div U = 0
 
 """
 import numpy as np
+from timing import timing
 
-def compute_div(work, dstate, grid):
+@timing
+def compute_div(work, dstate, grid, **kwargs):
     """Compute divergence."""
     for count, i in enumerate('jki'):
         div = work.view(i)
@@ -19,6 +21,7 @@ def compute_div(work, dstate, grid):
             div[:, :, 1:] += np.diff(dU) * grid.ids2[i]
 
 
+@timing
 def calculate_p_from_dU(mg, state, dstate, grid):
     """ 
     This solves the poisson

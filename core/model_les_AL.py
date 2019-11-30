@@ -37,18 +37,19 @@ class LES(object):
         self.mg = mg.Multigrid(param)
         self.stats = []
 
+    @timing
     def diagnose_var(self, state):
         # Diagnostic variables
         #projection.calculate_p_from_dU(self.mg, state, state, self.grid)
         projection.calculate_p_from_dU(self.mg, state, state, self.grid)
         div = self.state.work
-        projection.compute_div(div, self.state, self.grid)
+        projection.compute_div(div, self.state, self.grid, timing=False)
         self.update_stats()
         U_from_u(state, self.grid)
         vort.vorticity(state)
         kinetic.kinenergy(state, self.grid)
 
-        
+    @timing
     def rhs(self, state, t, dstate):
         reset_state(dstate)
         # TODO: if this function call stays here, the flag in rhstrac
@@ -65,6 +66,7 @@ class LES(object):
         # U_from_u(dstate)
         # pressure
 
+    @timing
     def forward(self, t, dt):
         self.timescheme.forward(self.state, t, dt)
         #div = self.state.work

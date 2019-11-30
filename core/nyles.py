@@ -8,7 +8,7 @@ import variables
 import grid
 import nylesIO
 import plotting
-from timing import timing
+import timing
 
 
 class Nyles(object) :
@@ -126,8 +126,9 @@ class Nyles(object) :
         self.IO.finalize(self.model.state, t, n)
         print("Output written to:", self.IO.hist_path)
         self.model.write_stats(self.IO.output_directory)
+        timing.write_timings(self.IO.output_directory)
+        timing.analyze_timing(self.IO.output_directory)
 
-    @timing
     def compute_dt(self):
         """Calculate timestep dt from contravariant velocity U and cfl.
 

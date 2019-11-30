@@ -26,7 +26,7 @@ import numpy as np
 import halo
 import fortran_operators as fortran
 from scipy import sparse
-
+from timing import timing
 
 class Grid(object):
     """
@@ -58,6 +58,7 @@ class Grid(object):
         assert x in ['x', 'b', 'r']
         return np.reshape(getattr(self, x), self.size)
 
+    @timing
     def halofill(self, x):
         """
         Fill x's halo, where 'x' is in ['xbr']
@@ -85,11 +86,13 @@ class Grid(object):
         # todo : add a global communication to sum y2
         return np.sqrt(y2)
 
+    @timing
     def residual(g):
         # g is self
         g.r[:] = g.b - g.A * g.x
         g.halofill('r')
 
+    @timing
     def smooth(g, nite):
         # g is self
         for k in range(nite):

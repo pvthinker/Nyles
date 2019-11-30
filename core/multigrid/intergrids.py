@@ -7,7 +7,7 @@ Provide the functions to coarsen and interpolate
 import numpy as np
 import itertools as iter
 from scipy import sparse
-
+from timing import timing
 
 class Intergrids(object):
     def __init__(self, fine, coarse):
@@ -21,6 +21,7 @@ class Intergrids(object):
             # define self.dummy and gluing process
             raise ValueError('not yet implemented')
 
+    @timing
     def fine2coarse(self, which='r'):
         assert which in ['r', 'b']
 
@@ -37,6 +38,7 @@ class Intergrids(object):
 
         self.coarse.x[:] = 0.
 
+    @timing
     def coarse2fine(self):
         if self.gluing:
             self.split(self.coarse.x, self.dummy)

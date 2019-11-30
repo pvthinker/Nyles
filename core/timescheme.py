@@ -29,7 +29,6 @@ timeschemes, we need to store more than just one dstate
 
 """
 
-
 class Timescheme(object):
     """Catalogue and handler of timeschemes.
 

@@ -40,14 +40,14 @@ class LES(object):
     @timing
     def diagnose_var(self, state):
         # Diagnostic variables
-        #projection.calculate_p_from_dU(self.mg, state, state, self.grid)
         projection.calculate_p_from_dU(self.mg, state, state, self.grid)
         div = self.state.work
         projection.compute_div(div, self.state, self.grid, timing=False)
         self.update_stats()
         U_from_u(state, self.grid)
-        vort.vorticity(state)
-        kinetic.kinenergy(state, self.grid)
+        if self.nonlinear:
+            vort.vorticity(state)
+            kinetic.kinenergy(state, self.grid)
 
     @timing
     def rhs(self, state, t, dstate):
@@ -59,20 +59,14 @@ class LES(object):
         tracer.rhstrac(state, dstate, self.traclist, self.orderA)
 
         # vortex force
-        vortf.vortex_force(state, dstate, self.orderVF)
+        if self.nonlinear:
+            vortf.vortex_force(state, dstate, self.orderVF)
         # bernoulli
         bern.bernoulli(state, dstate, self.grid)
-        # dU from du when enter
-        # U_from_u(dstate)
-        # pressure
 
     @timing
     def forward(self, t, dt):
         self.timescheme.forward(self.state, t, dt)
-        #div = self.state.work
-        #projection.compute_div(div, self.state, self.grid)
-        #print("t=%.2f  /"%t+"Maximum divergence: {:20.8f}".format(np.max(np.abs(div.view()))))
-        #print("Mean of abs of div: {:20.8f}".format(np.mean(np.abs(div.view()))))
     
     def update_stats(self):
         stats = self.mg.stats

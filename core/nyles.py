@@ -80,7 +80,10 @@ class Nyles(object) :
         self.dt_max = param['dt_max']
 
         # Load the plotting module
-        #self.plotting = plotting.Plotting(param, self.model.state, self.grid)
+        if param["show"]:
+            self.plotting = plotting.Plotting(param, self.model.state, self.grid)
+        else:
+            self.plotting = None
 
     def run(self):
         t = 0.0
@@ -90,14 +93,12 @@ class Nyles(object) :
         self.IO.init(self.model.state, self.grid, t, n)
 
         # Open the plotting window and draw the initial state
-        # self.plotting.init(t, n)
-        # Give the user some time to enjoy the first frame.
-        # The rest of the simulation won't get prettier,
-        # as long as we haven't fixed the numerics.
-        # print("Resize the window to a suitable size,")
-        # print("move the camera into a good angle,")
-        # print("lean back in your seat and ...")
-        # input("... press Enter to start! ")
+        if self.plotting:
+            self.plotting.init(t, n)
+            print("Resize the window to a suitable size,")
+            print("move the camera into a good angle,")
+            print("lean back in your seat and ...")
+            input("... press Enter to start! ")
 
         time_length = len(str(int(self.tend))) + 3
         time_string = "\r"+", ".join([
@@ -114,7 +115,8 @@ class Nyles(object) :
             t += dt
             n += 1
             stop = self.IO.do(self.model.state, t, n)
-            # self.plotting.update(t, n)
+            if self.plotting:
+                self.plotting.update(t, n)
             if t >= self.tend or stop:
                 break
         print(time_string.format(n, t, self.tend, dt), end=" ")

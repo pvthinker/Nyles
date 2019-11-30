@@ -71,6 +71,21 @@
         }
     },
 
+    "animation": {
+        "show": {
+            "type": "bool",
+            "default": false,
+            "avail": [true, false],
+            "doc": "Whether to display an animated 3D figure of the simulation or not (faster)"
+        },
+        "aspect": {
+            "type": "str",
+            "default": "equal",
+            "avail": ["equal", "auto"],
+            "doc": "Aspect ratio of the figure."
+        }
+    },
+
     "time": {
         "tend": {
             "type": "float",

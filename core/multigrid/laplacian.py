@@ -2,7 +2,7 @@ import numpy as np
 from scipy import sparse
 
 
-def set_finest(fine):
+def set_finest(fine, modelgrid):
     """
 
     Return the Laplacian matrix on the finest grid 
@@ -16,8 +16,11 @@ def set_finest(fine):
     col = np.zeros((nmax,), dtype=int)
     counter = 0
 
-    # todo: set the correct coefficients here
-    Az, Ay, Ax = 1., 1., 1.
+    # Cartesian coordinates case -- to be adapted later for sigma coord
+    dx, dy, dz = modelgrid.dx, modelgrid.dy, modelgrid.dz
+    Az = 1./dz**2
+    Ay = 1./dy**2
+    Ax = 1./dx**2
     
     nk, nj, ni = fine.size
     Gf = np.arange(fine.N).reshape(fine.size)

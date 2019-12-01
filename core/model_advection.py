@@ -1,9 +1,12 @@
 """All the tools needed to advect a tracer with an imposed velocity field."""
 
 import variables as var
-import tracer as tracer
+import tracer
+import cov_to_contra
+import projection
 import timescheme as ts
-
+from timing import timing
+import pickle
 
 class Advection(object):
     """Pure advection model.
@@ -11,19 +14,45 @@ class Advection(object):
     It advects the buoyancy with a prescribed contravariant velocity.
     """
 
-    def __init__(self, param):
+    def __init__(self, param, grid):
         self.state = var.get_state(param)
         self.traclist = ['b']
         self.order = param['orderA']
         self.timescheme = ts.Timescheme(param, self.state)
-        self.timescheme.set(self.rhs)
+        self.timescheme.set(self.rhs, self.diagnose_var)
+        self.param = param
+        self.grid = grid
+        self.stats = []
+        
+    def diagnose_var(self, state):
+        # no diagnostic variables in this model
+        pass
 
+    def make_u_divergentfree(self):
+        import mg
+        mg = mg.Multigrid(self.param, self.grid)
+        cov_to_contra.U_from_u(self.state, self.grid)
+        projection.compute_p(mg, self.state, self.grid)
+        cov_to_contra.U_from_u(self.state, self.grid)
+
+        
+    @timing
     def forward(self, t, dt):
         self.timescheme.forward(self.state, t, dt)
 
+    @timing    
     def rhs(self, state, t, dstate):
         tracer.rhstrac(state, dstate, self.traclist, self.order)
 
+    def update_stats(self):
+        b = self.state.b
+        bmean = np.mean(b.view())
+        bstd = np.bstd(b.view())
+        stats = {'bmean': bmean, 'bstd': bstd}
+
+    def write_stats(self, path):
+        fid = open('%s/stats.pkl' % path, 'bw')
+        pickle.dump(self.stats, fid)
 
 if __name__ == '__main__':
     import numpy as np

@@ -1,10 +1,17 @@
 !----------------------------------------
 subroutine upwind(trac, u, dtrac, order, iflag, l, m, n)
   !
-  ! compute dtrac = -delta[ trac*u ]
-  ! where delta[ ] is the finite difference in the 'u' direction
-  ! the 'u' direction is the third entry of the 3D array
+  ! compute dtrac = -delta[ trac*U ]
+  ! where delta[ ] is the finite difference in the i direction
+  ! which is the third entry of the 3D array
+  ! U is the contravariant component  
   ! trac is upwinded at u-point
+  !
+  ! note that with arbitrary coordinates we should have
+  ! dtrac = -delta[ trac*U*vol ] / vol
+  !
+  ! in Cartesian coordinates, vol is uniform, so vol
+  ! can be drop out
   !
   implicit none
 

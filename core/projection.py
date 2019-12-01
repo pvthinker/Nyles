@@ -7,36 +7,44 @@ import numpy as np
 from timing import timing
 
 @timing
-def compute_div(work, dstate, grid, **kwargs):
-    """Compute divergence."""
+def compute_div(state, **kwargs):
+    """Compute divergence from U, the contravariant velocity
+
+    div = delta[U*vol]/vol
+
+    here we assume that vol is uniform (Cartesian coordinates case)
+    so
+
+    div = delta[U]
+    """
     for count, i in enumerate('jki'):
-        div = work.view(i)
-        dU = dstate.u[i].view(i)
+        div = state.div.view(i)
+        dU = state.U[i].view(i)
         if count == 0:
-            # grid.ids2 is the inverse metric tensor
-            div[:, :, 0] = dU[:, :, 0] * grid.ids2[i]
-            div[:, :, 1:] = np.diff(dU) * grid.ids2[i]
+            div[:, :, 0] = dU[:, :, 0]
+            div[:, :, 1:] = np.diff(dU)
         else:
-            div[:, :, 0] += dU[:, :, 0] * grid.ids2[i]
-            div[:, :, 1:] += np.diff(dU) * grid.ids2[i]
+            div[:, :, 0] += dU[:, :, 0]
+            div[:, :, 1:] += np.diff(dU)
 
 
 @timing
-def calculate_p_from_dU(mg, state, dstate, grid):
+def compute_p(mg, state, grid):
     """ 
-    This solves the poisson
-    equation with dU (dstate.U),
-    stores the result in p
-    (state.p) and updates dU
+    This solves the poisson equation with U (state.U),
+    stores the result in p (state.p)
+    and corrects u (state.u) with -delta[p]
+
+    note that the real pressure is p/dt
 
     mg is the multigrid object (with all data and methods)
 
     grid is the Grid object with the metric tensor
     """
-    div = state.work
-    compute_div(div, dstate, grid)
+    div = state.div
+    compute_div(state)
 
-    # at the end of the loop div and dU are in the 'i' convention
+    # at the end of the loop div and U are in the 'i' convention
     # this is mandatory because MG only works with the 'i' convention
 
     # copy divergence into the multigrid RHS
@@ -47,7 +55,7 @@ def calculate_p_from_dU(mg, state, dstate, grid):
     # this is triplet of slices than span the MG domain (inner+MG halo)
     # typically mg_idx = (kidx, jidx, iidx)
     # with kidx = slice(k0, k1) the slice in the k direction
-    mg_idx = state.work.mg_idx
+    mg_idx = state.div.mg_idx
     b[:] = div.view('i')[mg_idx]
 #    x[:] = 0.
     # solve
@@ -57,12 +65,12 @@ def calculate_p_from_dU(mg, state, dstate, grid):
     p = state.p.view('i')
     p[mg_idx] = x[:]
 
-    # correct du (the covariant component)
+    # correct u (the covariant component)
     # now we start with the 'i' convention
     for i in 'ijk':
         p = state.p.view(i)
-        du = dstate.u[i].view(i)
-        du[:, :, :-1] -= np.diff(p)
+        u = state.u[i].view(i)
+        u[:, :, :-1] -= np.diff(p)
 
 
 if __name__ == "__main__":
@@ -111,13 +119,20 @@ if __name__ == "__main__":
     v[:, :-1, :] = 0
     w[:-1, :, :] = 0
 
+    U = s.U['i'].view('i')
+    V = s.U['j'].view('i')
+    V = s.U['k'].view('i')
+    U[:] = u*grid.idx2
+    V[:] = v*grid.idy2
+    W[:] = w*grid.idz2
+    
     print('and make it divergent-free')
-    calculate_p_from_dU(mg, s, ds, grid)
+    compute_p(mg, s, ds, grid)
 
     p = s.p.view('i')
 
-    div = s.work
-    compute_div(div, ds, grid)
+    div = s.div
+    compute_div(ds)
 
     u = ds.u['i'].view('i')
     v = ds.u['j'].view('i')

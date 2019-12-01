@@ -7,7 +7,7 @@ import laplacian as laplac
 
 
 class Multigrid(object):
-    def __init__(self, param):
+    def __init__(self, param, modelgrid):
 
         for key in ['npre', 'npost', 'maxite', 'tol', 'procs']:
             setattr(self, key, param[key])
@@ -41,7 +41,7 @@ class Multigrid(object):
         self.As = [1] * nlevs
         for lev, g in enumerate(self.grid):
             if lev == 0:
-                Afinest = laplac.set_finest(g)
+                Afinest = laplac.set_finest(g, modelgrid)
                 g.set_ADS(Afinest)
             else:
                 Afine = self.grid[lev-1].A

@@ -11,9 +11,10 @@ nx = 32
 # It must be possible to set the following lengths to arbitrary values,
 # but currently, due to a problem in the handling of the metric in the
 # calculation of p, it is necessary to ensure dx = dy = dz = 1. #TODO
-Lz = 1.0 * nz
-Ly = 1.0 * ny
-Lx = 1.0 * nx
+factor = 1.
+Lz = 1. * nz/factor
+Ly = 1.0 * ny/factor
+Lx = 1.0 * nx/factor
 
 
 # Get the default parameters, then modify them as needed
@@ -28,17 +29,17 @@ param.model["Lz"] = Lz
 param.IO["datadir"] = "~/data/Nyles"
 param.IO["expname"] = "test"
 param.IO["mode"] = "overwrite"
-param.IO["variables_in_history"] = ['b', 'u', 'vor']
+param.IO["variables_in_history"] = ['b', 'u', 'vor', 'div']
 param.IO["timestep_history"] = 0.2
 
 param.physics['rotating'] = True
 param.physics['coriolis'] = 1.
 
 param.time["timestepping"] = "LFAM3"
-param.time["tend"] = 20.0
+param.time["tend"] = 20.0/factor
 param.time["auto_dt"] = False
 # parameter if auto_dt is False
-param.time["dt"] = 0.04
+param.time["dt"] = 0.04/factor
 # parameters if auto_dt is True
 param.time["cfl"] = 0.4
 param.time["dt_max"] = 1.0

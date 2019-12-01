@@ -97,8 +97,6 @@ class Multigrid(object):
         else:
             return 0, 0.
 
-        if normb > 1e6:
-            raise ValueError('blowup')
 
         res = res0
         reslist = [res]
@@ -106,6 +104,11 @@ class Multigrid(object):
         nite_diverge = 0
         # improve the solution until one of this condition is wrong
         ok = True
+        blowup = False
+        if normb > 1e6:
+            ok = False
+            blowup = True
+            
         while (nite < self.maxite) and (res0 > self.tol) and ok:
             if cycle == 'V':
                 self.Vcycle(0)
@@ -135,12 +138,13 @@ class Multigrid(object):
                 ok = False
                 print('solver is not converging')
                 print('Abort!')
+                blowup = True
                 #raise ValueError('solver is not converging')
 
         # No need to copy x back to an external variable
 
         # store the statistics
-        self.stats = {'normb': normb, 'res': reslist}
+        self.stats = {'normb': normb, 'res': reslist, 'blowup': blowup}
 
         return nite, res
 

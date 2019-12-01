@@ -11,7 +11,7 @@ nx = 32
 # It must be possible to set the following lengths to arbitrary values,
 # but currently, due to a problem in the handling of the metric in the
 # calculation of p, it is necessary to ensure dx = dy = dz = 1. #TODO
-factor = 1.
+factor = .5
 Lz = 1. * nz/factor
 Ly = 1.0 * ny/factor
 Lx = 1.0 * nx/factor
@@ -36,13 +36,13 @@ param.physics['rotating'] = True
 param.physics['coriolis'] = 1.
 
 param.time["timestepping"] = "LFAM3"
-param.time["tend"] = 20.0/factor
-param.time["auto_dt"] = False
+param.time["tend"] = 40.0
+param.time["auto_dt"] = True
 # parameter if auto_dt is False
 param.time["dt"] = 0.04/factor
 # parameters if auto_dt is True
-param.time["cfl"] = 0.4
-param.time["dt_max"] = 1.0
+param.time["cfl"] = 0.8
+param.time["dt_max"] = 0.04/factor
 
 param.discretization["global_nx"] = nx
 param.discretization["global_ny"] = ny

@@ -82,6 +82,7 @@ class LES(object):
     @timing
     def forward(self, t, dt):
         self.timescheme.forward(self.state, t, dt)
+        return self.mg.stats['blowup']
     
     def update_stats(self):
         stats = self.mg.stats

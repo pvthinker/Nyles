@@ -110,16 +110,19 @@ class Nyles(object) :
         print("-"*50)
         while True:
             dt = self.compute_dt()
-            print(time_string.format(n, t, self.tend, dt), end='')
-            self.model.forward(t, dt)
+            blowup = self.model.forward(t, dt)
             t += dt
             n += 1
             stop = self.IO.do(self.model.state, t, n)
+            print(time_string.format(n, t, self.tend, dt), end='')
+            if blowup:
+                print('')
+                print('BLOW UP! ', end='')
+                stop = True
             if self.plotting:
                 self.plotting.update(t, n)
             if t >= self.tend or stop:
                 break
-        print(time_string.format(n, t, self.tend, dt), end=" ")
         if stop:
             print("-- aborted.")
         else:

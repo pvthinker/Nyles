@@ -39,6 +39,7 @@ class Advection(object):
     @timing
     def forward(self, t, dt):
         self.timescheme.forward(self.state, t, dt)
+        return False
 
     @timing    
     def rhs(self, state, t, dstate):

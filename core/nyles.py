@@ -153,14 +153,6 @@ class Nyles(object) :
             # increasing, the order of sqrt and max can be exchanged.
             # This way, it is only necessary to calculate the square
             # root of a single value, which is faster.
-            #
-            # One can speed up the calculation by using instead
-            # np.max([np.max(np.abs(U)), np.max(np.abs(V)), np.max(np.abs(W))])
-            # to approximate U_max.  However, this gives only a lower
-            # bound that can differ from the actual value by a factor of
-            # up to sqrt(3) = 1.73.  So with this approximation, the
-            # timestep dt is chosen too big, which could lead to an
-            # unstable integration if cfl is not adjusted accordingly.
             U_max = np.sqrt(np.max(U**2 + V**2 + W**2))
             # Note: the if-statement cannot be replaced by try-except,
             # because U_max is a numpy-float which throws a warning

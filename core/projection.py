@@ -143,7 +143,7 @@ if __name__ == "__main__":
     for direc in 'ijk':
         s.u[direc].view('i')[:] = ds.u[direc].view('i')[:]
         
-    vort.vorticity(s)    
+    vort.vorticity(s, 0.)    
     vor = s.vor
     wy = vor['j'].view('i')
     plt.figure()

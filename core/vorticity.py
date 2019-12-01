@@ -4,7 +4,7 @@ from timing import timing
 
 
 @timing
-def vorticity(state):
+def vorticity(state, fparameter):
     """
     compute the vorticity
 
@@ -30,7 +30,8 @@ def vorticity(state):
         wk = state.vor[dirk].flipview(dirk)
 
         fortran.vorticity(ui, uj, wk)
-
+        if (fparameter > 0.) and (dirk is 'k'):
+            wk[:, :-1, :-1] += fparameter
 
 @timing
 def vorticity_all_comp(state):
@@ -91,7 +92,7 @@ if __name__ == '__main__':
     u[...] = - Omega * y
     v[...] = Omega * x
 
-    vorticity(state)
+    vorticity(state, 0.)
 
     vorticity_all_comp(state)
 

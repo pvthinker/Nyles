@@ -83,6 +83,10 @@ class UserParameters(object):
             parameter: attributes["default"]
             for parameter, attributes in defaults["animation"].items()
         })
+        self.physics = InextensibleDict({
+            parameter: attributes["default"]
+            for parameter, attributes in defaults["physics"].items()
+        })
         self.time = InextensibleDict({
             parameter: attributes["default"]
             for parameter, attributes in defaults["time"].items()
@@ -126,6 +130,7 @@ class UserParameters(object):
         """
         return {
             **self.model,
+            **self.physics,
             **self.IO,
             **self.animation,
             **self.time,
@@ -212,7 +217,7 @@ class UserParameters(object):
 
         This does not check if the given default value is valid."""
         # List of categories that are needed in the defaults
-        CATEGORIES = ["model", "IO", "animation", "time", "discretization", "MPI"]
+        CATEGORIES = ["model", "physics", "IO", "animation", "time", "discretization", "MPI"]
         # List of attributes that are needed for every parameter
         ATTRIBUTES = ["type", "default", "avail", "doc"]
         # Check all categories exist
@@ -280,6 +285,7 @@ if __name__ == "__main__":
     print("-"*80)
 
     print("Model parameters:", param.model)
+    print("Physics parameters:", param.physics)
     print("Input/Output parameters:", param.IO)
     print("Animation parameters:", param.animation)
     print("Time parameters:", param.time)

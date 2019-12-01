@@ -34,6 +34,14 @@ class LES(object):
         self.traclist = ['b']
         self.orderA = param["orderA"]
         self.orderVF = param["orderVF"]
+        self.rotating = param["rotating"]
+        if self.rotating:
+            # convert Coriolis parameter into its covariant quantity
+            # i.e. multiply with cell horizontal area
+            area = self.grid.dx*self.grid.dy
+            self.fparameter = param["coriolis"] * area
+        else:
+            self.fparameter = 0.
         self.mg = mg.Multigrid(param)
         self.stats = []
 
@@ -46,7 +54,7 @@ class LES(object):
         self.update_stats()
         U_from_u(state, self.grid)
         if self.nonlinear:
-            vort.vorticity(state)
+            vort.vorticity(state, self.fparameter)
             kinetic.kinenergy(state, self.grid)
 
     @timing

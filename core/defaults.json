@@ -32,6 +32,21 @@
         }
     },
 
+    "physics": {
+        "rotating": {
+            "type": "bool",
+            "default": false,
+            "avail": [true, false],
+            "doc": "Whether Coriolis force is present or not"
+        },
+        "coriolis": {
+            "type": "float",
+            "default": 1.0,
+            "avail": "> 0.0",
+            "doc": "Coriolis parameter in the vertical direction (in s^-1)"
+        }
+    },
+
     "IO": {
         "datadir": {
             "type": "str",

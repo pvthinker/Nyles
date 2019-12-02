@@ -130,6 +130,7 @@ class NylesIO(object):
             about low disk space
          - unit_length, unit_duration: the physical units for length and
             duration used in the model; to be saved in the history file
+         - n_tracers: number of passive tracers used in the model
 
         Every key-value-pair in "param" is saved in the history file.
         Values of type int, float or string are saved as they are.
@@ -138,7 +139,8 @@ class NylesIO(object):
         MAX_LENGTH_ATTRIBUTE characters if necessary.
         """
         self.disk_limit = param["disk_space_warning"]
-        # this will be finalised on "init"
+        # Copy the variables for the history file; the list will be
+        # checked and finalised on "init"
         self.hist_variables = param["variables_in_history"]
         self.dt_hist = param["timestep_history"]
         self.t_next_hist = 0.0
@@ -148,6 +150,7 @@ class NylesIO(object):
         self.unit = lambda dimension: (
             dimension.replace("T", param["unit_duration"]).replace("L", param["unit_length"])
         )
+        self.n_tracers = param["n_tracers"]
 
         # Create a copy of the experiment parameters to save them it in the history file
         self.experiment_parameters = param.copy()
@@ -166,8 +169,8 @@ class NylesIO(object):
                 # Convert parameters of any other type to a string
                 # denoting its type and a representation of its value
                 string_representation = (
-                    "{}: {}".format(type(value), repr(value))[
-                        :self.MAX_LENGTH_ATTRIBUTE+1]
+                    "{}: {}".format(type(value), repr(value))
+                    [:self.MAX_LENGTH_ATTRIBUTE+1]
                 )
                 # Cut strings which are too long
                 if len(string_representation) > self.MAX_LENGTH_ATTRIBUTE:
@@ -240,6 +243,9 @@ class NylesIO(object):
                 "a variable chosen for the history file does not exist in this "
                 "model.  Available variables: " + str(state.toc)
             )
+        # Add tracers
+        for i in range(self.n_tracers):
+            self.hist_variables.append("t{}".format(i))
         # Make list of strings into list of Scalar and Vector objects
         self.hist_variables = [state.get(v) for v in self.hist_variables]
         # Create (if necessary) the output directory and the history file
@@ -308,8 +314,8 @@ class NylesIO(object):
                             elif answer == "n":
                                 return True  # stop
                             else:
-                                print(
-                                    'Unknown answer.  Please answer with "y" or "n".')
+                                print('Unknown answer.', end='  ')
+                                print('Please answer with "y" or "n".')
         return False  # no problem
 
     def finalize(self, state, t, n):
@@ -514,7 +520,8 @@ class NylesIO(object):
             ncfile["n"][self.n_hist] = n
             for v in self.hist_variables:
                 ncfile[v.nickname][self.n_hist] = state.get(
-                    v.nickname).view("i")
+                    v.nickname
+                ).view("i")
         self.n_hist += 1
         self.last_saved_frame = n
 
@@ -540,7 +547,8 @@ if __name__ == "__main__":
         "disk_space_warning": 0.5,
         "unit_length": "m",
         "unit_duration": "s",
-        ## Choose between a list or "all"
+        "n_tracers": 0,
+        # Choose between a list or "all"
         "variables_in_history": "all",
         # "variables_in_history": ["u", "b"],
         # Select one of the following options

@@ -30,11 +30,17 @@ class LES(object):
     def __init__(self, param, grid, linear=False):
         self.nonlinear = not linear
         self.grid = grid
+        self.traclist = ['b']
+        # Add tracers (if any)
+        for i in range(param["n_tracers"]):
+            t_nickname = "t{}".format(i)
+            t_name = "tracer{}".format(i)
+            self.traclist.append(t_nickname)
+            var.modelvar[t_nickname] = var.ModelVariable('scalar', t_name,  dimension='', prognostic=True)
         self.state = var.get_state(param)
         self.halo = halo.set_halo(param, self.state)
         self.timescheme = ts.Timescheme(param, self.state)
         self.timescheme.set(self.rhs, self.diagnose_var)
-        self.traclist = ['b']
         self.orderA = param["orderA"]
         self.orderVF = param["orderVF"]
         self.rotating = param["rotating"]
@@ -137,9 +143,11 @@ if __name__ == "__main__":
         'Lx': 1.0, 'Ly': 1.0, 'Lz': 1.0,
         'orderA': 5, 'orderVF': 5,
         'timestepping': 'LFAM3',
+        'rotating': True, 'coriolis': 1.0,
         'neighbours': neighbours,
         'procs': procs, 'topology': topo.topology,
-        'npre': 3, 'npost': 3, 'omega': 0.8, 'ndeepest': 20, 'maxite': 20, 'tol': 1e-6
+        'npre': 3, 'npost': 3, 'omega': 0.8, 'ndeepest': 20, 'maxite': 20, 'tol': 1e-6,
+        'n_tracers': 0,
     }
 
     grid = Grid(param)

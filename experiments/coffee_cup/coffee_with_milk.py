@@ -35,6 +35,9 @@ param = UserParameters()
 # Choose a name for the output file
 param.IO["expname"] = "coffee_with_milk"
 
+# Add a passive tracer to track the path of the milk
+param.model["n_tracers"] = 1
+
 # Select the physical quantities to save in the history file
 param.IO["variables_in_history"] = ["b", "ke", "u"]
 
@@ -45,8 +48,9 @@ param.IO["timestep_history"] = 0.01
 param.physics["unit_length"] = "cm"
 param.physics["unit_duration"] = "s"
 
-# Turn the live animation off (or on)
-param.animation["show"] = False
+# Turn the live animation for a tracer on
+param.animation["show"] = True
+param.animation["style"] = "tracer"
 
 # Set the total length of the simulation in seconds
 param.time["tend"] = 5.0
@@ -70,7 +74,8 @@ param.discretization["global_nz"] = 64
 # Initialize Nyles with these parameters
 nyles = Nyles(param)
 
-# Get access to buoyancy and its coordinates
+# Get access to buoyancy, the passive tracer, and their coordinates
+tracer = nyles.model.state.t0.view("i")
 b = nyles.model.state.b.view("i")
 x = nyles.grid.x_b.view("i") / Lx
 y = nyles.grid.y_b.view("i") / Ly
@@ -85,7 +90,10 @@ rho_0 = rho_coffee
 # Fill the cup with coffee
 b[...] = -g * rho_coffee / rho_0
 # Add milk
-b[z >= 1 - z_milk * np.exp(-r**2/r_milk**2)] = -g * rho_milk / rho_0
+inital_milk_shape = (z >= 1 - z_milk * np.exp(-r**2/r_milk**2))
+b[inital_milk_shape] = -g * rho_milk / rho_0
+# Add a tracer to visualize the mixing
+tracer[inital_milk_shape] = 1
 
 # Optionally add stirring (TODO)
 

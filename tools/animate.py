@@ -62,9 +62,29 @@ class Animator:
         # Initialize self.hist_file to prevent the destructor from failing
         self.hist_file = None
 
-        # TODO: remove this when more variables are implemented
-        if varname != "b":
-            raise NotImplementedError("The plotting module does not yet support other variables than buoyancy.")
+        self.tracers = False
+
+        # Set parameters needed for Plotting that cannot be determined
+        # so far; maybe make them command line arguments in the future
+        param = {
+            "figsize": (RESOLUTION[0] / DPI, RESOLUTION[1] / DPI),
+            "aspect": "equal",
+            "rotation_speed": 3,
+        }
+
+        if varname == "b":
+            param["style"] = "b-interface"
+            param["stable_stratification"] = True  # TODO make this a command line argument
+        elif varname == "t0":
+            # This option is to plot only the first tracer and also a
+            # shorter notation in the common case with only one tracer
+            param["style"] = "tracer"
+            param["n_tracers"] = 1
+        elif varname == "tracer":
+            param["style"] = "tracer"
+            self.tracers = True
+        else:
+            raise NotImplementedError("The given variable is not yet supported.")
 
         # Save necessary arguments
         self.video_path = video_path
@@ -87,20 +107,19 @@ class Animator:
                 "date": time.strftime("%Y-%m-%d"),
             }
 
-        # Set parameters needed for Plotting
-        # TODO: add more when plotting takes more parameters
-        param = {
-            "figsize": (RESOLUTION[0] / DPI, RESOLUTION[1] / DPI),
-            "aspect": "equal",
-        }
-
         # Open the history file and keep it open to allow sequential reading
         print("Loading history file {!r}:".format(hist_path))
         self.hist_file = nc.Dataset(hist_path)
         print(self.hist_file)
 
         # Load the needed data
-        self.vardata = self.hist_file[varname]
+        if self.tracers:
+            param["n_tracers"] = self.hist_file.n_tracers
+            self.tracers_data = [
+                self.hist_file["t{}".format(i)] for i in range(self.hist_file.n_tracers)
+            ]
+        else:
+            self.vardata = self.hist_file[varname]
         self.t = self.hist_file["t"]
         self.n = self.hist_file["n"]
         self.n_frames = self.n.size
@@ -117,16 +136,26 @@ class Animator:
         param["nh"] = 0
         param["neighbours"] = {}
 
-        # Create a Grid, the variable, a State, and a Plotting object
         grid = Grid(param)
-        # Scalar takes actually a dimension instead of a unit, but this
-        # does not matter as long as the units don't change
-        scalar = Scalar(param, self.vardata.long_name, varname, self.vardata.units)
-        state = State([scalar])
-        self.p = Plotting(param, state, grid)
 
-        # Get access to the 3D data array
-        self.array = scalar.view("i")
+        # Create one or several Scalar variables as an interface for
+        # passing data to the plotting module.  Note: Scalar takes
+        # actually a dimension instead of a unit, but that does not
+        # matter because this information is not processed here.
+        if self.tracers:
+            tracer_list = []
+            self.arrays = []
+            for data in self.tracers_data:
+                tracer = Scalar(param, data.long_name, data.name, data.units)
+                tracer_list.append(tracer)
+                self.arrays.append(tracer.view("i"))
+            state = State(tracer_list)
+        else:
+            scalar = Scalar(param, self.vardata.long_name, varname, self.vardata.units)
+            self.array = scalar.view("i")
+            state = State([scalar])
+
+        self.p = Plotting(param, state, grid)
 
     def __del__(self):
         """Close the history file in the destructor."""
@@ -135,7 +164,10 @@ class Animator:
 
     def init(self):
         """Show the inital frame."""
-        print("Variable:", self.vardata.long_name)
+        if self.tracers:
+            print("Variable:", len(self.tracers_data), "tracer")
+        else:
+            print("Variable:", self.vardata.long_name)
         print("Number of frames:", self.n_frames)
         if self.video_path:
             print("Output file:", self.video_path, end="")
@@ -150,7 +182,11 @@ class Animator:
         else:
             print("No video will be created.")
         # Load the initial data and show it
-        self.array[...] = self.vardata[0]
+        if self.tracers:
+            for array, data in zip(self.arrays, self.tracers_data):
+                array[...] = data[0]
+        else:
+            self.array[...] = self.vardata[0]
         self.p.init(self.t[0], self.n[0])
 
     def run(self):
@@ -179,7 +215,11 @@ class Animator:
         """Load the data of the given frame and display it."""
         print("\rProcessing frame {} of {} ...".format(frame+1, self.n_frames), end="")
         # Load the data and show it
-        self.array[...] = self.vardata[frame]
+        if self.tracers:
+            for array, data in zip(self.arrays, self.tracers_data):
+                array[...] = data[frame]
+        else:
+            self.array[...] = self.vardata[frame]
         self.p.update(self.t[frame], self.n[frame], self.visible)
         # At the end
         if frame + 1 == self.n_frames:

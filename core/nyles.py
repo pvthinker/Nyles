@@ -188,7 +188,7 @@ class Nyles(object):
         launchscript = sys.argv[0]
         savedscript = '%s/%s.py' % (directory, param["expname"])
         if os.path.exists(savedscript):
-            print('Warning: the python script already exists in %s' % directory)
+            print('Warning: a python script with the same name already exists in %s' % directory)
             print('The experiment has already been done')
             # r = input('Do you want to overwrite it [Y/n] ?')
             r = ''

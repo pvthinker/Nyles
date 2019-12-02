@@ -29,6 +29,12 @@
             "default": 1.0,
             "avail": "> 0.0",
             "doc": "Length of the domain along z (z-axis goes from 0 to Lz)"
+        },
+        "n_tracers": {
+            "type": "int",
+            "default": 0,
+            "avail": ">= 0",
+            "doc": "Number of passive tracers to be advected with the flow; tracers are automatically added to the history file"
         }
     },
 
@@ -105,11 +111,29 @@
             "avail": [true, false],
             "doc": "Whether to display an animated 3D figure of the simulation or not (faster)"
         },
+        "style": {
+            "type": "str",
+            "default": "b-interface",
+            "avail": ["b-interface", "tracer"],
+            "doc": "Type of the animation: (1) b-interface: plot the interface of the central value of initial buoyancy (2) tracer: plot the position of all tracers in a scatter plot; tracers should be initialized with 1; the scatter plot shows where the value is bigger than 0.5"
+        },
+        "stable_stratification": {
+            "type": "bool",
+            "default": false,
+            "avail": [true, false],
+            "doc": "When the animation style is b-interface, it is necessary to say if the initial stratification is stable or unstable"
+        },
         "aspect": {
             "type": "str",
             "default": "equal",
             "avail": ["equal", "auto"],
-            "doc": "Aspect ratio of the figure."
+            "doc": "Aspect ratio of the figure"
+        },
+        "rotation_speed": {
+            "type": "int",
+            "default": 3,
+            "avail": ">= 0",
+            "doc": "Speed of the camera to rotate around the 3D scene in degrees per redraw"
         }
     },
 

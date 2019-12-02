@@ -163,6 +163,9 @@ class UserParameters(object):
                         "parameter {} must be one of {}, not {!r}"
                         .format(parameter, options, value)
                     )
+            elif options == "any":
+                # any value is allowed
+                pass
             elif options == "> 0.0":
                 if not value > 0.0:
                     raise UserParameterError(

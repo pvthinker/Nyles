@@ -27,21 +27,22 @@ from collections import namedtuple
 # Define the attributes of a variable in the LES model:
 #  - type can be 'scalar' or 'velocity' or 'vorticity'
 #  - name is the name of the physical quantity
-#  - unit is the physical unit of the quantity
+#  - dimension is the physical dimension of the quantity;  this is to
+#    associate the correct units with each quantity in the history file
 #  - prognostic is True for prognostic variables and False for diagnostic variables
 ModelVariable = namedtuple(
-    'ModelVariable', ['type', 'name', 'unit', 'prognostic']
+    'ModelVariable', ['type', 'name', 'dimension', 'prognostic']
 )
 
 # Define the variables in the LES model
 modelvar = {
-    'b': ModelVariable('scalar', 'buoyancy', 'm.s^-2', prognostic=True),
-    'p': ModelVariable('scalar', 'pressure', 'm.s^-2', prognostic=False),
-    'ke': ModelVariable('scalar', 'kinetic energy', 'm^2.s^-2', prognostic=False),
-    'div': ModelVariable('scalar', 'divergence', 's^-1', prognostic=False),
-    'u': ModelVariable('velocity', 'covariant velocity', 'm^2.s^-1', prognostic=True),
-    'U': ModelVariable('velocity', 'contravariant velocity',  's^-1', prognostic=False),
-    'vor': ModelVariable('vorticity', 'vorticity',  'm^2.s^-1', prognostic=False),
+    'b': ModelVariable('scalar', 'buoyancy', 'L.T^-2', prognostic=True),
+    'p': ModelVariable('scalar', 'pressure', 'L^2.T^-2', prognostic=False),
+    'ke': ModelVariable('scalar', 'kinetic energy', 'L^2.T^-2', prognostic=False),
+    'div': ModelVariable('scalar', 'divergence', 'T^-1', prognostic=False),
+    'u': ModelVariable('velocity', 'covariant velocity', 'L^2.T^-1', prognostic=True),
+    'U': ModelVariable('velocity', 'contravariant velocity',  'T^-1', prognostic=False),
+    'vor': ModelVariable('vorticity', 'vorticity',  'L^2.T^-1', prognostic=False),
 }
 
 # ----------------------------------------------------------------------
@@ -51,7 +52,7 @@ class Scalar(object):
     """A scalar field in 3D space representing a physical quantity.
 
     The physical quantity is defined by a common name, a short name and
-    a unit.  This information is written in the NetCDF file on save.
+    a dimension. This information is written in the NetCDF file on save.
 
     The data of the scalar field can be accessed via the "view"-methods,
     which return a 3D array.  For performance reasons, the data is
@@ -64,7 +65,7 @@ class Scalar(object):
      - name: a common name describing the physical quantity represented
         by the scalar
      - nickname: a short name or a symbol for the physical quantity
-     - unit: the physical unit of the quantity
+     - dimension: the physical dimension of the quantity
      - prognostic: a Boolean variable to distinguish prognostic from
         diagnostic variables
      - data: dictionary with keys ['i', 'j', 'k']; each key points to a
@@ -82,9 +83,10 @@ class Scalar(object):
      - flipview
      - viewlike
      - get_nature
+
     """
 
-    def __init__(self, param, name, nickname, unit, prognostic: bool=False):
+    def __init__(self, param, name, nickname, dimension, prognostic: bool=False):
         """Construct a scalar field in 3D space for a physical quantity.
 
         The arguments of the constructor have the same role as the
@@ -98,7 +100,7 @@ class Scalar(object):
 
         self.name = name
         self.nickname = nickname
-        self.unit = unit
+        self.dimension = dimension
         self.prognostic = prognostic
 
         # Calculate size needed in every direction, taking into account
@@ -149,10 +151,10 @@ class Scalar(object):
         """Return a new empty Scalar based on self.
 
         The new scalar field has the same meta-information as self
-        (param, name, nickname, unit, prognostic).  Its data arrays are
-        initialized with zeros.
+        (param, name, nickname, dimension, prognostic).  Its data
+        arrays are initialized with zeros.
         """
-        return Scalar(self.param, self.name, self.nickname, self.unit, self.prognostic)
+        return Scalar(self.param, self.name, self.nickname, self.dimension, self.prognostic)
 
     def view(self, idx=None):
         """Return a pointer to the data with idx as inner direction.
@@ -226,7 +228,7 @@ class Vector(dict):
     in z-direction it is v['k'].
 
     Attributes:
-     - param, name, nickname, unit, prognostic: see class Scalar
+     - param, name, nickname, dimension, prognostic: see class Scalar
      - is_velocity: Boolean variable to distinguish velocity vectors
         from vorticity vectors
 
@@ -235,8 +237,8 @@ class Vector(dict):
      - get_nature
     """
 
-    def __init__(self, param, name, nickname, unit, prognostic: bool=False,
-                 is_velocity: bool=True):
+    def __init__(self, param, name, nickname, dimension,
+                 prognostic: bool=False, is_velocity: bool=True):
         """Construct a vector field in 3D space for a physical quantity.
 
         The arguments of the constructor have the same role as the
@@ -250,7 +252,7 @@ class Vector(dict):
                 param,
                 name + ' (' + direction + ')',
                 nickname + '_' + direction,
-                unit,
+                dimension,
                 prognostic,
             )
 
@@ -260,7 +262,7 @@ class Vector(dict):
 
         self.name = name
         self.nickname = nickname
-        self.unit = unit
+        self.dimension = dimension
         self.prognostic = prognostic
         self.is_velocity = is_velocity
 
@@ -268,10 +270,10 @@ class Vector(dict):
         """Return a new empty Vector based on self.
 
         The new vector field has the same meta-information as self
-        (param, name, nickname, unit, prognostic, is_velocity).  The
-        data arrays of its components are initialized with zeros.
+        (param, name, nickname, dimension, prognostic, is_velocity).
+        The data arrays of its components are initialized with zeros.
         """
-        return Vector(self.param, self.name, self.nickname, self.unit,
+        return Vector(self.param, self.name, self.nickname, self.dimension,
                       self.prognostic, self.is_velocity)
 
     def get_nature(self):
@@ -411,16 +413,16 @@ def get_state(param):
     for nickname, var in modelvar.items():
         if var.type == 'scalar':
             listvar.append(
-                Scalar(param, var.name, nickname, var.unit, var.prognostic)
+                Scalar(param, var.name, nickname, var.dimension, var.prognostic)
             )
         elif var.type == 'velocity':
             listvar.append(
-                Vector(param, var.name, nickname, var.unit, var.prognostic,
+                Vector(param, var.name, nickname, var.dimension, var.prognostic,
                        is_velocity=True)
             )
         elif var.type == 'vorticity':
             listvar.append(
-                Vector(param, var.name, nickname, var.unit, var.prognostic,
+                Vector(param, var.name, nickname, var.dimension, var.prognostic,
                        is_velocity=False)
             )
     return State(listvar)

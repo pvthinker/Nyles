@@ -54,9 +54,9 @@ class Grid(object):
         }
 
         # Define coordinates at buoyancy-point (cell centers)
-        self.x_b = Scalar(param, "x at cell centers", "x_b", "m")
-        self.y_b = Scalar(param, "y at cell centers", "y_b", "m")
-        self.z_b = Scalar(param, "z at cell centers", "z_b", "m")
+        self.x_b = Scalar(param, "x at cell centers", "x_b", "L")
+        self.y_b = Scalar(param, "y at cell centers", "y_b", "L")
+        self.z_b = Scalar(param, "z at cell centers", "z_b", "L")
         # Create coordinate vectors
         self.x_b_1D = np.linspace(self.dx/2, self.Lx - self.dx/2, self.nx)
         self.y_b_1D = np.linspace(self.dy/2, self.Ly - self.dy/2, self.ny)
@@ -76,9 +76,9 @@ class Grid(object):
         # https://docs.scipy.org/doc/numpy/reference/generated/numpy.meshgrid.html
 
         # Define coordinates at velocity-points (cell faces)
-        self.x_vel = Vector(param, "x at cell faces", "x_vel", "m", is_velocity=True)
-        self.y_vel = Vector(param, "y at cell faces", "y_vel", "m", is_velocity=True)
-        self.z_vel = Vector(param, "z at cell faces", "z_vel", "m", is_velocity=True)
+        self.x_vel = Vector(param, "x at cell faces", "x_vel", "L", is_velocity=True)
+        self.y_vel = Vector(param, "y at cell faces", "y_vel", "L", is_velocity=True)
+        self.z_vel = Vector(param, "z at cell faces", "z_vel", "L", is_velocity=True)
         # Create coordinate vectors
         self.x_u_1D = self.x_b_1D.copy() + self.dx/2
         self.y_u_1D = self.y_b_1D.copy()
@@ -110,9 +110,9 @@ class Grid(object):
         )
 
         # Define coordinates at vorticity-points (cell edges)
-        self.x_vor = Vector(param, "x at cell edges", "x_vor", "m", is_velocity=False)
-        self.y_vor = Vector(param, "y at cell edges", "y_vor", "m", is_velocity=False)
-        self.z_vor = Vector(param, "z at cell edges", "z_vor", "m", is_velocity=False)
+        self.x_vor = Vector(param, "x at cell edges", "x_vor", "L", is_velocity=False)
+        self.y_vor = Vector(param, "y at cell edges", "y_vor", "L", is_velocity=False)
+        self.z_vor = Vector(param, "z at cell edges", "z_vor", "L", is_velocity=False)
         # Create coordinate vectors
         self.x_vor_i_1D = self.x_b_1D.copy()
         self.y_vor_i_1D = self.y_b_1D.copy() + self.dy/2

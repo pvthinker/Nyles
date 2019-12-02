@@ -33,6 +33,18 @@
     },
 
     "physics": {
+        "unit_length": {
+            "type": "str",
+            "default": "m",
+            "avail": "any",
+            "doc": "Physical unit for lengths (extents in space) used in the model"
+        },
+        "unit_duration": {
+            "type": "str",
+            "default": "s",
+            "avail": "any",
+            "doc": "Physical unit for durations (amounts of time) used in the model"
+        },
         "rotating": {
             "type": "bool",
             "default": false,
@@ -42,7 +54,7 @@
         "coriolis": {
             "type": "float",
             "default": 1.0,
-            "avail": "> 0.0",
+            "avail": "any",
             "doc": "Coriolis parameter in the vertical direction (in s^-1)"
         }
     },
@@ -70,7 +82,7 @@
             "type": "list or string",
             "default": "all",
             "avail": "a list of model variables or the string \"all\"",
-            "doc": "Names of the 3D variables of the model to save in the history file or the string \"all\" to save all model variables except for the array \"work\""
+            "doc": "Names of the 3D variables of the model to save in the history file or the string \"all\" to save all model variables"
         },
         "timestep_history": {
             "type": "float",

@@ -8,7 +8,7 @@ from nyles import Nyles
 from parameters import UserParameters
 
 
-# Densities in kg m^-3
+# Densities in kg m^-3 (the unit does not matter, only the density ratio does)
 rho_coffee = 970  # at 85 °C (density of fresh water)
 rho_milk = 1100  # at 5 °C (density of fresh water multiplied by 1.1)
 
@@ -20,13 +20,13 @@ z_milk = 0.4
 # Initial extent of the milk: must be greater than zero
 r_milk = 0.3
 
-# Size of coffee cup (in meter, makes a volume of 225 ml)
-Lx = 32  # realistic value: 0.05
-Ly = 32  # realistic value: 0.05
-Lz = 64  # realistic value: 0.10
+# Size of coffee cup (in centimeter, makes a volume of 250 mL)
+Lx = 5
+Ly = 5
+Lz = 10
 
-# Gravity acceleration in m/s²
-g = 9.81
+# Gravity acceleration in cm/s²
+g = 980.7
 
 
 # Get the default parameters, then modify them as needed
@@ -38,18 +38,25 @@ param.IO["expname"] = "coffee_with_milk"
 # Select the physical quantities to save in the history file
 param.IO["variables_in_history"] = ["b", "ke", "u"]
 
+# Set the time interval (in seconds) at which these quantities are saved
+param.IO["timestep_history"] = 0.01
+
+# Make Nyles aware that CGS units are used here
+param.physics["unit_length"] = "cm"
+param.physics["unit_duration"] = "s"
+
 # Turn the live animation off (or on)
 param.animation["show"] = False
 
 # Set the total length of the simulation in seconds
-param.time["tend"] = 60.0
+param.time["tend"] = 5.0
 # Select automatic (or fix) time steps
 param.time["auto_dt"] = True
 # The following parameter is used for fix time steps
-param.time["dt"] = 0.5
+param.time["dt"] = 0.01
 # The following parameters are used for automatic time steps
 param.time["cfl"] = 0.8
-param.time["dt_max"] = 0.5
+param.time["dt_max"] = 0.01
 
 # Set the domain size and resolution
 param.model["Lx"] = Lx
@@ -84,7 +91,7 @@ b[z >= 1 - z_milk * np.exp(-r**2/r_milk**2)] = -g * rho_milk / rho_0
 
 # Optionally add noise to make the situation unsymmetric
 # noise = np.random.normal(size=b.shape)
-# b += noise * 1e-3
+# b *= noise * 1e-2 + 1
 
 # Start the simulation
 nyles.run()

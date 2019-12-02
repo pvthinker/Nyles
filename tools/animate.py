@@ -1,7 +1,7 @@
 #! /usr/bin/env python3
 
 # The first line allows to run this program from the Linux shell without
-# calling Python explicitely.  Since it is a comment, it is ignored on
+# calling Python explicitly.  Since it is a comment, it is ignored on
 # platforms which don't understand the "Hashbang".
 
 """Animate a Nyles history file and create a video from it.
@@ -90,7 +90,7 @@ class Animator:
         # Set parameters needed for Plotting
         # TODO: add more when plotting takes more parameters
         param = {
-            "figsize": (RESOLUTION[0]/DPI, RESOLUTION[1]/DPI),
+            "figsize": (RESOLUTION[0] / DPI, RESOLUTION[1] / DPI),
             "aspect": "equal",
         }
 
@@ -119,6 +119,8 @@ class Animator:
 
         # Create a Grid, the variable, a State, and a Plotting object
         grid = Grid(param)
+        # Scalar takes actually a dimension instead of a unit, but this
+        # does not matter as long as the units don't change
         scalar = Scalar(param, self.vardata.long_name, varname, self.vardata.units)
         state = State([scalar])
         self.p = Plotting(param, state, grid)
@@ -188,6 +190,7 @@ class Animator:
                 plt.pause(0.5)
                 plt.close(self.p.fig)
 
+
 if __name__ == "__main__":
     # Set up the command line arguments
     parser = argparse.ArgumentParser(
@@ -203,8 +206,7 @@ if __name__ == "__main__":
              "the animation is shown, but no video is created",
     )
     parser.add_argument(
-        "--fast", dest="fast", action="store_const",
-        const=True, default=False,
+        "--fast", dest="fast", action="store_const", const=True, default=False,
         help="only save the video without showing it at the same time "
              "(this has no effect if no video file is given)",
     )

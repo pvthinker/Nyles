@@ -141,8 +141,8 @@ class Nyles(object) :
         is False.  Otherwise, the timestep is calculated as
             dt = cfl / max(|U|) .
         Note that the "dx" is hidden in the contravariant velocity U,
-        which has units of 1/T.  In the formula, |U| denotes the norm of
-        the contravariant velocity vector.  If the velocity is zero
+        which has dimension 1/T.  In the formula, |U| denotes the norm
+        of the contravariant velocity vector.  If the velocity is zero
         everywhere, self.dt_max is returned.  Otherwise, the smaller
         value of dt and dt_max is returned.
         """

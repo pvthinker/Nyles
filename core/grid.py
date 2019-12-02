@@ -18,14 +18,18 @@ class Grid(object):
         self.ny = param["ny"]
         self.nz = param["nz"]
 
+        self.npx = param["npx"]
+        self.npy = param["npy"]
+        self.npz = param["npz"]
+
         self.Lx = param["Lx"]
         self.Ly = param["Ly"]
         self.Lz = param["Lz"]
 
         # Define useful quantities
-        self.dx = self.Lx / self.nx
-        self.dy = self.Ly / self.ny
-        self.dz = self.Lz / self.nz
+        self.dx = self.Lx / (self.npx*self.nx)
+        self.dy = self.Ly / (self.npy*self.ny)
+        self.dz = self.Lz / (self.npz*self.nz)
 
         self.dx2 = self.dx**2
         self.dy2 = self.dy**2
@@ -57,14 +61,20 @@ class Grid(object):
         self.x_b = Scalar(param, "x at cell centers", "x_b", "L")
         self.y_b = Scalar(param, "y at cell centers", "y_b", "L")
         self.z_b = Scalar(param, "z at cell centers", "z_b", "L")
+        
         # Create coordinate vectors
         size = self.x_b.size
         self.size = size
         self.domainindices = self.x_b.domainindices
         k0, k1, j0, j1, i0, i1 = self.domainindices
-        self.x_b_1D = (np.arange(size['i'])+0.5-i0)*self.dx #np.linspace(self.dx/2, self.Lx - self.dx/2, self.nx)
-        self.y_b_1D = (np.arange(size['j'])+0.5-j0)*self.dy #np.linspace(self.dy/2, self.Ly - self.dy/2, self.ny)
-        self.z_b_1D = (np.arange(size['k'])+0.5-k0)*self.dz #np.linspace(self.dz/2, self.Lz - self.dz/2, self.nz)
+        #  coordinates of the bottom left front corner of the subdomain
+        x0 = param['loc'][2]*self.nx*self.dx
+        y0 = param['loc'][1]*self.ny*self.dy
+        z0 = param['loc'][0]*self.nz*self.dz        
+        self.x_b_1D = (np.arange(size['i'])+0.5-i0)*self.dx + x0
+        self.y_b_1D = (np.arange(size['j'])+0.5-j0)*self.dy + y0
+        self.z_b_1D = (np.arange(size['k'])+0.5-k0)*self.dz + z0
+        
         # Make the vectors into coordinate matrices and save them
         x_b = self.x_b.view("i")
         y_b = self.y_b.view("i")

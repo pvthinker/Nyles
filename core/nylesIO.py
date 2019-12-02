@@ -189,7 +189,9 @@ class NylesIO(object):
             raise NotImplementedError
         else:
             raise ValueError("unknown mode: {}".format(param["mode"]))
-        self.hist_path = os.path.join(out_dir, expname + "_hist.nc")
+        self.hist_path = os.path.join(out_dir, expname +
+                                      "_%02i" % param["myrank"] +
+                                      "_hist.nc")
         self.script_path = os.path.join(out_dir, expname + ".py")
         self.output_directory = out_dir
 
@@ -240,8 +242,8 @@ class NylesIO(object):
 
         # Create the output directory if necessary
         if not os.path.isdir(self.output_directory):
-            os.makedirs(self.output_directory)
-
+            if param["myrank"] == 0:
+                os.makedirs(self.output_directory)
         # Create the history file and save the initial state
         self.create_history_file(grid, variables)
         self.write_history_file(state, t, n)

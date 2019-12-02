@@ -176,7 +176,7 @@ def define_grids(param):
         mygrids += [grid]
         lev += 1
         if np.prod(shape) <= ncellscoarsest:
-            assert np.prod(procs) == 1, 'weird problem with the grid hierachy'
+            # assert np.prod(procs) == 1, 'weird problem with the grid hierachy'
             done = True
 
     return mygrids

@@ -4,10 +4,10 @@ import nyles as nyles_module
 import parameters
 
 
-nh = 2
+nh = 3
 nz = 32
 ny = 32
-nx = 64
+nx = 32
 # It must be possible to set the following lengths to arbitrary values,
 # but currently, due to a problem in the handling of the metric in the
 # calculation of p, it is necessary to ensure dx = dy = dz = 1. #TODO
@@ -26,7 +26,7 @@ param.model["Ly"] = Ly
 param.model["Lz"] = Lz
 
 param.IO["datadir"] = "~/data/Nyles"
-param.IO["expname"] = "khi_0"
+param.IO["expname"] = "khi_1"
 param.IO["mode"] = "overwrite"
 param.IO["variables_in_history"] = ['b', 'u']
 param.IO["timestep_history"] = .2  # 0.0 saves every frame
@@ -48,7 +48,7 @@ param.discretization["orderVF"] = 5  # upwind-order for vortex-force term
 param.discretization["orderA"] = 5  # upwind-order for advection term
 
 param.MPI["nh"] = nh
-param.MPI["npx"] = 1
+param.MPI["npx"] = 2
 param.MPI["npy"] = 1
 param.MPI["npz"] = 1
 

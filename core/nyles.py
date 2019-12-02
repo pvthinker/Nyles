@@ -65,12 +65,21 @@ class Nyles(object):
         param["procs"] = procs
         param["myrank"] = myrank
         param["neighbours"] = neighbours
+        param["loc"] = loc
 
         # Load the grid with the extended parameters
         self.grid = grid.Grid(param)
 
+        # Load the IO; only the parameters modifiable by the user are saved
+        self.IO = nylesIO.NylesIO(param)
+
+        # backup script file into the NetCDF file directory
+        self.backup_scriptfile(param)
+
         # Initiate the model and needed variables
         self.initiate(param)
+
+        sys.stdout = Logger(self.IO.output_directory+'/output.txt')
 
     def initiate(self, param):
         if param['modelname'] == 'LES':
@@ -196,6 +205,20 @@ class Nyles(object):
         for l in logo:
             print(" "*10+l)
 
+class Logger(object):
+    def __init__(self, logfile):
+        self.terminal = sys.stdout
+        self.log = open(logfile, "w")
+
+    def write(self, message):
+        self.terminal.write(message)
+        self.log.write(message)
+
+    def flush(self):
+        # this flush method is needed for python 3 compatibility.
+        # this handles the flush command by doing nothing.
+        # you might want to specify some extra behavior here.
+        pass
 
 if __name__ == "__main__":
     from parameters import UserParameters

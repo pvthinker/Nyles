@@ -138,7 +138,8 @@ class NylesIO(object):
         MAX_LENGTH_ATTRIBUTE characters if necessary.
         """
         self.disk_limit = param["disk_space_warning"]
-        self.hist_variables = param["variables_in_history"]  # this will be finalised on "init"
+        # this will be finalised on "init"
+        self.hist_variables = param["variables_in_history"]
         self.dt_hist = param["timestep_history"]
         self.t_next_hist = 0.0
         self.n_hist = 0
@@ -165,7 +166,8 @@ class NylesIO(object):
                 # Convert parameters of any other type to a string
                 # denoting its type and a representation of its value
                 string_representation = (
-                    "{}: {}".format(type(value), repr(value))[:self.MAX_LENGTH_ATTRIBUTE+1]
+                    "{}: {}".format(type(value), repr(value))[
+                        :self.MAX_LENGTH_ATTRIBUTE+1]
                 )
                 # Cut strings which are too long
                 if len(string_representation) > self.MAX_LENGTH_ATTRIBUTE:
@@ -306,7 +308,8 @@ class NylesIO(object):
                             elif answer == "n":
                                 return True  # stop
                             else:
-                                print('Unknown answer.  Please answer with "y" or "n".')
+                                print(
+                                    'Unknown answer.  Please answer with "y" or "n".')
         return False  # no problem
 
     def finalize(self, state, t, n):
@@ -344,29 +347,32 @@ class NylesIO(object):
             # Store the experiment parameters
             ncfile.setncatts(self.experiment_parameters)
 
+            nxl = grid.size['i']
+            nyl = grid.size['j']
+            nzl = grid.size['k']
             # Create the dimensions
             ncfile.createDimension("t")  # unlimited size
-            ncfile.createDimension("x_b", grid.nx)
-            ncfile.createDimension("y_b", grid.ny)
-            ncfile.createDimension("z_b", grid.nz)
-            ncfile.createDimension("x_u", grid.nx)
-            ncfile.createDimension("y_u", grid.ny)
-            ncfile.createDimension("z_u", grid.nz)
-            ncfile.createDimension("x_v", grid.nx)
-            ncfile.createDimension("y_v", grid.ny)
-            ncfile.createDimension("z_v", grid.nz)
-            ncfile.createDimension("x_w", grid.nx)
-            ncfile.createDimension("y_w", grid.ny)
-            ncfile.createDimension("z_w", grid.nz)
-            ncfile.createDimension("x_vor_i", grid.nx)
-            ncfile.createDimension("y_vor_i", grid.ny)
-            ncfile.createDimension("z_vor_i", grid.nz)
-            ncfile.createDimension("x_vor_j", grid.nx)
-            ncfile.createDimension("y_vor_j", grid.ny)
-            ncfile.createDimension("z_vor_j", grid.nz)
-            ncfile.createDimension("x_vor_k", grid.nx)
-            ncfile.createDimension("y_vor_k", grid.ny)
-            ncfile.createDimension("z_vor_k", grid.nz)
+            ncfile.createDimension("x_b", nxl)
+            ncfile.createDimension("y_b", nyl)
+            ncfile.createDimension("z_b", nzl)
+            ncfile.createDimension("x_u", nxl)
+            ncfile.createDimension("y_u", nyl)
+            ncfile.createDimension("z_u", nzl)
+            ncfile.createDimension("x_v", nxl)
+            ncfile.createDimension("y_v", nyl)
+            ncfile.createDimension("z_v", nzl)
+            ncfile.createDimension("x_w", nxl)
+            ncfile.createDimension("y_w", nyl)
+            ncfile.createDimension("z_w", nzl)
+            ncfile.createDimension("x_vor_i", nxl)
+            ncfile.createDimension("y_vor_i", nyl)
+            ncfile.createDimension("z_vor_i", nzl)
+            ncfile.createDimension("x_vor_j", nxl)
+            ncfile.createDimension("y_vor_j", nyl)
+            ncfile.createDimension("z_vor_j", nzl)
+            ncfile.createDimension("x_vor_k", nxl)
+            ncfile.createDimension("y_vor_k", nyl)
+            ncfile.createDimension("z_vor_k", nzl)
 
             # Create the variables with one dimension
             v = ncfile.createVariable("n", int, ("t",))
@@ -507,7 +513,8 @@ class NylesIO(object):
             ncfile["t"][self.n_hist] = t
             ncfile["n"][self.n_hist] = n
             for v in self.hist_variables:
-                ncfile[v.nickname][self.n_hist] = state.get(v.nickname).view("i")
+                ncfile[v.nickname][self.n_hist] = state.get(
+                    v.nickname).view("i")
         self.n_hist += 1
         self.last_saved_frame = n
 
@@ -525,9 +532,8 @@ if __name__ == "__main__":
 
     from variables import get_state
 
-
     param = {
-        ### Parameters necessary for the IO class
+        # Parameters necessary for the IO class
         "datadir": "~/data/Nyles",
         "expname": "test_exp",
         "timestep_history": 1.0,
@@ -537,11 +543,11 @@ if __name__ == "__main__":
         ## Choose between a list or "all"
         "variables_in_history": "all",
         # "variables_in_history": ["u", "b"],
-        ## Select one of the following options
+        # Select one of the following options
         "mode": "overwrite",
         # "mode": "count",
         # "mode": "continue",
-        ### Parameters necessary for State and/or Grid
+        # Parameters necessary for State and/or Grid
         "Lx": 60,
         "Ly": 50,
         "Lz": 10,
@@ -550,7 +556,7 @@ if __name__ == "__main__":
         "nz": 4,
         "nh": 3,
         "neighbours": {},  # TODO: try with neighbours when halo-handling is implemented
-        ### Parameters to test the storage of parameters in the history file
+        # Parameters to test the storage of parameters in the history file
         "a boolean variable": True,
         "a 2nd boolean variable": False,
         "a long list": list(range(50)),

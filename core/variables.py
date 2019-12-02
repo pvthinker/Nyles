@@ -109,7 +109,7 @@ class Scalar(object):
         p = param
         nx, ny, nz, nh = p['nx'], p['ny'], p['nz'], p['nh']
         shape = [nz, ny, nx]
-
+        self.shape = shape
         size, domainindices = topo.get_variable_shape(shape, neighbours, nh)
 
         nzl, nyl, nxl = size

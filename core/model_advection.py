@@ -7,6 +7,8 @@ import projection
 import timescheme as ts
 from timing import timing
 import pickle
+import halo
+
 
 class Advection(object):
     """Pure advection model.
@@ -18,30 +20,33 @@ class Advection(object):
         self.state = var.get_state(param)
         self.traclist = ['b']
         self.order = param['orderA']
+        self.halo = halo.set_halo(param, self.state)
         self.timescheme = ts.Timescheme(param, self.state)
         self.timescheme.set(self.rhs, self.diagnose_var)
         self.param = param
         self.grid = grid
         self.stats = []
-        
+
     def diagnose_var(self, state):
         # no diagnostic variables in this model
-        pass
+        self.halo.fill(state.b)
 
     def make_u_divergentfree(self):
         import mg
         mg = mg.Multigrid(self.param, self.grid)
+
+        self.halo.fill(self.state.u)
+
         cov_to_contra.U_from_u(self.state, self.grid)
         projection.compute_p(mg, self.state, self.grid)
         cov_to_contra.U_from_u(self.state, self.grid)
 
-        
     @timing
     def forward(self, t, dt):
         self.timescheme.forward(self.state, t, dt)
         return False
 
-    @timing    
+    @timing
     def rhs(self, state, t, dstate):
         tracer.rhstrac(state, dstate, self.traclist, self.order)
 
@@ -54,6 +59,7 @@ class Advection(object):
     def write_stats(self, path):
         fid = open('%s/stats.pkl' % path, 'bw')
         pickle.dump(self.stats, fid)
+
 
 if __name__ == '__main__':
     import numpy as np
@@ -77,11 +83,11 @@ if __name__ == '__main__':
         'neighbours': neighbours,
         # Choose a timestepping method
         'timestepping': 'LFAM3',
-        #'timestepping': 'EF',
+        # 'timestepping': 'EF',
         # Set the order of the upwind scheme
         'orderA': 5,
-        #'orderA': 3,
-        #'orderA': 1,
+        # 'orderA': 3,
+        # 'orderA': 1,
     }
 
     model = Advection(param)

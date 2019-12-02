@@ -11,6 +11,7 @@ from timing import timing
 import mg
 import pickle
 import cov_to_contra
+import halo
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -30,6 +31,7 @@ class LES(object):
         self.nonlinear = not linear
         self.grid = grid
         self.state = var.get_state(param)
+        self.halo = halo.set_halo(param, self.state)
         self.timescheme = ts.Timescheme(param, self.state)
         self.timescheme.set(self.rhs, self.diagnose_var)
         self.traclist = ['b']
@@ -48,9 +50,12 @@ class LES(object):
 
     @timing
     def diagnose_var(self, state):
+        self.halo.fill(state.b)
+        self.halo.fill(state.u)
         # Diagnostic variables
         cov_to_contra.U_from_u(state, self.grid)
         projection.compute_p(self.mg, state, self.grid)
+        self.halo.fill(state.u)
         cov_to_contra.U_from_u(state, self.grid)
 
         # this computation is only to check the divergence
@@ -58,11 +63,14 @@ class LES(object):
         # we don't need to know the information (that can
         # always be estimated offline, from 'u')
         projection.compute_div(self.state, timing=False)
+        self.halo.fill(state.div)
         self.update_stats()
-        
+
         if self.nonlinear:
             vort.vorticity(state, self.fparameter)
             kinetic.kinenergy(state, self.grid)
+            self.halo.fill(state.vor)
+            self.halo.fill(state.ke)
 
     @timing
     def rhs(self, state, t, dstate):
@@ -83,10 +91,10 @@ class LES(object):
     def forward(self, t, dt):
         self.timescheme.forward(self.state, t, dt)
         return self.mg.stats['blowup']
-    
+
     def update_stats(self):
         stats = self.mg.stats
-        
+
         div = self.state.div
         maxdiv = np.max(np.abs(div.view()))
         stats['maxdiv'] = maxdiv
@@ -98,8 +106,8 @@ class LES(object):
     def write_stats(self, path):
         fid = open('%s/stats.pkl' % path, 'bw')
         pickle.dump(self.stats, fid)
-        
-        
+
+
 @timing
 def reset_state(state):
     for var_name, var_type in state.toc.items():
@@ -114,7 +122,6 @@ def reset_state(state):
 
 if __name__ == "__main__":
     from grid import Grid
-
 
     procs = [1, 1, 1]
     topo.topology = 'closed'

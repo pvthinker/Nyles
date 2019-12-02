@@ -9,9 +9,14 @@ import grid
 import nylesIO
 import plotting
 import timing
+import topology as topo
+import mpitools
+import subprocess as subp
+import os
+import sys
 
 
-class Nyles(object) :
+class Nyles(object):
     """
     Attributes :
         - self.grid
@@ -32,13 +37,18 @@ class Nyles(object) :
             - run() : main loop. Iterates the model forward and saves the state
             in the history file
     """
+
     def __init__(self, user_param):
+        self.banner()
         # Check and get user parameters
         user_param.check()
         param = user_param.view_parameters()
 
         # Load the IO; only the parameters modifiable by the user are saved
         self.IO = nylesIO.NylesIO(param)
+
+        # backup script file into the NetCDF file directory
+        self.backup_scriptfile(param)
 
         # Add parameters that are automatically set
         param["nx"] = param["global_nx"] // param["npx"]
@@ -47,14 +57,17 @@ class Nyles(object) :
         # TODO: make the following general
         # for reference (taken from an experiment file; remove when done):
         # import topology as topo
-        # topo.topology = 'closed'
-        # procs = [1, 1, 1]
-        # myrank = 0
-        # loc = topo.rank2loc(myrank, procs)
-        # neighbours = topo.get_neighbours(loc, procs)
+        topo.topology = param["geometry"]
+        npz = param["npz"]
+        npy = param["npy"]
+        npx = param["npx"]
+        procs = [npz, npy, npx]
+        myrank = mpitools.get_myrank(procs)
+        loc = topo.rank2loc(myrank, procs)
+        neighbours = topo.get_neighbours(loc, procs)
         param.update({
-            "procs": [1, 1, 1], "neighbours": {},
-            "topology": "closed",  # is this always the same as param["geometry"]?
+            "procs": procs, "neighbours": neighbours,
+            "topology": param["geometry"],
             "npre": 3, "npost": 3, "omega": 0.8, "ndeepest": 20, "maxite": 20,
             "tol": 1e-3,
         })
@@ -81,7 +94,8 @@ class Nyles(object) :
 
         # Load the plotting module
         if param["show"]:
-            self.plotting = plotting.Plotting(param, self.model.state, self.grid)
+            self.plotting = plotting.Plotting(
+                param, self.model.state, self.grid)
         else:
             self.plotting = None
 
@@ -103,10 +117,11 @@ class Nyles(object) :
         time_length = len(str(int(self.tend))) + 3
         time_string = "\r"+", ".join([
             "n = {:3d}",
-            "t = {:"+ str(time_length) + ".2f}/{:" + str(time_length) + ".2f}",
+            "t = {:" + str(time_length) + ".2f}/{:" +
+            str(time_length) + ".2f}",
             "dt = {:.4f}",
         ])
-        
+
         print("-"*50)
         while True:
             dt = self.compute_dt()
@@ -167,6 +182,36 @@ class Nyles(object) :
                 return min(dt, self.dt_max)
         else:
             return self.dt0
+
+    def backup_scriptfile(self, param):
+        directory = self.IO.output_directory
+        launchscript = sys.argv[0]
+        savedscript = '%s/%s.py' % (directory, param["expname"])
+        if os.path.exists(savedscript):
+            print('Warning: the python script already exists in %s' % directory)
+            print('The experiment has already been done')
+            # r = input('Do you want to overwrite it [Y/n] ?')
+            r = ''
+            if r.lower() == 'n':
+                print('Okay, I stop')
+                exit(0)
+
+        subp.call(['cp', launchscript, savedscript])
+
+    def banner(self):
+        logo = [
+            "  _   _       _            ",
+            " | \ | |     | |           ",
+            " |  \| |_   _| | ___  ___  ",
+            " | . ` | | | | |/ _ \/ __| ",
+            " | |\  | |_| | |  __/\__ \ ",
+            " |_| \_|\__, |_|\___||___/ ",
+            "         __/ |             ",
+            "        |___/              ",
+            "                           "]
+        print("Welcome to")
+        for l in logo:
+            print(" "*10+l)
 
 
 if __name__ == "__main__":

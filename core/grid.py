@@ -58,9 +58,13 @@ class Grid(object):
         self.y_b = Scalar(param, "y at cell centers", "y_b", "L")
         self.z_b = Scalar(param, "z at cell centers", "z_b", "L")
         # Create coordinate vectors
-        self.x_b_1D = np.linspace(self.dx/2, self.Lx - self.dx/2, self.nx)
-        self.y_b_1D = np.linspace(self.dy/2, self.Ly - self.dy/2, self.ny)
-        self.z_b_1D = np.linspace(self.dz/2, self.Lz - self.dz/2, self.nz)
+        size = self.x_b.size
+        self.size = size
+        self.domainindices = self.x_b.domainindices
+        k0, k1, j0, j1, i0, i1 = self.domainindices
+        self.x_b_1D = (np.arange(size['i'])+0.5-i0)*self.dx #np.linspace(self.dx/2, self.Lx - self.dx/2, self.nx)
+        self.y_b_1D = (np.arange(size['j'])+0.5-j0)*self.dy #np.linspace(self.dy/2, self.Ly - self.dy/2, self.ny)
+        self.z_b_1D = (np.arange(size['k'])+0.5-k0)*self.dz #np.linspace(self.dz/2, self.Lz - self.dz/2, self.nz)
         # Make the vectors into coordinate matrices and save them
         x_b = self.x_b.view("i")
         y_b = self.y_b.view("i")

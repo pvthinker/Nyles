@@ -174,7 +174,7 @@ class Halo():
         TODO: see if it's worth optimizing
         """
         for direc in 'ijk':
-            self.fillarray(getattr(vector, direc).view('i'))
+            self.fillarray(vector[direc].view('i'))
 
     def _print(self):
         """
@@ -185,6 +185,21 @@ class Halo():
         for key, buf in self.sbuf.items():
             print(self.myrank, key, np.shape(buf))
 
+def set_halo(param, state):
+    extension = 6
+    nh = param["nh"]
+    procs = param["procs"]
+    neighbours = param["neighbours"]
+    shape = state.b.shape
+    size, domainindices = np.shape(state.b.view('i')), state.b.domainindices
+    localgrid = {'shape': shape,
+        'size': size,
+        'nh': nh,
+        'neighbours': neighbours,
+        'domainindices': domainindices,
+        'extension': extension}
+    check_halo_width(procs, shape, nh)
+    return Halo(localgrid)
 
 def test_111_domain():
     topo.topology = 'perio_xyz'
@@ -273,7 +288,8 @@ def check_halo_width(procs, shape, nh):
     if (procs[1] > 1) or ('y' in topo.topology):
         assert shape[1] >= nh, msg
     if (procs[2] > 1) or ('x' in topo.topology):
-        assert shape[2] >= nh, msg
+        msg2 = msg + ' / shape[2]={} < nh'.format(shape[2])
+        assert shape[2] >= nh, msg2
 
 
 if __name__ == '__main__':

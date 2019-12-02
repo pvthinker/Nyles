@@ -40,8 +40,9 @@ class Grid(object):
 
     """
     def __init__(self, grid, param):
-        for key in ['shape', 'neighbours', 'nh', 'size', 'N', 'domainindices']:
+        for key in ['shape', 'neighbours', 'size', 'N', 'domainindices']:
             setattr(self, key, grid[key])
+            self.nh = 1
             
         for key in ['omega', 'ndeepest']:
             setattr(self, key, param[key])
@@ -115,7 +116,7 @@ def define_grids(param):
     """
     procs = param['procs'].copy()
     nx, ny, nz = param['nx'], param['ny'], param['nz']
-    nh = param['nh']
+    nh = 1#param['nh']
 
     # todo: 'nglue' and 'ncellscoarsest' should be set from 'param'
     nglue = 16

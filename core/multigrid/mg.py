@@ -11,7 +11,7 @@ class Multigrid(object):
 
         for key in ['npre', 'npost', 'maxite', 'tol', 'procs']:
             setattr(self, key, param[key])
-        self.verbose = False
+        self.verbose = True
 
         myrank = mpi.get_myrank(self.procs)
 
@@ -20,6 +20,7 @@ class Multigrid(object):
         if myrank == 0 and self.verbose:
             grd.print_grids(allgrids)
 
+        self.verbose = False
         nlevs = len(allgrids)
         self.nlevs = nlevs
         subdomains = subdom.set_subdomains(allgrids)

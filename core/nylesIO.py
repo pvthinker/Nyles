@@ -1,7 +1,8 @@
 """Provide Input/Output handling for Nyles through the class NylesIO.
 
 The class NylesIO serves for two closely related purposes:
- 1. Output: Store the output of a model run in a netCDF file.
+ 1. Output: Store the output of a model run in a netCDF file and backup
+            the script file of the experiment for future reference.
  2. Input:  Load the output of a previously saved model run and continue
             the experiment from the last saved point.
 
@@ -42,14 +43,20 @@ TODO:
  - save the array without its halo
 """
 
+# Standard library imports
 import os
-import netCDF4 as nc
+import sys
+import shutil
 from enum import Enum   # since Python 3.4
 from collections import namedtuple
 
-# Local import
+# Third party import
+import netCDF4 as nc
+
+# Local imports
 from variables import State
 from grid import Grid
+
 
 # Define the attributes of a netCDF variable
 NetCDFVariable = namedtuple('NetCDFVariable', ['nickname', 'name', 'dimension'])
@@ -66,6 +73,7 @@ class NylesIO(object):
      - output_directory: path to the output directory
      - hist_path: path to the history file; this string contains the
         path to the output directory
+     - script_path: path to the backup of the script file
 
     Attributes mostly for private access:
      - hist_variables: list of NetCDFVariable instances, describing the
@@ -101,6 +109,7 @@ class NylesIO(object):
      - create_history_file
      - write_history_file
      - get_disk_space_in_GB
+     - backup_scriptfile
     """
 
     MAX_LENGTH_ATTRIBUTE = 100
@@ -207,6 +216,7 @@ class NylesIO(object):
         else:
             raise ValueError("unknown mode: {}".format(param["mode"]))
         self.hist_path = os.path.join(out_dir, expname + "_hist.nc")
+        self.script_path = os.path.join(out_dir, expname + ".py")
         self.output_directory = out_dir
 
     def init(self, state: State, grid: Grid, t=0.0, n=0):
@@ -220,6 +230,8 @@ class NylesIO(object):
 
         A new history file is created and the initial state of the model
         is saved.
+
+        The script file is backed up.
 
         Arguments:
          - state: current (initial) state of the model run
@@ -252,6 +264,8 @@ class NylesIO(object):
         if not os.path.isdir(self.output_directory):
             os.makedirs(self.output_directory)
         self.create_history_file(grid)
+        # Backup the script file
+        self.backup_scriptfile()
         # Split vectors into their components to make saving data easier
         full_hist_variables = []
         for v in self.hist_variables:
@@ -532,6 +546,9 @@ class NylesIO(object):
         """
         statvfs = os.statvfs(self.output_directory)
         return statvfs.f_frsize * statvfs.f_bavail / 1e9
+
+    def backup_scriptfile(self):
+        shutil.copyfile(sys.argv[0], self.script_path)
 
 
 if __name__ == "__main__":

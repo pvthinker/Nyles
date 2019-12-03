@@ -11,9 +11,6 @@ import plotting
 import timing
 import topology as topo
 import mpitools
-import subprocess as subp
-import os
-import sys
 
 
 class Nyles(object):
@@ -46,9 +43,6 @@ class Nyles(object):
 
         # Load the IO; only the parameters modifiable by the user are saved
         self.IO = nylesIO.NylesIO(param)
-
-        # backup script file into the NetCDF file directory
-        self.backup_scriptfile(param)
 
         # Add parameters that are automatically set
         param["nx"] = param["global_nx"] // param["npx"]
@@ -104,6 +98,7 @@ class Nyles(object):
         n = 0
         self.model.diagnose_var(self.model.state)
         print("Creating output file:", self.IO.hist_path)
+        print("Backing up script to:", self.IO.script_path)
         self.IO.init(self.model.state, self.grid, t, n)
 
         # Open the plotting window and draw the initial state
@@ -182,21 +177,6 @@ class Nyles(object):
                 return min(dt, self.dt_max)
         else:
             return self.dt0
-
-    def backup_scriptfile(self, param):
-        directory = self.IO.output_directory
-        launchscript = sys.argv[0]
-        savedscript = '%s/%s.py' % (directory, param["expname"])
-        if os.path.exists(savedscript):
-            print('Warning: a python script with the same name already exists in %s' % directory)
-            print('The experiment has already been done')
-            # r = input('Do you want to overwrite it [Y/n] ?')
-            r = ''
-            if r.lower() == 'n':
-                print('Okay, I stop')
-                exit(0)
-
-        subp.call(['cp', launchscript, savedscript])
 
     def banner(self):
         logo = [

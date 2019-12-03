@@ -27,6 +27,8 @@ import halo
 import fortran_operators as fortran
 from scipy import sparse
 from timing import timing
+import mpitools
+
 
 class Grid(object):
     """
@@ -76,6 +78,7 @@ class Grid(object):
         self.idiag = np.zeros_like(D)
         self.idiag[idx] = -1./D[idx]
 
+    @timing
     def norm(self, which='r'):
         """
         Compute the norm of 'which'
@@ -83,8 +86,14 @@ class Grid(object):
         """
         y = self.toarray(which)
         k0, k1, j0, j1, i0, i1 = self.domainindices
-        y2 = fortran.norm(y, k0, k1, j0, j1, i0, i1)
-        # todo : add a global communication to sum y2
+        localsum = fortran.norm(y, k0, k1, j0, j1, i0, i1)
+        # Note: the global sum is done on  all cores,
+        # meaning it works only on the finest partition,
+        # viz. one subdomain per core.
+        # BUT since the norm is needed only on the finest level,
+        # we don't need to generalize this sum to
+        # other partitions
+        y2 = mpitools.global_sum(localsum)
         return np.sqrt(y2)
 
     @timing

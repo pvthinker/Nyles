@@ -73,13 +73,14 @@ class Nyles(object):
         # Load the IO; only the parameters modifiable by the user are saved
         self.IO = nylesIO.NylesIO(param)
 
+        # redirect the x11 to output.txt
+        sys.stdout = Logger(self.IO.output_directory+'/output.txt')
+
         # backup script file into the NetCDF file directory
         self.backup_scriptfile(param)
 
         # Initiate the model and needed variables
         self.initiate(param)
-
-        sys.stdout = Logger(self.IO.output_directory+'/output.txt')
 
     def initiate(self, param):
         if param['modelname'] == 'LES':
@@ -155,6 +156,9 @@ class Nyles(object):
         self.model.write_stats(self.IO.output_directory)
         timing.write_timings(self.IO.output_directory)
         timing.analyze_timing(self.IO.output_directory)
+        # in case of a blowup, only core exits the time loop
+        # the others remain waiting, they need to be stopped
+        mpitools.abort()
 
     def compute_dt(self):
         """Calculate timestep dt from contravariant velocity U and cfl.
@@ -205,6 +209,7 @@ class Nyles(object):
         for l in logo:
             print(" "*10+l)
 
+
 class Logger(object):
     def __init__(self, logfile):
         self.terminal = sys.stdout
@@ -219,6 +224,7 @@ class Logger(object):
         # this handles the flush command by doing nothing.
         # you might want to specify some extra behavior here.
         pass
+
 
 if __name__ == "__main__":
     from parameters import UserParameters

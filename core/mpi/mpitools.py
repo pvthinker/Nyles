@@ -10,3 +10,10 @@ def get_myrank(procs):
     assert comm.Get_size() == np.prod(procs), msg
 
     return myrank
+
+def abort():
+    comm = MPI.COMM_WORLD
+    comm.Abort()
+
+def global_sum(localsum):
+    return MPI.COMM_WORLD.allreduce(localsum, op=MPI.SUM)

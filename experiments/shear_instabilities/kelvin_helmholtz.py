@@ -29,11 +29,11 @@ param.IO["datadir"] = "~/data/Nyles"
 param.IO["expname"] = "khi_1"
 param.IO["mode"] = "overwrite"
 param.IO["variables_in_history"] = ['b', 'u']
-param.IO["timestep_history"] = .2  # 0.0 saves every frame
+param.IO["timestep_history"] = 1.  # 0.0 saves every frame
 param.IO["disk_space_warning"] = 0.5  # in GB
 
 param.time["timestepping"] = "LFAM3"
-param.time["tend"] = 40.0
+param.time["tend"] = 80.0
 param.time["auto_dt"] = True
 # parameter if auto_dt is False
 param.time["dt"] = 0.2

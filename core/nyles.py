@@ -1,5 +1,7 @@
 """The Nyles main class."""
 
+import sys
+
 import numpy as np
 
 import model_les_AL as model_LES
@@ -37,8 +39,9 @@ class Nyles(object):
 
     def __init__(self, user_param):
         self.banner()
-        # Check and get user parameters
+        # Check, freeze, and get user parameters
         user_param.check()
+        user_param.freeze()
         param = user_param.view_parameters()
 
         # Load the IO; only the parameters modifiable by the user are saved
@@ -97,9 +100,6 @@ class Nyles(object):
         t = 0.0
         n = 0
         self.model.diagnose_var(self.model.state)
-        print("Creating output file:", self.IO.hist_path)
-        print("Backing up script to:", self.IO.script_path)
-        self.IO.init(self.model.state, self.grid, t, n)
 
         # Open the plotting window and draw the initial state
         if self.plotting:
@@ -108,6 +108,11 @@ class Nyles(object):
             print("move the camera into a good angle,")
             print("lean back in your seat and ...")
             input("... press Enter to start! ")
+
+        print("Creating output file:", self.IO.hist_path)
+        self.IO.init(self.model.state, self.grid, t, n)
+        print("Backing up script to:", self.IO.script_path)
+        self.IO.backup_scriptfile(sys.argv[0])
 
         time_length = len(str(int(self.tend))) + 3
         time_string = "\r"+", ".join([

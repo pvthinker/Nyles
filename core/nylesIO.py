@@ -1,10 +1,11 @@
 """Provide Input/Output handling for Nyles through the class NylesIO.
 
-The class NylesIO serves for two closely related purposes:
- 1. Output: Store the output of a model run in a netCDF file and backup
-            the script file of the experiment for future reference.
+The NylesIO class serves for two closely related purposes:
+ 1. Output: Store the output of a model run in a netCDF file.
  2. Input:  Load the output of a previously saved model run and continue
             the experiment from the last saved point.
+It also provides methods that are useful for the handling of other
+output files.
 
 For every experiment, a new directory is created, which contains all the
 output files for this model run, referred to as the "output directory".
@@ -45,7 +46,6 @@ TODO:
 
 # Standard library imports
 import os
-import sys
 import shutil
 from enum import Enum   # since Python 3.4
 from collections import namedtuple
@@ -73,7 +73,7 @@ class NylesIO(object):
      - output_directory: path to the output directory
      - hist_path: path to the history file; this string contains the
         path to the output directory
-     - script_path: path to the backup of the script file
+     - script_path: path of the script file backup
 
     Attributes mostly for private access:
      - hist_variables: list of NetCDFVariable instances, describing the
@@ -104,12 +104,12 @@ class NylesIO(object):
      - do
      - finalize
      - save_array_3D
+     - backup_scriptfile
 
     Methods mostly for private access:
      - create_history_file
      - write_history_file
      - get_disk_space_in_GB
-     - backup_scriptfile
     """
 
     MAX_LENGTH_ATTRIBUTE = 100
@@ -231,8 +231,6 @@ class NylesIO(object):
         A new history file is created and the initial state of the model
         is saved.
 
-        The script file is backed up.
-
         Arguments:
          - state: current (initial) state of the model run
          - t: initial time of the model run, usually 0.0, but can be
@@ -264,8 +262,6 @@ class NylesIO(object):
         if not os.path.isdir(self.output_directory):
             os.makedirs(self.output_directory)
         self.create_history_file(grid)
-        # Backup the script file
-        self.backup_scriptfile()
         # Split vectors into their components to make saving data easier
         full_hist_variables = []
         for v in self.hist_variables:
@@ -297,40 +293,63 @@ class NylesIO(object):
          - t: current time of the model run
          - n: current integration step of the model
         """
-        # Write data to the history file if it is time to do so
-        if t >= self.t_next_hist:
-            self.write_history_file(state, t, n)
-            self.t_next_hist += self.dt_hist
-            # Check if the remaining disk space is sufficient
-            if self.disk_limit > 0:
+        if t < self.t_next_hist:
+            # Nothing to do yet
+            return False
+        # Otherwise it is time to write data to the history file
+        self.write_history_file(state, t, n)
+        self.t_next_hist += self.dt_hist
+        if self.disk_limit <= 0:
+            # No disk space limit defined
+            return False
+        # Otherwise check if the remaining disk space is sufficient
+        try:
+            free_space = self.get_disk_space_in_GB()
+        except Exception as e:
+            print("")
+            print("Cannot determine available disk space.")
+            print("Error message:", e)
+            print("Disabling further disk space checks.")
+            self.disk_limit = 0
+            # This is not a reason to stop the program
+            return False
+        if free_space >= self.disk_limit:
+            # Everything fine
+            return False
+        # Otherwise, print a warning
+        print("")
+        print("!"*50)
+        print("Warning, low disk space:")
+        print(
+            "{:.2f} GB remaining in the output directory {}"
+            .format(free_space, self.output_directory)
+        )
+        # Ask the user what to do
+        while True:
+            answer = input(
+                "Do you want to continue? [Y/n] "
+            ).lower()
+            if answer == "n":
+                # Stop the program
+                return True
+            elif answer == "y" or answer == "":
+                # Check if more space is free now
                 try:
                     free_space = self.get_disk_space_in_GB()
-                except Exception as e:
-                    print("Cannot determine available disk space.  Error message:", e)
-                    print("Disabling further disk space checks.")
-                    self.disk_limit = 0
+                except:
+                    # Unknown error; check free space again next time
+                    pass
                 else:
+                    # elif cannot be used here
                     if free_space < self.disk_limit:
-                        print("!"*50)
-                        print("Warning, low disk space:")
-                        print(
-                            "{:.2f} GB remaining in the output directory {}."
-                            .format(free_space, self.output_directory)
-                        )
-                        while True:
-                            answer = input(
-                                "Do you want to continue? [Y/n] "
-                            ).lower()
-                            if answer == "y" or answer == "":
-                                print("Ok, disabling further disk space checks.")
-                                self.disk_limit = 0
-                                break
-                            elif answer == "n":
-                                return True  # stop
-                            else:
-                                print('Unknown answer.', end='  ')
-                                print('Please answer with "y" or "n".')
-        return False  # no problem
+                        # The problem persists
+                        print("Disabling further disk space checks.")
+                        self.disk_limit = 0
+                # Continue the program
+                return False
+            else:
+                print('Unknown answer.', end='  ')
+                print('Please answer with "y" or "n".')
 
     def finalize(self, state, t, n):
         """Write the final state to the history file if necessary.
@@ -547,8 +566,8 @@ class NylesIO(object):
         statvfs = os.statvfs(self.output_directory)
         return statvfs.f_frsize * statvfs.f_bavail / 1e9
 
-    def backup_scriptfile(self):
-        shutil.copyfile(sys.argv[0], self.script_path)
+    def backup_scriptfile(self, filename):
+        shutil.copyfile(filename, self.script_path)
 
 
 if __name__ == "__main__":
@@ -603,6 +622,6 @@ if __name__ == "__main__":
     b = state.get("b").view("i")
     for i, t in enumerate([0.2, 0.5, 0.7, 1.0, 1.5, 2.1, 3.0]):
         n = i+1
-        print("* t = {:9.2f} / n = {:6} / n_hist = {:6}".format(t, n, io.n_hist))
         b[:] = t * np.ones_like(b)
         io.do(state, t, n)
+        print("* t = {:9.2f} / n = {:6} / n_hist = {:6}".format(t, n, io.n_hist))

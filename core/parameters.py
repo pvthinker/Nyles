@@ -4,8 +4,29 @@ import datetime
 
 
 class InextensibleDict(dict):
-    """A dictionary that refuses adding new keys -- safe against common typos."""
+    """A dictionary that is safe against accidentally adding new keys.
+
+    It is not possible to add new keys to an InextensibleDict using the
+    common notation dict[key] = value.  This notation can only be used
+    to modify the value, but not to add new keys.
+
+    This dictionary has a method freeze() that prevents any further
+    changes to the dictionary of the form dict[key] = value.  A call to
+    freeze will freeze all the instances of the InextensibleDict class,
+    not only the one it is invoked on.
+    """
+
+    frozen = False
+
+    @classmethod
+    def freeze(cls):
+        cls.frozen = True
+
     def __setitem__(self, key, item):
+        if self.frozen:
+            raise UserParameterError(
+                "not possible to modify parameters after the creation of Nyles."
+            )
         if key not in self:
             raise UserParameterError(
                 "not possible to add new key {!r} to the parameters."
@@ -42,6 +63,7 @@ class UserParameters(object):
      - possible_values
      - view_parameters
      - check
+     - freeze
     """
 
     DEFAULTS_FILE = "defaults.json"
@@ -152,8 +174,12 @@ class UserParameters(object):
             param_type = self.types[parameter]
             if not isinstance(value, self.TYPES[param_type]):
                 raise UserParameterError(
-                    "parameter {} must be a {}, not {}"
-                    .format(parameter, param_type, type(value))
+                    "parameter {} must be {} {}, not {}"
+                    .format(
+                        parameter,
+                        "an" if param_type == "int" else "a",
+                        param_type, type(value),
+                    )
                 )
             # Check if value is among the options
             options = self.options[parameter]
@@ -175,6 +201,11 @@ class UserParameters(object):
                 if not value >= 0.0:
                     raise UserParameterError(
                         "parameter {} must be non-negative".format(parameter)
+                    )
+            elif options == ">= 1":
+                if not value >= 1:
+                    raise UserParameterError(
+                        "parameter {} must be at least 1".format(parameter)
                     )
             elif options == "2^n":
                 if value not in POWERS_OF_2:
@@ -269,6 +300,10 @@ class UserParameters(object):
                         "unknown type {} of parameter {}"
                         .format(attributes["type"], parameter),
                     )
+
+    def freeze(self):
+        # Freeze all parameter dictionaries with one command
+        InextensibleDict.freeze()
 
 
 if __name__ == "__main__":

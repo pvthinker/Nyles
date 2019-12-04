@@ -100,7 +100,7 @@
             "type": "float",
             "default": 0.5,
             "avail": ">= 0.0",
-            "doc": "Minimal amount of free disk space in GB; if the available space in the output directory (datadir) drops below this value, the simulation is paused and the user is asked whether they want to continue or stop the experiment; the user is only asked once per run; set this parameter to zero to disable checks"
+            "doc": "Minimal amount of free disk space in GB; if the available space in the output directory (datadir) drops below this value, the simulation is paused and the user is asked whether they want to continue or stop the experiment; if the user clears disk space before resuming the program, the checks stay on, otherwise they are turned off; set this parameter to zero to disable checks"
         }
     },
 
@@ -110,6 +110,12 @@
             "default": false,
             "avail": [true, false],
             "doc": "Whether to display an animated 3D figure of the simulation or not (faster)"
+        },
+        "iterations_per_frame": {
+            "type": "int",
+            "default": 4,
+            "avail": ">= 1",
+            "doc": "Number of calculation steps (n) until the animation updates; set to 1 to show the state after every iteration step (slow); note that this parameter ensures that about equal *calculation time* has passed between two updates, but not that equal *model time* has passed; use fix timesteps to ensure both"
         },
         "style": {
             "type": "str",

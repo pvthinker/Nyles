@@ -20,7 +20,15 @@ class Plotting(object):
         self.state = state
         self.grid = grid
 
+        # Parameter figsize is not used for live-plotting, only for the
+        # creation of videos in post-processing
         self.figsize = param["figsize"] if "figsize" in param else None
+        # Parameter n_update is not used in the animate module because
+        # the frames saved in the history file might not be multiples of
+        # any integer
+        self.n_update = (
+            param["iterations_per_frame"] if "iterations_per_frame" in param else 1
+        )
         self.aspect = param["aspect"]
         self.rotation_speed = param["rotation_speed"]
 
@@ -61,6 +69,9 @@ class Plotting(object):
         self.update(t, n)
 
     def update(self, t, n, visible=True):
+        if n % self.n_update:
+            # Only update if n is a multiple of self.n_update
+            return
         if self.plot_type == PlotType.B_Interface:
             self.calculate_interface()
         elif self.plot_type == PlotType.Tracer:

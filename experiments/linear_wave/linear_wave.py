@@ -38,6 +38,8 @@ param.IO["variables_in_history"] = ["b", "u"]
 param.animation["show"] = True
 # Tell the animation module that the wave is stable
 param.animation["stable_stratification"] = True
+# Let the animation update after every second iteration step
+param.animation["iterations_per_frame"] = 2
 
 # Set the total length of the simulation
 param.time["tend"] = 30.0

@@ -1,0 +1,14 @@
+Title: Unrealistic effects at the boundaries
+
+Found: 2019-12-06
+
+Reporter: Markus
+
+Experiments: freezing_water.py, rayleight_taylor_rotating.py
+
+In the rotating rayleigh taylor experiment, the vorticity vor_k at the
+boundary is wrong.
+
+In the freezing water experiment, at the upper and lower boundaries,
+unrealistic values of buoyancy develop.  This problem might be related
+to problems with calculating vorticity at the boundaries.

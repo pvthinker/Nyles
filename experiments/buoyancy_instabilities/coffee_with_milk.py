@@ -41,6 +41,9 @@ param.model["n_tracers"] = 1
 # Select the physical quantities to save in the history file
 param.IO["variables_in_history"] = ["b", "ke", "u"]
 
+# Choose to save all quantities on the same grid in the history file
+param.IO["simplified_grid"] = True
+
 # Set the time interval (in seconds) at which these quantities are saved
 param.IO["timestep_history"] = 0.01
 

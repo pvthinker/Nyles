@@ -299,15 +299,16 @@ class State(object):
 
     Attributes:
      - toc: the table of contents is a dictionary; its keys are the
-        names of the variables and the values are the nature of the
-        variables
+        nicknames of the variables and the values are the nature of
+        the variables
      - an object of the class state contains one attribute for each
-        element of 'toc' with the key of the dictionary-element as the
-        name of the attribute
+        element of “toc” with the key of the dictionary-element as
+        the name of the attribute
 
     Methods:
      - duplicate_prognostic_variables
      - get
+     - get_prognostic_variables
      - get_prognostic_scalars
     """
 
@@ -365,6 +366,10 @@ class State(object):
             # Otherwise return the requested variable
             return getattr(self, variable)
 
+    def get_prognostic_variables(self):
+        """Return a list of the nicknames of the prognostic variables."""
+        return [v for v in self.toc if getattr(self, v).prognostic]
+
     def get_prognostic_scalars(self):
         """Return a list of names of prognostic scalars.
 
@@ -380,15 +385,13 @@ class State(object):
 
         """
         prognostic_scalars = []
-        for variable in self.toc:
-            if getattr(self, variable).prognostic:
-                if self.toc[variable] == "scalar":
-                    prognostic_scalars.append(variable)
-                else:
-                    prognostic_scalars += [
-                        "{}_{}".format(variable, direction)
-                        for direction in "ijk"
-                    ]
+        for nickname in self.get_prognostic_variables():
+            if self.toc[nickname] == "scalar":
+                prognostic_scalars.append(nickname)
+            else:
+                prognostic_scalars += [
+                    "{}_{}".format(nickname, direction) for direction in "ijk"
+                ]
         return prognostic_scalars
 
 # ----------------------------------------------------------------------
@@ -479,6 +482,9 @@ if __name__ == '__main__':
     # Check that the list of prognostic scalars is correctly created
     # and that they can be accessed with the get method.
     print('-'*40)
+    print("Prognostic variables:")
+    for variable in s.get_prognostic_variables():
+        print(" - {:3}:".format(variable), s.get(variable))
     print("Prognostic scalars:")
     for scalar in s.get_prognostic_scalars():
         print(" - {:3}:".format(scalar), s.get(scalar))

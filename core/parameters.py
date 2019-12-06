@@ -226,9 +226,11 @@ class UserParameters(object):
                         'parameter {} must not contain a "/"'.format(parameter)
                     )
             elif parameter == "variables_in_history":
-                if not isinstance(value, (list, tuple)) and value != "all":
+                if not isinstance(value, (list, tuple)) and value not in [
+                        "all", "prognostic", "p+p"
+                ]:
                     raise UserParameterError(
-                        'parameter {} must be a list or "all", not {!r}'
+                        'value {!r} of parameter {} not understood'
                         .format(parameter, value)
                     )
             elif parameter == "datadir":
@@ -333,6 +335,14 @@ if __name__ == "__main__":
 
     print("Possible values for modelname:", param.possible_values("modelname"))
     print("Description of modelname:", param.help("modelname"))
+    print("-"*80)
+
+    print("Possible values for variables_in_history:",
+          param.possible_values("variables_in_history")
+    )
+    print("Description of variables_in_history:",
+          param.help("variables_in_history")
+    )
     print("-"*80)
 
     param.check()

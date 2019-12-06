@@ -86,15 +86,21 @@
         },
         "variables_in_history": {
             "type": "list or string",
-            "default": "all",
-            "avail": "a list of model variables or the string \"all\"",
-            "doc": "Names of the 3D variables of the model to save in the history file or the string \"all\" to save all model variables"
+            "default": "prognostic",
+            "avail": "a list of model variables or one of the strings \"all\", \"prognostic\", or \"p+p\"",
+            "doc": "Model variables to save in the history file can be: (1) a list of nicknames (2) the string \"all\" to select all model variables (3) the string \"prognostic\" to select all prognostic model variables (4) the string \"p+p\" to select all prognostic model variables and pressure; note that tracers are automatically saved in the history file"
         },
         "timestep_history": {
             "type": "float",
             "default": 1.0,
             "avail": ">= 0.0",
             "doc": "Desired timestep for saving the model state in the history file; use 0.0 to save every iteration step of the model"
+        },
+        "simplified_grid": {
+            "type": "bool",
+            "default": false,
+            "avail": [true, false],
+            "doc": "Whether to save in the history file every variable at its actual coordinates of the staggered grid (physically and numerically correct) or to simplify and to save all variables at cell centers (slightly incorrect but sometimes more convenient); this does not influence the calcuations or the numerics, it only affects the history file"
         },
         "disk_space_warning": {
             "type": "float",

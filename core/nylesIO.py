@@ -48,7 +48,6 @@ TODO:
 import os
 import shutil
 from enum import Enum   # since Python 3.4
-from collections import namedtuple
 
 # Third party import
 import netCDF4 as nc
@@ -56,10 +55,6 @@ import netCDF4 as nc
 # Local imports
 from variables import State
 from grid import Grid
-
-
-# Define the attributes of a netCDF variable
-NetCDFVariable = namedtuple('NetCDFVariable', ['nickname', 'name', 'dimension'])
 
 
 class NylesIO(object):
@@ -76,10 +71,13 @@ class NylesIO(object):
      - script_path: path of the script file backup
 
     Attributes mostly for private access:
-     - hist_variables: list of NetCDFVariable instances, describing the
-        scalar variables of the model to be saved in the history file;
-        this list is created in the constructor, but its content is
-        neither checked nor finalised until "init" is called
+     - variables_in_history: list or string describing the variables
+        that the user wants to save in the history file
+     - hist_variables: dictionary containing all the scalars that
+        are actually saved in the history file; this is created on
+        “init” together with the history file; the keys are the names
+        used in the history file, the values are the nicknames used in
+        the model
      - experiment_parameters: dictionary with all parameters of the
         experiment to be saved in the history file, which are of type
         int or float or string
@@ -117,40 +115,16 @@ class NylesIO(object):
     def __init__(self, param):
         """Create an object to handle Input and Output.
 
-        The argument "param" determines the behaviour of this object and
-        provides the experiment parameters which are saved in the
-        history file.
-
-        The following keys must be present in "param":
-         ~ variables_in_history: list of nicknames of the variables to
-            be saved in the history file; instead of a list, this
-            parameter can have the value "all" to save all model
-            variables; for vectors, it is discouraged to include
-            individual vector components in this list, because they will
-            not be saved at the correct coordinates of the staggered
-            grid; instead, always use the whole vector "u", "U" or "vor"
-         - timestep_history: target timestep for saving the model state
-            in the history file; use 0.0 to save every frame;
-         - datadir: path to the data directory
-         - expname: name of the experiment
-         - mode: one out of ["overwrite", "count", "continue"];
-            "continue" is not yet implemented
-         - disk_space_warning: limit in GB at which to display a warning
-            about low disk space
-         - unit_length, unit_duration: the physical units for length and
-            duration used in the model; to be saved in the history file
-         - n_tracers: number of passive tracers used in the model
-
-        Every key-value-pair in "param" is saved in the history file.
-        Values of type int, float or string are saved as they are.
-        Boolean variables are converted to the string "True" or "False".
-        Every other variable is converted to a string and shortened to
-        MAX_LENGTH_ATTRIBUTE characters if necessary.
+        The argument “param” determines the behaviour of this object.
+        Furthermore, every key-value-pair in "param" is saved in the
+        history file.  Values of type int, float or string are saved as
+        they are.  Boolean variables are converted to the string "True"
+        or "False".  Every other variable is converted to a string and
+        shortened to MAX_LENGTH_ATTRIBUTE characters if necessary.
         """
         self.disk_limit = param["disk_space_warning"]
-        # Copy the variables for the history file; the list will be
-        # checked and finalised on "init"
-        self.hist_variables = param["variables_in_history"]
+        self.simplified_grid = param["simplified_grid"]
+        self.variables_in_history = param["variables_in_history"]
         self.dt_hist = param["timestep_history"]
         self.t_next_hist = 0.0
         self.n_hist = 0
@@ -220,61 +194,56 @@ class NylesIO(object):
         self.output_directory = out_dir
 
     def init(self, state: State, grid: Grid, t=0.0, n=0):
-        """Initialise the I/O object and create the history file.
-
-        The list of variables to be saved in the history file is
-        finalised by either checking if every given variable exists in
-        the state or by replacing "all" by a list of all the variables
-        in the state.  Every vector is split up into its components, so
-        that the list contains only scalar variables.
-
-        A new history file is created and the initial state of the model
-        is saved.
+        """Create a new history file with the initial data.
 
         Arguments:
-         - state: current (initial) state of the model run
-         - t: initial time of the model run, usually 0.0, but can be
-            higher if a previous experiment is continued
+         - state: initial state of the model run
+         - t: initial time of the model run, usually 0.0
          - n: integration step of the model, usually 0
         """
         # Check the list of variables to save in the history file
-        if not self.hist_variables:
-            # Do not throw an error but only print a warning, because it
-            # could be the desired to save no 3D fields
-            print(
-                "Warning: no 3D data will be saved in the history file! "
-                "Modify the parameter 'variables_in_history' to change this."
-            )
-        elif self.hist_variables == "all":
-            self.hist_variables = state.toc.keys()
-        elif any(variable not in state.toc for variable in self.hist_variables):
-            # Throw an error because this is likely due to a typo of the user
+        if self.variables_in_history == "all":
+            self.variables_in_history = state.toc.keys()
+        elif self.variables_in_history == "prognostic":
+            self.variables_in_history = state.get_prognostic_variables()
+        elif self.variables_in_history == "p+p":
+            self.variables_in_history = state.get_prognostic_variables()
+            if "p" in state.toc:
+                self.variables_in_history.append("p")
+            else:
+                raise ValueError(
+                    "pressure is not a variable of this model; "
+                    "please change the parameter variables_in_history."
+                )
+        elif any(variable not in state.toc for variable in self.variables_in_history):
             raise ValueError(
                 "a variable chosen for the history file does not exist in this "
-                "model.  Available variables: " + str(state.toc)
+                "model.  The available variables are " + str(state.toc)
             )
-        # Add tracers
-        for i in range(self.n_tracers):
-            self.hist_variables.append("t{}".format(i))
+        else:
+            # Add tracers
+            for i in range(self.n_tracers):
+                nickname = "t{}".format(i)
+                if nickname not in self.variables_in_history:
+                    self.variables_in_history.append(nickname)
+
+        # Check that the user did not forget to add variables
+        if len(self.variables_in_history) == 0:
+            raise ValueError(
+                "no variables are selected for the history file.  "
+                "This means, all calculation results are lost.  "
+                "I refuse to waste energy like this."
+            )
+
         # Make list of strings into list of Scalar and Vector objects
-        self.hist_variables = [state.get(v) for v in self.hist_variables]
-        # Create (if necessary) the output directory and the history file
+        variables = [state.get(v) for v in self.variables_in_history]
+
+        # Create the output directory if necessary
         if not os.path.isdir(self.output_directory):
             os.makedirs(self.output_directory)
-        self.create_history_file(grid)
-        # Split vectors into their components to make saving data easier
-        full_hist_variables = []
-        for v in self.hist_variables:
-            if v.get_nature() == "scalar":
-                full_hist_variables.append(
-                    NetCDFVariable(v.nickname, v.name, v.dimension)
-                )
-            else:
-                for i in "ijk":
-                    full_hist_variables.append(
-                        NetCDFVariable(v[i].nickname, v[i].name, v[i].dimension)
-                    )
-        self.hist_variables = full_hist_variables[:]
+
+        # Create the history file and save the initial state
+        self.create_history_file(grid, variables)
         self.write_history_file(state, t, n)
         self.t_next_hist = t + self.dt_hist
 
@@ -380,38 +349,23 @@ class NylesIO(object):
                 v.long_name = description
             ncfile[name] = data
 
-    def create_history_file(self, grid: Grid):
-        """Create a new history file."""
+    def create_history_file(self, grid: Grid, variables: list):
+        """Create a new history file with “variables” living on “grid”."""
+        # Open new netCDF file for writing data to it (or for
+        # overwriting existing data)
         with nc.Dataset(self.hist_path, "w") as ncfile:
             # Store the experiment parameters
             ncfile.setncatts(self.experiment_parameters)
 
-            nxl = grid.size['i']
-            nyl = grid.size['j']
-            nzl = grid.size['k']
             # Create the dimensions
             ncfile.createDimension("t")  # unlimited size
-            ncfile.createDimension("x_b", nxl)
-            ncfile.createDimension("y_b", nyl)
-            ncfile.createDimension("z_b", nzl)
-            ncfile.createDimension("x_u", nxl)
-            ncfile.createDimension("y_u", nyl)
-            ncfile.createDimension("z_u", nzl)
-            ncfile.createDimension("x_v", nxl)
-            ncfile.createDimension("y_v", nyl)
-            ncfile.createDimension("z_v", nzl)
-            ncfile.createDimension("x_w", nxl)
-            ncfile.createDimension("y_w", nyl)
-            ncfile.createDimension("z_w", nzl)
-            ncfile.createDimension("x_vor_i", nxl)
-            ncfile.createDimension("y_vor_i", nyl)
-            ncfile.createDimension("z_vor_i", nzl)
-            ncfile.createDimension("x_vor_j", nxl)
-            ncfile.createDimension("y_vor_j", nyl)
-            ncfile.createDimension("z_vor_j", nzl)
-            ncfile.createDimension("x_vor_k", nxl)
-            ncfile.createDimension("y_vor_k", nyl)
-            ncfile.createDimension("z_vor_k", nzl)
+            for x, i in zip("xyz", "ijk"):
+                if self.simplified_grid:
+                    ncfile.createDimension("{}".format(x), grid.size[i])
+                    continue
+                # “p” stands for “point”: b-point, u-point, v-point, etc.
+                for p in ["b", "u", "v", "w", "vor_i", "vor_j", "vor_k"]:
+                    ncfile.createDimension("{}_{}".format(x, p), grid.size[i])
 
             # Create the variables with one dimension
             v = ncfile.createVariable("n", int, ("t",))
@@ -421,123 +375,171 @@ class NylesIO(object):
             v.long_name = "time in the model run"
             v.units = self.unit("T")
 
-            v = ncfile.createVariable("x_b", float, ("x_b",))
-            v.long_name = grid.x_b.name
-            v.units = self.unit(grid.x_b.dimension)
-            v[:] = grid.x_b_1D
-            v = ncfile.createVariable("y_b", float, ("y_b",))
-            v.long_name = grid.y_b.name
-            v.units = self.unit(grid.y_b.dimension)
-            v[:] = grid.y_b_1D
-            v = ncfile.createVariable("z_b", float, ("z_b",))
-            v.long_name = grid.z_b.name
-            v.units = self.unit(grid.z_b.dimension)
-            v[:] = grid.z_b_1D
+            if self.simplified_grid:
+                v = ncfile.createVariable("x", float, ("x",))
+                v.long_name = grid.x_b.name
+                v.units = self.unit(grid.x_b.dimension)
+                v[:] = grid.x_b_1D
+                v = ncfile.createVariable("y", float, ("y",))
+                v.long_name = grid.y_b.name
+                v.units = self.unit(grid.y_b.dimension)
+                v[:] = grid.y_b_1D
+                v = ncfile.createVariable("z", float, ("z",))
+                v.long_name = grid.z_b.name
+                v.units = self.unit(grid.z_b.dimension)
+                v[:] = grid.z_b_1D
 
-            v = ncfile.createVariable("x_u", float, ("x_u",))
-            v.long_name = grid.x_vel["i"].name
-            v.units = self.unit(grid.x_vel["i"].dimension)
-            v[:] = grid.x_u_1D
-            v = ncfile.createVariable("y_u", float, ("y_u",))
-            v.long_name = grid.y_vel["i"].name
-            v.units = self.unit(grid.y_vel["i"].dimension)
-            v[:] = grid.y_u_1D
-            v = ncfile.createVariable("z_u", float, ("z_u",))
-            v.long_name = grid.z_vel["i"].name
-            v.units = self.unit(grid.z_vel["i"].dimension)
-            v[:] = grid.z_u_1D
+            else:
+                v = ncfile.createVariable("x_b", float, ("x_b",))
+                v.long_name = grid.x_b.name
+                v.units = self.unit(grid.x_b.dimension)
+                v[:] = grid.x_b_1D
+                v = ncfile.createVariable("y_b", float, ("y_b",))
+                v.long_name = grid.y_b.name
+                v.units = self.unit(grid.y_b.dimension)
+                v[:] = grid.y_b_1D
+                v = ncfile.createVariable("z_b", float, ("z_b",))
+                v.long_name = grid.z_b.name
+                v.units = self.unit(grid.z_b.dimension)
+                v[:] = grid.z_b_1D
 
-            v = ncfile.createVariable("x_v", float, ("x_v",))
-            v.long_name = grid.x_vel["j"].name
-            v.units = self.unit(grid.x_vel["j"].dimension)
-            v[:] = grid.x_v_1D
-            v = ncfile.createVariable("y_v", float, ("y_v",))
-            v.long_name = grid.y_vel["j"].name
-            v.units = self.unit(grid.y_vel["j"].dimension)
-            v[:] = grid.y_v_1D
-            v = ncfile.createVariable("z_v", float, ("z_v",))
-            v.long_name = grid.z_vel["j"].name
-            v.units = self.unit(grid.z_vel["j"].dimension)
-            v[:] = grid.z_v_1D
+                v = ncfile.createVariable("x_u", float, ("x_u",))
+                v.long_name = grid.x_vel["i"].name
+                v.units = self.unit(grid.x_vel["i"].dimension)
+                v[:] = grid.x_u_1D
+                v = ncfile.createVariable("y_u", float, ("y_u",))
+                v.long_name = grid.y_vel["i"].name
+                v.units = self.unit(grid.y_vel["i"].dimension)
+                v[:] = grid.y_u_1D
+                v = ncfile.createVariable("z_u", float, ("z_u",))
+                v.long_name = grid.z_vel["i"].name
+                v.units = self.unit(grid.z_vel["i"].dimension)
+                v[:] = grid.z_u_1D
 
-            v = ncfile.createVariable("x_w", float, ("x_w",))
-            v.long_name = grid.x_vel["k"].name
-            v.units = self.unit(grid.x_vel["k"].dimension)
-            v[:] = grid.x_w_1D
-            v = ncfile.createVariable("y_w", float, ("y_w",))
-            v.long_name = grid.y_vel["k"].name
-            v.units = self.unit(grid.y_vel["k"].dimension)
-            v[:] = grid.y_w_1D
-            v = ncfile.createVariable("z_w", float, ("z_w",))
-            v.long_name = grid.z_vel["k"].name
-            v.units = self.unit(grid.z_vel["k"].dimension)
-            v[:] = grid.z_w_1D
+                v = ncfile.createVariable("x_v", float, ("x_v",))
+                v.long_name = grid.x_vel["j"].name
+                v.units = self.unit(grid.x_vel["j"].dimension)
+                v[:] = grid.x_v_1D
+                v = ncfile.createVariable("y_v", float, ("y_v",))
+                v.long_name = grid.y_vel["j"].name
+                v.units = self.unit(grid.y_vel["j"].dimension)
+                v[:] = grid.y_v_1D
+                v = ncfile.createVariable("z_v", float, ("z_v",))
+                v.long_name = grid.z_vel["j"].name
+                v.units = self.unit(grid.z_vel["j"].dimension)
+                v[:] = grid.z_v_1D
 
-            v = ncfile.createVariable("x_vor_i", float, ("x_vor_i",))
-            v.long_name = grid.x_vor["i"].name
-            v.units = self.unit(grid.x_vor["i"].dimension)
-            v[:] = grid.x_vor_i_1D
-            v = ncfile.createVariable("y_vor_i", float, ("y_vor_i",))
-            v.long_name = grid.y_vor["i"].name
-            v.units = self.unit(grid.y_vor["i"].dimension)
-            v[:] = grid.y_vor_i_1D
-            v = ncfile.createVariable("z_vor_i", float, ("z_vor_i",))
-            v.long_name = grid.z_vor["i"].name
-            v.units = self.unit(grid.z_vor["i"].dimension)
-            v[:] = grid.z_vor_i_1D
+                v = ncfile.createVariable("x_w", float, ("x_w",))
+                v.long_name = grid.x_vel["k"].name
+                v.units = self.unit(grid.x_vel["k"].dimension)
+                v[:] = grid.x_w_1D
+                v = ncfile.createVariable("y_w", float, ("y_w",))
+                v.long_name = grid.y_vel["k"].name
+                v.units = self.unit(grid.y_vel["k"].dimension)
+                v[:] = grid.y_w_1D
+                v = ncfile.createVariable("z_w", float, ("z_w",))
+                v.long_name = grid.z_vel["k"].name
+                v.units = self.unit(grid.z_vel["k"].dimension)
+                v[:] = grid.z_w_1D
 
-            v = ncfile.createVariable("x_vor_j", float, ("x_vor_j",))
-            v.long_name = grid.x_vor["j"].name
-            v.units = self.unit(grid.x_vor["j"].dimension)
-            v[:] = grid.x_vor_j_1D
-            v = ncfile.createVariable("y_vor_j", float, ("y_vor_j",))
-            v.long_name = grid.y_vor["j"].name
-            v.units = self.unit(grid.y_vor["j"].dimension)
-            v[:] = grid.y_vor_j_1D
-            v = ncfile.createVariable("z_vor_j", float, ("z_vor_j",))
-            v.long_name = grid.z_vor["j"].name
-            v.units = self.unit(grid.z_vor["j"].dimension)
-            v[:] = grid.z_vor_j_1D
+                v = ncfile.createVariable("x_vor_i", float, ("x_vor_i",))
+                v.long_name = grid.x_vor["i"].name
+                v.units = self.unit(grid.x_vor["i"].dimension)
+                v[:] = grid.x_vor_i_1D
+                v = ncfile.createVariable("y_vor_i", float, ("y_vor_i",))
+                v.long_name = grid.y_vor["i"].name
+                v.units = self.unit(grid.y_vor["i"].dimension)
+                v[:] = grid.y_vor_i_1D
+                v = ncfile.createVariable("z_vor_i", float, ("z_vor_i",))
+                v.long_name = grid.z_vor["i"].name
+                v.units = self.unit(grid.z_vor["i"].dimension)
+                v[:] = grid.z_vor_i_1D
 
-            v = ncfile.createVariable("x_vor_k", float, ("x_vor_k",))
-            v.long_name = grid.x_vor["k"].name
-            v.units = self.unit(grid.x_vor["k"].dimension)
-            v[:] = grid.x_vor_k_1D
-            v = ncfile.createVariable("y_vor_k", float, ("y_vor_k",))
-            v.long_name = grid.y_vor["k"].name
-            v.units = self.unit(grid.y_vor["k"].dimension)
-            v[:] = grid.y_vor_k_1D
-            v = ncfile.createVariable("z_vor_k", float, ("z_vor_k",))
-            v.long_name = grid.z_vor["k"].name
-            v.units = self.unit(grid.z_vor["k"].dimension)
-            v[:] = grid.z_vor_k_1D
+                v = ncfile.createVariable("x_vor_j", float, ("x_vor_j",))
+                v.long_name = grid.x_vor["j"].name
+                v.units = self.unit(grid.x_vor["j"].dimension)
+                v[:] = grid.x_vor_j_1D
+                v = ncfile.createVariable("y_vor_j", float, ("y_vor_j",))
+                v.long_name = grid.y_vor["j"].name
+                v.units = self.unit(grid.y_vor["j"].dimension)
+                v[:] = grid.y_vor_j_1D
+                v = ncfile.createVariable("z_vor_j", float, ("z_vor_j",))
+                v.long_name = grid.z_vor["j"].name
+                v.units = self.unit(grid.z_vor["j"].dimension)
+                v[:] = grid.z_vor_j_1D
+
+                v = ncfile.createVariable("x_vor_k", float, ("x_vor_k",))
+                v.long_name = grid.x_vor["k"].name
+                v.units = self.unit(grid.x_vor["k"].dimension)
+                v[:] = grid.x_vor_k_1D
+                v = ncfile.createVariable("y_vor_k", float, ("y_vor_k",))
+                v.long_name = grid.y_vor["k"].name
+                v.units = self.unit(grid.y_vor["k"].dimension)
+                v[:] = grid.y_vor_k_1D
+                v = ncfile.createVariable("z_vor_k", float, ("z_vor_k",))
+                v.long_name = grid.z_vor["k"].name
+                v.units = self.unit(grid.z_vor["k"].dimension)
+                v[:] = grid.z_vor_k_1D
 
             # TODO: add mask if a mask is implemented
 
-            # Create variables for the model data.
-            for variable in self.hist_variables:
-                if variable.get_nature() == "scalar":
+            # Create variables for the model data and create a dict of
+            # the history file variables to make writing new data easy
+            self.hist_variables = {}
+            for variable in variables:
+                nickname = variable.nickname
+                nature = variable.get_nature()
+                if nature == "scalar":
+                    # Use in the history file the same name as in the model
+                    hist_name = nickname
                     v = ncfile.createVariable(
-                        variable.nickname, float, ("t", "z_b", "y_b", "x_b")
+                        hist_name,
+                        float,
+                        ("t", "z", "y", "x") if self.simplified_grid else
+                        ("t", "z_b", "y_b", "x_b"),
                     )
                     v.long_name = variable.name
                     v.units = self.unit(variable.dimension)
-                elif variable.get_nature() == "velocity":
+                    self.hist_variables[hist_name] = nickname
+                elif nature == "velocity":
+                    if nickname == "u":
+                        # Use in the history file the name u/v/w
+                        modifier = str.lower
+                    elif nickname == "U":
+                        # Use in the history file the name U/V/W
+                        modifier = str.upper
+                    else:
+                        raise NotImplementedError(
+                            "unknown kind of velocity: " + nickname
+                        )
                     for i, u in zip("ijk", "uvw"):
+                        hist_name = modifier(u)
                         v = ncfile.createVariable(
-                            variable[i].nickname, float,
-                            ("t", "z_" + u, "y_" + u, "x_" + u)
+                            hist_name,
+                            float,
+                            ("t", "z", "y", "x") if self.simplified_grid else
+                            ("t", "z_" + u, "y_" + u, "x_" + u),
                         )
                         v.long_name = variable[i].name
                         v.units = self.unit(variable[i].dimension)
-                elif variable.get_nature() == "vorticity":
+                        self.hist_variables[hist_name] = variable[i].nickname
+                elif nature == "vorticity":
                     for i in "ijk":
+                        # Use in the history file the same name as in the model
+                        hist_name = variable[i].nickname
                         v = ncfile.createVariable(
-                            variable[i].nickname, float,
-                            ("t", "z_vor_" + i, "y_vor_" + i, "x_vor_" + i)
+                            hist_name,
+                            float,
+                            ("t", "z", "y", "x") if self.simplified_grid else
+                            ("t", "z_vor_" + i, "y_vor_" + i, "x_vor_" + i),
                         )
                         v.long_name = variable[i].name
                         v.units = self.unit(variable[i].dimension)
+                        self.hist_variables[hist_name] = variable[i].nickname
+                else:
+                    raise ValueError(
+                        "unknown nature", nature, "of variable", nickname
+                    )
 
     def write_history_file(self, state, t, n):
         """Append the given state to the history file.
@@ -551,10 +553,8 @@ class NylesIO(object):
         with nc.Dataset(self.hist_path, "a") as ncfile:
             ncfile["t"][self.n_hist] = t
             ncfile["n"][self.n_hist] = n
-            for v in self.hist_variables:
-                ncfile[v.nickname][self.n_hist] = state.get(
-                    v.nickname
-                ).view("i")
+            for hist_name, nickname in self.hist_variables.items():
+                ncfile[hist_name][self.n_hist] = state.get(nickname).view("i")
         self.n_hist += 1
         self.last_saved_frame = n
 
@@ -583,10 +583,9 @@ if __name__ == "__main__":
         "disk_space_warning": 0.5,
         "unit_length": "m",
         "unit_duration": "s",
-        "n_tracers": 0,
-        # Choose between a list or "all"
-        "variables_in_history": "all",
-        # "variables_in_history": ["u", "b"],
+        "n_tracers": 0,  # does not change anything here
+        "simplified_grid": False,
+        "variables_in_history": "p+p",
         # Select one of the following options
         "mode": "overwrite",
         # "mode": "count",

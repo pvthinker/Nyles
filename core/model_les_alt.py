@@ -1,4 +1,13 @@
-"""Implementation of the LES model proposed by Markus REINERT, 25 Oct 2019.
+"""Alternative, unfinished implementation of the LES model.
+
+This implementation was proposed by Markus Reinert on 25 Oct 2019.  It
+was never finished and it is not up-2-date with recent developments,
+since the team decided to push the development of the file now called
+"model_les.py".  This file may be completed in the future to compare the
+two approaches or it may be used as a starting point to implement other
+models like the hydrostatic model.
+
+
 
 The update of the state variables is implemented like this:
  1. Calculate delta_b, delta_u, delta_U and update p in compute_rhs.
@@ -29,7 +38,7 @@ between prognostic and diagnostic variables almost completely, except
 for p.
 """
 
-raise NotImplementedError("recent changes were not implemented here; use model_les_AL.")
+raise NotImplementedError("please use model_les")
 
 from variables import get_state
 from timescheme import Timescheme

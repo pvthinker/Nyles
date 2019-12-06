@@ -17,7 +17,7 @@ Lx = nx
 # Get the default parameters, then modify them as needed
 param = parameters.UserParameters()
 
-param.model["modelname"] = "LES"
+param.model["modelname"] = "advection"
 param.model["geometry"] = "perio_x"
 param.model["Lx"] = Lx
 param.model["Ly"] = Ly

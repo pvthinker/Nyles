@@ -28,11 +28,11 @@ param.model["Lz"] = Lz
 param.IO["datadir"] = "~/data/Nyles"
 param.IO["expname"] = "plume"
 param.IO["mode"] = "overwrite"
-param.IO["variables_in_history"] = "all"
-param.IO["timestep_history"] = 0
+param.IO["variables_in_history"] = ['b', 'u', 'p']
+param.IO["timestep_history"] = .5
 
 param.time["timestepping"] = "LFAM3"
-param.time["tend"] = 80.0
+param.time["tend"] = 20.0
 param.time["auto_dt"] = False
 # parameter if auto_dt is False
 param.time["dt"] = 0.02

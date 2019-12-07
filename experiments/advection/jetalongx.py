@@ -27,15 +27,15 @@ param.IO["datadir"] = "~/data/Nyles"
 param.IO["expname"] = "jetx"
 param.IO["mode"] = "overwrite"
 param.IO["variables_in_history"] = ['u', 'b']
-param.IO["timestep_history"] = 0.2
+param.IO["timestep_history"] = 1.
 
 param.time["timestepping"] = "LFAM3"
-param.time["tend"] = 12.0
-param.time["auto_dt"] = False
+param.time["tend"] = 30.0
+param.time["auto_dt"] = True
 # parameter if auto_dt is False
 param.time["dt"] = .05
 # parameters if auto_dt is True
-param.time["cfl"] = 0.4
+param.time["cfl"] = 0.8
 param.time["dt_max"] = 1.0
 
 param.discretization["global_nx"] = nx
@@ -49,6 +49,7 @@ param.MPI["npx"] = 1
 param.MPI["npy"] = 1
 param.MPI["npz"] = 1
 
+param.physics['diff_coef'] = {'b': 1e-1}
 
 nyles = nyles_module.Nyles(param)
 
@@ -71,5 +72,6 @@ u[...] = z-0.5
 b[:] = np.round(x*6) % 2 + np.round(y*6) % 2 + np.round(z*6) % 2
 b *= 0.1
 
+nyles.model.make_u_divergentfree()
 nyles.model.diagnose_var(state)
 nyles.run()

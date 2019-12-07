@@ -1,42 +1,66 @@
 """Module to compute -div( tracer * U ) for Cartesian coordinates."""
 
 import fortran_upwind as fortran
+import fortran_dissipation as dissip
 import variables as var
 from timing import timing
 
 
-@timing
-def rhstrac(state, rhs, traclist, order):
-    """Compute negative advection of a tracer in Cartesian coordinates.
+class Tracer_numerics(object):
+    def __init__(self, grid, traclist, order, diff_coef=[]):
+        """
+        - grid: nyles grid object
+        - traclist: list of prognostic variables that are advected, e.g.,
+        traclist = ['b']
+        - order: can be 1, 3, or 5; sets the order of the upwind scheme
+        used to calculate the advection of the tracer
+        - diffcoef is a dictionnary with diffusion coefficient for each variable
+        """
+        self.traclist = traclist
+        assert(order in {1, 3, 5})
+        self.order = order
+        diffusion = len(diff_coef) > 0
+        self.diffusion = diffusion
+        if diffusion:
+            self.ids2 = grid.ids2
+            self.diff_coef = diff_coef
 
-    Arguments:
-     - state: State instance containing the current value of the tracer
-       and the contravariant velocity
-     - rhs: State instance containing prognostic variables to save the
-       result within
-     - traclist: list of prognostic variables that are advected, e.g.,
-       traclist = ['b']
-     - order: can be 1, 3, or 5; sets the order of the upwind scheme
-       used to calculate the advection of the tracer
-    """
+    @timing
+    def rhstrac(self, state, rhs, last=False):
+        """Compute negative advection of a tracer in Cartesian coordinates.
 
-    assert(order in {1, 3, 5})
+        Note: diffusion term should be integrated in time with a Euler forward
+        For multi-stages timeschemes handling diffusion, set add_diffusion = True
+        only for the last stage.
 
-    for tracname in traclist:
-        trac = state.get(tracname)  # trac is a 'Scalar' instance
-        dtrac = rhs.get(tracname)
 
-        for direction in 'ijk':
-            velocity = state.U[direction].view(direction)
-            field = trac.view(direction)
-            dfield = dtrac.view(direction)
+        Arguments:
+         - state: State instance containing the current value of the tracer
+           and the contravariant velocity
+         - rhs: State instance containing prognostic variables to save the
+           result within
+        """
 
-            if direction == 'i':
-                # overwrite rhs
-                fortran.upwind(field, velocity, dfield, order, 1)
-            else:
-                # add to rhs
-                fortran.upwind(field, velocity, dfield, order, 0)
+        for tracname in self.traclist:
+            trac = state.get(tracname)  # trac is a 'Scalar' instance
+            dtrac = rhs.get(tracname)
+
+            for direction in 'ijk':
+                velocity = state.U[direction].view(direction)
+                field = trac.view(direction)
+                dfield = dtrac.view(direction)
+
+                if direction == 'i':
+                    # overwrite rhs
+                    fortran.upwind(field, velocity, dfield, self.order, 1)
+                else:
+                    # add to rhs
+                    fortran.upwind(field, velocity, dfield, self.order, 0)
+
+                if last and self.diffusion:
+                    if (tracname in self.diff_coef.keys()):
+                        coef = self.diff_coef[tracname]*self.ids2[direction]
+                        dissip.add_laplacian(field, dfield, coef)
 
 
 # ----------------------------------------------------------------------
@@ -49,4 +73,6 @@ if __name__ == '__main__':
     state = var.get_state(param)
     ds = state.duplicate_prognostic_variables()
 
-    rhstrac(state, ds, ['b'], order=3)
+    grid = None
+    tracnum = Tracer_numerics(grid, ['b'], order=3)
+    tracnum.rhstrac(state, ds)

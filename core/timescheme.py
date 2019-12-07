@@ -105,7 +105,7 @@ class Timescheme(object):
 
     # ----------------------------------------
     def EulerForward(self, state, t, dt, **kwargs):
-        self.rhs(state, t, self.dstate)
+        self.rhs(state, t, self.dstate, last=True)
         for scalar_name in self.prognostic_scalars:
             scalar = state.get(scalar_name)
             # Get a view on the data without changing its orientation
@@ -158,7 +158,7 @@ class Timescheme(object):
             self.diagnose_var(state)
 
             # Corrector step at n+1/2
-            self.rhs(state, t+dt*.5, self.dstate)
+            self.rhs(state, t+dt*.5, self.dstate, last=True)
 
             # move from n to n+1
             for scalar_name in self.prognostic_scalars:

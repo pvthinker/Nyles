@@ -20,11 +20,14 @@ class Advection(object):
         self.state = var.get_state(param)
         self.traclist = ['b']
         self.order = param['orderA']
+        self.diff_coef = param['diff_coef']
         self.halo = halo.set_halo(param, self.state)
         self.timescheme = ts.Timescheme(param, self.state)
         self.timescheme.set(self.rhs, self.diagnose_var)
         self.param = param
         self.grid = grid
+        self.tracer = tracer.Tracer_numerics(
+            grid, self.traclist, self.order, self.diff_coef)
         self.stats = []
 
     def diagnose_var(self, state):
@@ -47,8 +50,8 @@ class Advection(object):
         return False
 
     @timing
-    def rhs(self, state, t, dstate):
-        tracer.rhstrac(state, dstate, self.traclist, self.order)
+    def rhs(self, state, t, dstate, last=False):
+        self.tracer.rhstrac(state, dstate, last=last)
 
     def update_stats(self):
         b = self.state.b

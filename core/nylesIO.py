@@ -579,7 +579,7 @@ class NylesIO(object):
             fid.write('# Nyles commit\n')
             fid.write(githash+'\n')
             fid.write('# to rerun it with same version \n')
-            fid.write('# git checkout %s' % githash[:6])
+            fid.write('# git checkout %s' % githash[:7])
 
 if __name__ == "__main__":
     import numpy as np

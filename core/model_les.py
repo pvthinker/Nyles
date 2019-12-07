@@ -36,7 +36,8 @@ class LES(object):
             t_nickname = "t{}".format(i)
             t_name = "tracer{}".format(i)
             self.traclist.append(t_nickname)
-            var.modelvar[t_nickname] = var.ModelVariable('scalar', t_name,  dimension='', prognostic=True)
+            var.modelvar[t_nickname] = var.ModelVariable(
+                'scalar', t_name,  dimension='', prognostic=True)
         self.state = var.get_state(param)
         self.halo = halo.set_halo(param, self.state)
         self.timescheme = ts.Timescheme(param, self.state)
@@ -44,6 +45,9 @@ class LES(object):
         self.orderA = param["orderA"]
         self.orderVF = param["orderVF"]
         self.rotating = param["rotating"]
+        self.diff_coef = param['diff_coef']
+        self.tracer = tracer.Tracer_numerics(
+            grid, self.traclist, self.orderA, self.diff_coef)
         if self.rotating:
             # convert Coriolis parameter (in s^-1) into its covariant quantity
             # i.e. multiply with cell horizontal area
@@ -79,13 +83,13 @@ class LES(object):
             self.halo.fill(state.ke)
 
     @timing
-    def rhs(self, state, t, dstate):
+    def rhs(self, state, t, dstate, last=False):
         reset_state(dstate)
         # TODO: if this function call stays here, the flag in rhstrac
         # can be removed.  Other possibility: remove the reset_state and
         # add the reset to the vortex_force term.
         # buoyancy
-        tracer.rhstrac(state, dstate, self.traclist, self.orderA)
+        self.tracer.rhstrac(state, dstate)
 
         # vortex force
         if self.nonlinear:

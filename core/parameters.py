@@ -83,6 +83,7 @@ class UserParameters(object):
         "int": int,
         "float": (float, int),  # an int can be used instead of a float
         "bool": bool,
+        "dict": dict,
         "list or string": (list, tuple, str),
     }
 

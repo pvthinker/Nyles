@@ -192,20 +192,20 @@
         "global_nx": {
             "type": "int",
             "default": 64,
-            "avail": "2^n",
-            "doc": "Number of gridpoints for the full domain in x-direction; must be a power of 2"
+            "avail": "[3 *] 2^n",
+            "doc": "Number of gridpoints for the full domain in x-direction; must be a power of 2 or 3 times a power of 2"
         },
         "global_ny": {
             "type": "int",
             "default": 64,
-            "avail": "2^n",
-            "doc": "Number of gridpoints for the full domain in y-direction; must be a power of 2"
+            "avail": "[3 *] 2^n",
+            "doc": "Number of gridpoints for the full domain in y-direction; must be a power of 2 or 3 times a power of 2"
         },
         "global_nz": {
             "type": "int",
             "default": 64,
-            "avail": "2^n",
-            "doc": "Number of gridpoints for the full domain in z-direction; must be a power of 2"
+            "avail": "[3 *] 2^n",
+            "doc": "Number of gridpoints for the full domain in z-direction; must be a power of 2 or 3 times a power of 2"
         },
         "orderVF": {
             "type": "int",

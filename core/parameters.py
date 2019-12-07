@@ -205,6 +205,19 @@ class UserParameters(object):
                             "use it, extend the variable POWERS_OF_2 in this "
                             "class to include your value".format(parameter)
                         )
+            elif options == "[3 *] 2^n":
+                if value not in POWERS_OF_2 and value / 3 not in POWERS_OF_2:
+                    if value < max(POWERS_OF_2):
+                        raise UserParameterError(
+                            "parameter {} must be a power of 2 or 3 times a "
+                            "power of 2".format(parameter)
+                        )
+                    else:
+                        raise UserParameterError(
+                            "parameter {} is very large; if you are sure to "
+                            "use it, extend the variable POWERS_OF_2 in this "
+                            "class to include your value".format(parameter)
+                        )
             elif options == "any valid filename":
                 if "/" in value:
                     raise UserParameterError(
@@ -376,10 +389,10 @@ if __name__ == "__main__":
     param.time["cfl"] = 1
 
     i += 1
-    param.discretization["global_nx"] = 3
+    param.discretization["global_nx"] = 5
     try: param.check()
     except UserParameterError as e: print("{:2d}. UserParameterError: {}".format(i, e))
-    param.discretization["global_nx"] = 2
+    param.discretization["global_nx"] = 3
 
     i += 1
     param.discretization["global_ny"] = 2**1000

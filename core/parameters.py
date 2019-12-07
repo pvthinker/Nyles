@@ -2,10 +2,12 @@ import os
 import json
 import datetime
 
+
 # List of categories that are needed in the defaults
 CATEGORIES = ["model", "physics", "IO", "animation", "time", "discretization", "MPI", "multigrid"]
 # List of attributes that are needed for every parameter
 ATTRIBUTES = ["type", "default", "avail", "doc"]
+
 
 class InextensibleDict(dict):
     """A dictionary that is safe against accidentally adding new keys.
@@ -56,11 +58,12 @@ class UserParameters(object):
     directory.  Its filename is stored in the constant attribute
     DEFAULTS_FILE of this class.
 
-    Attributes for public access:
-     - model, IO, time, discretization, MPI: dictionaries with the
-        parameters of the respective category.  It is possible to modify
-        the value of each parameter, but it is not possible to add new
-        parameters to any of the dictionaries.
+    One public attribute exists for each entry in the list CATEGORIES.
+    This attribute is a dictionary.  Every key of the dictionary is the
+    name of a parameter.  It is possible to modify the value of the
+    parameter, but it is not possible to add new parameters.  Once Nyles
+    has been created, further modifications of the parameters are not
+    possible.
 
     Methods for public access:
      - help
@@ -97,39 +100,11 @@ class UserParameters(object):
         self.check_defaults(defaults)
 
         # Copy all parameters by category into self
-        # categories = ["model", "IO", "animation",
-        #               "physics", "time", "discretization",
-        #               "MPI", "multigrid"]
-
         for cat in CATEGORIES:
             setattr(self, cat, InextensibleDict({
                 parameter: attributes["default"]
                 for parameter, attributes in defaults[cat].items()
             }))
-        # self.IO = InextensibleDict({
-        #     parameter: attributes["default"]
-        #     for parameter, attributes in defaults["IO"].items()
-        # })
-        # self.animation = InextensibleDict({
-        #     parameter: attributes["default"]
-        #     for parameter, attributes in defaults["animation"].items()
-        # })
-        # self.physics = InextensibleDict({
-        #     parameter: attributes["default"]
-        #     for parameter, attributes in defaults["physics"].items()
-        # })
-        # self.time = InextensibleDict({
-        #     parameter: attributes["default"]
-        #     for parameter, attributes in defaults["time"].items()
-        # })
-        # self.discretization = InextensibleDict({
-        #     parameter: attributes["default"]
-        #     for parameter, attributes in defaults["discretization"].items()
-        # })
-        # self.MPI = InextensibleDict({
-        #     parameter: attributes["default"]
-        #     for parameter, attributes in defaults["MPI"].items()
-        # })
 
         # Copy information used for help and checks
         self.documentations = {}

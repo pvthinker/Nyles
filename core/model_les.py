@@ -145,8 +145,9 @@ if __name__ == "__main__":
         'timestepping': 'LFAM3',
         'rotating': True, 'coriolis': 1.0,
         'neighbours': neighbours,
-        'procs': procs, 'topology': topo.topology,
+        'procs': procs, 'myrank': myrank,
         'npre': 3, 'npost': 3, 'omega': 0.8, 'ndeepest': 20, 'maxite': 20, 'tol': 1e-6,
+        'nglue': 16, 'ncellscoarsest': 32,
         'n_tracers': 0,
     }
 

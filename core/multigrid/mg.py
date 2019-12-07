@@ -13,7 +13,7 @@ class Multigrid(object):
             setattr(self, key, param[key])
         self.verbose = True
 
-        myrank = mpi.get_myrank(self.procs)
+        myrank = param['myrank']
 
         # 1/ determine the hierarchy: grids and subdomains partitions
         allgrids = grd.define_grids(param)
@@ -184,7 +184,7 @@ if __name__ == '__main__':
     topo.topology = topology
     nh = 1
 
-    param = {'nx': 128, 'ny': 32, 'nz': 32, 'nh': nh, 'procs': procs, 'topology': topology,
+    param = {'nx': 128, 'ny': 32, 'nz': 32, 'nh': nh, 'procs': procs, 'myrank': 0,
              'npre': 3, 'npost': 3, 'omega': 0.8, 'ndeepest': 20, 'maxite': 10, 'tol': 1e-6}
 
     mg = Multigrid(param)

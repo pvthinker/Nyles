@@ -47,27 +47,24 @@ class Nyles(object):
         # Load the IO; only the parameters modifiable by the user are saved
         self.IO = nylesIO.NylesIO(param)
 
-        # Add parameters that are automatically set
-        param["nx"] = param["global_nx"] // param["npx"]
-        param["ny"] = param["global_ny"] // param["npy"]
-        param["nz"] = param["global_nz"] // param["npz"]
-        # TODO: make the following general
-        # for reference (taken from an experiment file; remove when done):
-        # import topology as topo
-        topo.topology = param["geometry"]
-        npz = param["npz"]
-        npy = param["npy"]
         npx = param["npx"]
+        npy = param["npy"]
+        npz = param["npz"]
+
+        # Add parameters that are automatically set
+        param["nx"] = param["global_nx"] // npx
+        param["ny"] = param["global_ny"] // npy
+        param["nz"] = param["global_nz"] // npz
+
+        # Set up MPI
+        topo.topology = param["geometry"]
         procs = [npz, npy, npx]
         myrank = mpitools.get_myrank(procs)
         loc = topo.rank2loc(myrank, procs)
         neighbours = topo.get_neighbours(loc, procs)
-        param.update({
-            "procs": procs, "neighbours": neighbours,
-            "topology": param["geometry"],
-            "npre": 3, "npost": 3, "omega": 0.8, "ndeepest": 20, "maxite": 20,
-            "tol": 1e-3,
-        })
+        param["procs"] = procs
+        param["myrank"] = myrank
+        param["neighbours"] = neighbours
 
         # Load the grid with the extended parameters
         self.grid = grid.Grid(param)

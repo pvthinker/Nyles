@@ -270,13 +270,13 @@
         "omega": {
             "type": "float",
             "default": 0.8,
-            "avail": ">= 0",
+            "avail": ">= 0.0",
             "doc": "Relaxation coefficient in the Jacobi smoother"
         },
         "tol": {
             "type": "float",
             "default": 1e-3,
-            "avail": ">= 0",
+            "avail": ">= 0.0",
             "doc": "Accuracy of the solution, such that ||r||/||b|| <= tol, r is the residual and b the rhs"
         },
         "maxite": {

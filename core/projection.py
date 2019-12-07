@@ -97,7 +97,7 @@ if __name__ == "__main__":
         'Lx': 1.0, 'Ly': 1.0, 'Lz': 1.0,
         'timestepping': 'LFAM3',
         'neighbours': neighbours,
-        'procs': procs, 'topology': topo.topology,
+        'procs': procs, 'myrank': myrank,
         'npre': 3, 'npost': 3, 'omega': 0.8, 'ndeepest': 20, 'maxite': 20, 'tol': 1e-12
     }
 

@@ -118,9 +118,8 @@ def define_grids(param):
     nx, ny, nz = param['nx'], param['ny'], param['nz']
     nh = 1#param['nh']
 
-    # todo: 'nglue' and 'ncellscoarsest' should be set from 'param'
-    nglue = 16
-    ncellscoarsest = 32
+    nglue = param['nglue']
+    ncellscoarsest = param['ncellscoarsest']
 
     shape = [nz, ny, nx]
     lev = 0

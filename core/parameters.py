@@ -2,6 +2,10 @@ import os
 import json
 import datetime
 
+# List of categories that are needed in the defaults
+CATEGORIES = ["model", "physics", "IO", "animation", "time", "discretization", "MPI", "multigrid"]
+# List of attributes that are needed for every parameter
+ATTRIBUTES = ["type", "default", "avail", "doc"]
 
 class InextensibleDict(dict):
     """A dictionary that is safe against accidentally adding new keys.
@@ -92,35 +96,40 @@ class UserParameters(object):
             defaults = json.load(f)
         self.check_defaults(defaults)
 
-        # Copy all parameters by category
-        self.model = InextensibleDict({
-            parameter: attributes["default"]
-            for parameter, attributes in defaults["model"].items()
-        })
-        self.IO = InextensibleDict({
-            parameter: attributes["default"]
-            for parameter, attributes in defaults["IO"].items()
-        })
-        self.animation = InextensibleDict({
-            parameter: attributes["default"]
-            for parameter, attributes in defaults["animation"].items()
-        })
-        self.physics = InextensibleDict({
-            parameter: attributes["default"]
-            for parameter, attributes in defaults["physics"].items()
-        })
-        self.time = InextensibleDict({
-            parameter: attributes["default"]
-            for parameter, attributes in defaults["time"].items()
-        })
-        self.discretization = InextensibleDict({
-            parameter: attributes["default"]
-            for parameter, attributes in defaults["discretization"].items()
-        })
-        self.MPI = InextensibleDict({
-            parameter: attributes["default"]
-            for parameter, attributes in defaults["MPI"].items()
-        })
+        # Copy all parameters by category into self
+        # categories = ["model", "IO", "animation",
+        #               "physics", "time", "discretization",
+        #               "MPI", "multigrid"]
+
+        for cat in CATEGORIES:
+            setattr(self, cat, InextensibleDict({
+                parameter: attributes["default"]
+                for parameter, attributes in defaults[cat].items()
+            }))
+        # self.IO = InextensibleDict({
+        #     parameter: attributes["default"]
+        #     for parameter, attributes in defaults["IO"].items()
+        # })
+        # self.animation = InextensibleDict({
+        #     parameter: attributes["default"]
+        #     for parameter, attributes in defaults["animation"].items()
+        # })
+        # self.physics = InextensibleDict({
+        #     parameter: attributes["default"]
+        #     for parameter, attributes in defaults["physics"].items()
+        # })
+        # self.time = InextensibleDict({
+        #     parameter: attributes["default"]
+        #     for parameter, attributes in defaults["time"].items()
+        # })
+        # self.discretization = InextensibleDict({
+        #     parameter: attributes["default"]
+        #     for parameter, attributes in defaults["discretization"].items()
+        # })
+        # self.MPI = InextensibleDict({
+        #     parameter: attributes["default"]
+        #     for parameter, attributes in defaults["MPI"].items()
+        # })
 
         # Copy information used for help and checks
         self.documentations = {}
@@ -158,6 +167,7 @@ class UserParameters(object):
             **self.time,
             **self.discretization,
             **self.MPI,
+            **self.multigrid
         }
 
     def check(self):
@@ -252,10 +262,6 @@ class UserParameters(object):
         """Raise an exception if an error with the defaults is found.
 
         This does not check if the given default value is valid."""
-        # List of categories that are needed in the defaults
-        CATEGORIES = ["model", "physics", "IO", "animation", "time", "discretization", "MPI"]
-        # List of attributes that are needed for every parameter
-        ATTRIBUTES = ["type", "default", "avail", "doc"]
         # Check all categories exist
         for category in CATEGORIES:
             if category not in defaults:
@@ -331,6 +337,7 @@ if __name__ == "__main__":
     print("Time parameters:", param.time)
     print("Discretization parameters:", param.discretization)
     print("MPI parameters:", param.MPI)
+    print("Multigrid parameters:", param.multigrid)
     print("-"*80)
 
     print("Possible values for modelname:", param.possible_values("modelname"))

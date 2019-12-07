@@ -246,5 +246,56 @@
             "avail": ">= 0",
             "doc": "Number of ghost points in the halo"
         }
+    },
+
+    "multigrid": {
+        "npre": {
+            "type": "int",
+            "default": 3,
+            "avail": ">= 0",
+            "doc": "Number of smoother iterations before coarsening"
+        },
+        "npost": {
+            "type": "int",
+            "default": 3,
+            "avail": ">= 0",
+            "doc": "Number of smoother iterations after interpolation"
+        },
+        "ndeepest": {
+            "type": "int",
+            "default": 20,
+            "avail": ">= 0",
+            "doc": "Number of smoother iterations at the coarsest level"
+        },
+        "omega": {
+            "type": "float",
+            "default": 0.8,
+            "avail": ">= 0",
+            "doc": "Relaxation coefficient in the Jacobi smoother"
+        },
+        "tol": {
+            "type": "float",
+            "default": 1e-3,
+            "avail": ">= 0",
+            "doc": "Accuracy of the solution, such that ||r||/||b|| <= tol, r is the residual and b the rhs"
+        },
+        "maxite": {
+            "type": "int",
+            "default": 20,
+            "avail": ">= 0",
+            "doc": "Maximum number of iterations per multigrid solve"
+        },
+        "nglue": {
+            "type": "int",
+            "default": 16,
+            "avail": ">= 0",
+            "doc": "Subdomain width (in any direction) below which subdomains are glued together"
+        },
+        "ncellscoarsest": {
+            "type": "int",
+            "default": 32,
+            "avail": ">= 0",
+            "doc": "Minimal size of a subdomain (in terms of nx*ny*nz). This defines the coarsest level. "
+        }
     }
 }

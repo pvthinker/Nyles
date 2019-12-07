@@ -26,19 +26,19 @@ param.model["Ly"] = Ly
 param.model["Lz"] = Lz
 
 param.IO["datadir"] = "~/data/Nyles"
-param.IO["expname"] = "khi_0"
+param.IO["expname"] = "khi_visc_0.1"
 param.IO["mode"] = "overwrite"
-param.IO["variables_in_history"] = ['b']
+param.IO["variables_in_history"] = ['b', 'u', 'vor']
 param.IO["timestep_history"] = 1.  # 0.0 saves every frame
 param.IO["disk_space_warning"] = 0.5  # in GB
 
 param.time["timestepping"] = "LFAM3"
-param.time["tend"] = 100.0
-param.time["auto_dt"] = False
+param.time["tend"] = 40.0
+param.time["auto_dt"] = True
 # parameter if auto_dt is False
-param.time["dt"] = 0.1
+param.time["dt"] = 0.2
 # parameters if auto_dt is True
-param.time["cfl"] = 0.4
+param.time["cfl"] = 0.8
 param.time["dt_max"] = 1.0
 
 param.discretization["global_nx"] = nx
@@ -52,6 +52,7 @@ param.MPI["npx"] = 1
 param.MPI["npy"] = 1
 param.MPI["npz"] = 1
 
+param.physics["diff_coef"] = {"u": 1e-1}
 
 nyles = nyles_module.Nyles(param)
 

@@ -5,6 +5,7 @@ import timescheme as ts
 import vorticity as vort
 import bernoulli as bern
 import kinenergy as kinetic
+import viscosity as visc
 import projection
 import topology as topo
 from timing import timing
@@ -45,7 +46,12 @@ class LES(object):
         self.orderA = param["orderA"]
         self.orderVF = param["orderVF"]
         self.rotating = param["rotating"]
+
         self.diff_coef = param['diff_coef']
+        self.add_viscosity = "u" in self.diff_coef.keys()
+        if self.add_viscosity:
+            self.viscosity = self.diff_coef['u']
+
         self.tracer = tracer.Tracer_numerics(
             grid, self.traclist, self.orderA, self.diff_coef)
         if self.rotating:
@@ -96,6 +102,9 @@ class LES(object):
             vortf.vortex_force(state, dstate, self.orderVF)
         # bernoulli
         bern.bernoulli(state, dstate, self.grid)
+
+        if last and self.add_viscosity:
+            visc.add_viscosity(self.grid, state, dstate, self.viscosity)
 
     @timing
     def forward(self, t, dt):

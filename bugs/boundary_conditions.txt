@@ -12,3 +12,15 @@ boundary is wrong.
 In the freezing water experiment, at the upper and lower boundaries,
 unrealistic values of buoyancy develop.  This problem might be related
 to problems with calculating vorticity at the boundaries.
+
+
+Update on the problem: 2019-12-07
+
+Vorticity, say the w_k component, is not computed on w_k[:, -1, :] and
+w_k[:, :, -1], see fortran_vorticity.f90, namely along these walls. Is that correct? No, it should be defined there too. The value depends on whether the boundary condition creates vorticity (no-slip) or doesn't create vorticity (free-slip). These values are then used in vortex_force in the case when there is a outward flow in the vicinity of these walls. That's how these, so far 0, vorticity values, can be injected in the domain.
+
+BUT, we have a more serious problem. We see that we need to carefully handle the vorticity along these walls. We should do the same on the other walls! typically w_k[:, 0, :] and w_k[:, :, 0]. So far we can't because of the staggering and the size of the vorticity array. Currently w_k[:, 0, :] does sit on the wall! it is already fully inside the domain. Once again, this is a question of posts and fences. In a closed domain with nx cells, we have nx+1 vorticity points to handle... To be really clean, vorticity arrays need to have size nx+1 ... This is not straightforward to do, given our code design. Let's think about that. I didn't see that coming. "Flute!"
+
+
+
+

@@ -569,6 +569,17 @@ class NylesIO(object):
     def backup_scriptfile(self, filename):
         shutil.copyfile(filename, self.script_path)
 
+    def write_githashnumber(self):
+        gitfile = self.output_directory +'/nyles.git'
+        import version
+        githash = version.get_nyles_hash_number()
+        print(gitfile)
+        with open(gitfile, 'w') as fid:
+            fid.write('# this experiment has been done with\n')
+            fid.write('# Nyles commit\n')
+            fid.write(githash+'\n')
+            fid.write('# to rerun it with same version \n')
+            fid.write('# git checkout %s' % githash[:6])
 
 if __name__ == "__main__":
     import numpy as np

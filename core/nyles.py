@@ -113,6 +113,7 @@ class Nyles(object):
         self.IO.init(self.model.state, self.grid, t, n)
         print("Backing up script to:", self.IO.script_path)
         self.IO.backup_scriptfile(sys.argv[0])
+        self.IO.write_githashnumber()
 
         time_length = len(str(int(self.tend))) + 3
         time_string = "\r"+", ".join([

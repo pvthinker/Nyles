@@ -22,5 +22,22 @@ w_k[:, :, -1], see fortran_vorticity.f90, namely along these walls. Is that corr
 BUT, we have a more serious problem. We see that we need to carefully handle the vorticity along these walls. We should do the same on the other walls! typically w_k[:, 0, :] and w_k[:, :, 0]. So far we can't because of the staggering and the size of the vorticity array. Currently w_k[:, 0, :] does sit on the wall! it is already fully inside the domain. Once again, this is a question of posts and fences. In a closed domain with nx cells, we have nx+1 vorticity points to handle... To be really clean, vorticity arrays need to have size nx+1 ... This is not straightforward to do, given our code design. Let's think about that. I didn't see that coming. "Flute!"
 
 
+Update : 2019-12-08
 
+Alex
 
+I've been working quite a lot on that issue this week-end ... without having a solution.
+My idea wast to cheat and add "ghost points" at the boundaries of the calculation. So in fortran_vorticity.f90 loop up to i = n, for example, and change the calculation of the vorticity for this point.
+For free-slip we should be in this situation :
+                      
+                      Outside
+    ----> imaginary u                  
+--------------------- Wall
+    ----> u                  
+                      Fluid
+ 
+So in this case, uj[k,j,i+1] = uj[k,j,i], and at i = n we would have
+  wk(k,j,i) = uj(k,j,i) - uj(k,j,i) - ui(k,j+1,i) + ui(k,j,i) 
+  and at i=n, ui[:,:,i]=0 if I'm not mistaken, so wk = 0
+
+I tried it, but putting wk=0 around the whole domain, doesn't work. I think it is because the boundaries are not consistent accross all the routines. I didn't have time to go more in depth on all of that.

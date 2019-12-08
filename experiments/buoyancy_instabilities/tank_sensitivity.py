@@ -12,6 +12,8 @@ exps = [
 
 script = "tank.py"
 
+tmpscript = "tmp_"+script
+
 with open(script, "r") as fid:
     lines = fid.readlines()
 
@@ -19,7 +21,7 @@ params = [p.split('=')[0] for p in exps[0]]
 
 for e in exps:
     print('*'*80)
-    with open(script, "w") as fid:
+    with open(tmpscript, "w") as fid:
         for l in lines:
             param = l.split('=')[0]
             if param in params:
@@ -29,4 +31,5 @@ for e in exps:
 
             fid.write(l)
 
-    os.system("python "+script)
+    os.system("python "+tmpscript)
+os.system("rm "+tmpscript)

@@ -129,6 +129,7 @@ class NylesIO(object):
         self.t_next_hist = 0.0
         self.n_hist = 0
         self.last_saved_frame = None
+        self.myrank = param["myrank"]
         # Define a function to replace dimensions by units for convenience
         self.unit = lambda dimension: (
             dimension.replace("T", param["unit_duration"]).replace("L", param["unit_length"])
@@ -242,7 +243,7 @@ class NylesIO(object):
 
         # Create the output directory if necessary
         if not os.path.isdir(self.output_directory):
-            if param["myrank"] == 0:
+            if self.myrank == 0:
                 os.makedirs(self.output_directory)
         # Create the history file and save the initial state
         self.create_history_file(grid, variables)

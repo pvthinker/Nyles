@@ -4,16 +4,22 @@ import nyles as nyles_module
 import parameters
 
 
-nh = 2
-nz = 32
-ny = 32
-nx = 128
-# It must be possible to set the following lengths to arbitrary values,
-# but currently, due to a problem in the handling of the metric in the
-# calculation of p, it is necessary to ensure dx = dy = dz = 1. #TODO
-Lz = 1.0 * nz
-Ly = 1.0 * ny
-Lx = 1.0 * nx
+nh = 3
+nxglo = 128
+nyglo = 32
+nzglo = 32
+
+npx = 2
+npy = 1
+npz = 1
+
+nx = nxglo//npx
+ny = nyglo//npy
+nz = nzglo//npz
+
+Lx = 2.
+Ly = 1.
+Lz = 1.
 
 
 # Get the default parameters, then modify them as needed
@@ -26,33 +32,35 @@ param.model["Ly"] = Ly
 param.model["Lz"] = Lz
 
 param.IO["datadir"] = "~/data/Nyles"
-param.IO["expname"] = "khi_visc_0.1"
+param.IO["expname"] = "khi_visc2"
 param.IO["mode"] = "overwrite"
 param.IO["variables_in_history"] = ['b', 'u', 'vor']
-param.IO["timestep_history"] = 1.  # 0.0 saves every frame
+param.IO["timestep_history"] = .1  # 0.0 saves every frame
 param.IO["disk_space_warning"] = 0.5  # in GB
 
 param.time["timestepping"] = "LFAM3"
-param.time["tend"] = 40.0
+param.time["tend"] = 4.0
 param.time["auto_dt"] = True
 # parameter if auto_dt is False
-param.time["dt"] = 0.2
+param.time["dt"] = 0.02
 # parameters if auto_dt is True
 param.time["cfl"] = 0.8
-param.time["dt_max"] = 1.0
+param.time["dt_max"] = 0.04
 
-param.discretization["global_nx"] = nx
-param.discretization["global_ny"] = ny
-param.discretization["global_nz"] = nz
+param.discretization["global_nx"] = nxglo
+param.discretization["global_ny"] = nyglo
+param.discretization["global_nz"] = nzglo
 param.discretization["orderVF"] = 5  # upwind-order for vortex-force term
 param.discretization["orderA"] = 5  # upwind-order for advection term
 
 param.MPI["nh"] = nh
-param.MPI["npx"] = 1
-param.MPI["npy"] = 1
-param.MPI["npz"] = 1
+param.MPI["npx"] = npx
+param.MPI["npy"] = npy
+param.MPI["npz"] = npz
 
-param.physics["diff_coef"] = {"u": 1e-1}
+param.multigrid["nglue"] = 1
+
+# param.physics["diff_coef"] = {"u": 1e-1}
 
 nyles = nyles_module.Nyles(param)
 

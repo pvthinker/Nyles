@@ -1,0 +1,12 @@
+Date : 2019-12-08
+
+Reporter : Alex
+
+auto_dt should be set to False when using MPI.
+For now, each core calculates its own dt, so at the end they calculate at different times.
+
+Suggestion :
+Before exchanging halo, they should calculate their dt at share it between everyone. 
+Then they should all pick the smallest dt for the next step.
+
+To be implemented soon

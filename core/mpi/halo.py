@@ -151,7 +151,7 @@ class Halo():
         idx = self.iidx
         for direc in self.neighbours.keys():
             dk, dj, di = direc
-            self.sbuf[direc][:, :, :] = x[idx[0][dk], idx[1][dj], idx[2][di]]
+            self.sbuf[direc][:, :, :] = x[idx[0][-dk], idx[1][-dj], idx[2][-di]]
 
         # 2)
         MPI.Prequest.Startall(self.reqs)
@@ -305,7 +305,7 @@ if __name__ == '__main__':
     msg = 'use mpirun -np %i python ' % np.prod(procs) + ' '.join(sys.argv)
     assert comm.Get_size() == np.prod(procs), msg
 
-    test_111_domain()
+    #test_111_domain()
 
 
     topo.topology = 'closed'
@@ -314,8 +314,9 @@ if __name__ == '__main__':
     shape = [nz, ny, nx]
     nh = 2
     loc = topo.rank2loc(myrank, procs)
+    print('myrank=%i / loc=' % myrank, loc)
     neighbours = topo.get_neighbours(loc, procs, extension=extension)
-    size, domainindices = var.get_variable_shape([nz, ny, nx], neighbours, nh)
+    size, domainindices = topo.get_variable_shape([nz, ny, nx], neighbours, nh)
     grid = {'shape': [nz, ny, nx],
             'size': size,
             'nh': nh,

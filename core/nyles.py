@@ -177,6 +177,7 @@ class Nyles(object):
             # This way, it is only necessary to calculate the square
             # root of a single value, which is faster.
             U_max = np.sqrt(np.max(U**2 + V**2 + W**2))
+            U_max = mpitools.global_max(U_max)
             # Note: the if-statement cannot be replaced by try-except,
             # because U_max is a numpy-float which throws a warning
             # instead of an error in case of division by zero.

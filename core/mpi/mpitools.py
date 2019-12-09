@@ -17,3 +17,6 @@ def abort():
 
 def global_sum(localsum):
     return MPI.COMM_WORLD.allreduce(localsum, op=MPI.SUM)
+
+def global_max(localmax):
+    return MPI.COMM_WORLD.allreduce(localmax, op=MPI.MAX)

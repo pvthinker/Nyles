@@ -68,7 +68,7 @@ def myloc(loc, inc, delta, proc):
     return loc2rank([k, j, i], proc)
 
 
-def get_neighbours(location, procs, incr=[1, 1, 1], extension=6):
+def get_neighbours(location, procs, incr=[1, 1, 1], extension=26):
     """ Return the neighbours rank in the six directions
 
     the result is presented in a dictionnary

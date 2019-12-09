@@ -166,7 +166,8 @@ def get_variable_shape(innersize, ngbs, nh):
         size[0] += nh
         k0 = nh
     else:
-        k0 = 0
+        size[0] += 1
+        k0 = 1
     k1 = size[0]
     if (+1, 0, 0) in ngbs.keys():
         size[0] += nh
@@ -175,7 +176,8 @@ def get_variable_shape(innersize, ngbs, nh):
         size[1] += nh
         j0 = nh
     else:
-        j0 = 0
+        size[1] += 1
+        j0 = 1
     j1 = size[1]
     if (0, +1, 0) in ngbs.keys():
         size[1] += nh
@@ -184,7 +186,8 @@ def get_variable_shape(innersize, ngbs, nh):
         size[2] += nh
         i0 = nh
     else:
-        i0 = 0
+        size[2] += 1
+        i0 = 1
     i1 = size[2]
     if (0, 0, +1) in ngbs.keys():
         size[2] += nh

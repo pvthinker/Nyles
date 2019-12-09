@@ -7,6 +7,7 @@ import bernoulli as bern
 import kinenergy as kinetic
 import viscosity as visc
 import projection
+import boundarycond as bc
 import topology as topo
 from timing import timing
 import mg
@@ -41,6 +42,7 @@ class LES(object):
                 'scalar', t_name,  dimension='', prognostic=True)
         self.state = var.get_state(param)
         self.halo = halo.set_halo(param, self.state)
+        self.neighbours = param["neighbours"]
         self.timescheme = ts.Timescheme(param, self.state)
         self.timescheme.set(self.rhs, self.diagnose_var)
         self.orderA = param["orderA"]
@@ -66,6 +68,7 @@ class LES(object):
 
     @timing
     def diagnose_var(self, state):
+        bc.apply_bc_on_velocity(state, self.neighbours)
         self.halo.fill(state.b)
         self.halo.fill(state.u)
         # Diagnostic variables
@@ -84,6 +87,7 @@ class LES(object):
 
         if self.nonlinear:
             vort.vorticity(state, self.fparameter)
+            bc.apply_bc_on_vorticity(state, self.neighbours)
             kinetic.kinenergy(state, self.grid)
             self.halo.fill(state.vor)
             self.halo.fill(state.ke)

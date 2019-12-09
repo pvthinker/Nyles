@@ -4,16 +4,19 @@ import nyles as nyles_module
 import parameters
 
 
-nh = 2
+nh = 3
+
 nz = 64
 ny = 32
 nx = 32
-# It must be possible to set the following lengths to arbitrary values,
-# but currently, due to a problem in the handling of the metric in the
-# calculation of p, it is necessary to ensure dx = dy = dz = 1. #TODO
-Lz = 1.0 * nz
-Ly = 1.0 * ny
-Lx = 1.0 * nx
+
+npx = 1
+npy = 1
+npz = 1
+
+Lz = 1.0
+Ly = 1.0
+Lx = 1.0
 
 
 # Get the default parameters, then modify them as needed
@@ -28,28 +31,28 @@ param.model["Lz"] = Lz
 param.IO["datadir"] = "~/data/Nyles"
 param.IO["expname"] = "test"
 param.IO["mode"] = "overwrite"
-param.IO["variables_in_history"] = "all"
-param.IO["timestep_history"] = 0.2
+param.IO["variables_in_history"] = ["b", "u", "vor"]
+param.IO["timestep_history"] = 0.1
 
 param.time["timestepping"] = "LFAM3"
-param.time["tend"] = 20.0
-param.time["auto_dt"] = False
+param.time["tend"] = 2.0
+param.time["auto_dt"] = True
 # parameter if auto_dt is False
-param.time["dt"] = 0.03
+param.time["dt"] = 0.01
 # parameters if auto_dt is True
-param.time["cfl"] = 0.4
-param.time["dt_max"] = 1.0
+param.time["cfl"] = 0.8
+param.time["dt_max"] = 0.01
 
-param.discretization["global_nx"] = nx
-param.discretization["global_ny"] = ny
-param.discretization["global_nz"] = nz
+param.discretization["global_nx"] = nx*npx
+param.discretization["global_ny"] = ny*npy
+param.discretization["global_nz"] = nz*npz
 param.discretization["orderVF"] = 5  # upwind-order for vortex-force term
 param.discretization["orderA"] = 5  # upwind-order for advection term
 
 param.MPI["nh"] = nh
-param.MPI["npx"] = 1
-param.MPI["npy"] = 1
-param.MPI["npz"] = 1
+param.MPI["npx"] = npx
+param.MPI["npy"] = npy
+param.MPI["npz"] = npz
 
 
 nyles = nyles_module.Nyles(param)

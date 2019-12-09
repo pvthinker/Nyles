@@ -17,18 +17,35 @@ to problems with calculating vorticity at the boundaries.
 Update on the problem: 2019-12-07
 
 Vorticity, say the w_k component, is not computed on w_k[:, -1, :] and
-w_k[:, :, -1], see fortran_vorticity.f90, namely along these walls. Is that correct? No, it should be defined there too. The value depends on whether the boundary condition creates vorticity (no-slip) or doesn't create vorticity (free-slip). These values are then used in vortex_force in the case when there is a outward flow in the vicinity of these walls. That's how these, so far 0, vorticity values, can be injected in the domain.
+w_k[:, :, -1], see fortran_vorticity.f90, namely along these walls. Is
+that correct? No, it should be defined there too. The value depends on
+whether the boundary condition creates vorticity (no-slip) or doesn't
+create vorticity (free-slip). These values are then used in
+vortex_force in the case when there is a outward flow in the vicinity
+of these walls. That's how these, so far 0, vorticity values, can be
+injected in the domain.
 
-BUT, we have a more serious problem. We see that we need to carefully handle the vorticity along these walls. We should do the same on the other walls! typically w_k[:, 0, :] and w_k[:, :, 0]. So far we can't because of the staggering and the size of the vorticity array. Currently w_k[:, 0, :] does sit on the wall! it is already fully inside the domain. Once again, this is a question of posts and fences. In a closed domain with nx cells, we have nx+1 vorticity points to handle... To be really clean, vorticity arrays need to have size nx+1 ... This is not straightforward to do, given our code design. Let's think about that. I didn't see that coming. "Flute!"
+BUT, we have a more serious problem. We see that we need to carefully
+handle the vorticity along these walls. We should do the same on the
+other walls! typically w_k[:, 0, :] and w_k[:, :, 0]. So far we can't
+because of the staggering and the size of the vorticity
+array. Currently w_k[:, 0, :] does sit on the wall! it is already
+fully inside the domain. Once again, this is a question of posts and
+fences. In a closed domain with nx cells, we have nx+1 vorticity
+points to handle... To be really clean, vorticity arrays need to have
+size nx+1 ... This is not straightforward to do, given our code
+design. Let's think about that. I didn't see that coming. "Flute!"
 
 
 Update : 2019-12-08
 
 Alex
 
-I've been working quite a lot on that issue this week-end ... without having a solution.
-My idea wast to cheat and add "ghost points" at the boundaries of the calculation. So in fortran_vorticity.f90 loop up to i = n, for example, and change the calculation of the vorticity for this point.
-For free-slip we should be in this situation :
+I've been working quite a lot on that issue this week-end ... without
+having a solution.  My idea wast to cheat and add "ghost points" at
+the boundaries of the calculation. So in fortran_vorticity.f90 loop up
+to i = n, for example, and change the calculation of the vorticity for
+this point.  For free-slip we should be in this situation :
                       
                       Outside
     ----> imaginary u                  
@@ -40,4 +57,64 @@ So in this case, uj[k,j,i+1] = uj[k,j,i], and at i = n we would have
   wk(k,j,i) = uj(k,j,i) - uj(k,j,i) - ui(k,j+1,i) + ui(k,j,i) 
   and at i=n, ui[:,:,i]=0 if I'm not mistaken, so wk = 0
 
-I tried it, but putting wk=0 around the whole domain, doesn't work. I think it is because the boundaries are not consistent accross all the routines. I didn't have time to go more in depth on all of that.
+I tried it, but putting wk=0 around the whole domain, doesn't work. I
+think it is because the boundaries are not consistent accross all the
+routines. I didn't have time to go more in depth on all of that.
+
+Update: 2019-12-09
+
+Guillaume
+
+I agree with you Alex on the free slip BC for vorticity wk(k,j,i) = 0. And in the no-slip case we have
+
+wk(k,j,i) = -2*uj(k,j,i)
+
+Here is my reasoning to find these values:
+
+     consider w_k[k, j, i]: omega_k = delta_i[u_j] - delta_j[u_i]
+
+     wk(k,j,i) = uj(k,j,i+1) - uj(k,j,i) - ui(k,j+1,i) + ui(k,j,i)
+
+     it is defined for w_k[:, :-1, :-1]
+
+     *right wall*: on w_k[:, :, -1],
+     we have ui(k,j+1,i)=ui(k,j,i)=0 and uj(k,j,i+1) outside the domain,
+     uj(k,j,i+0.5) is on the wall
+
+     in freeslip: we need to interpolate uj to i+1.
+     Nearest interpolation yields uj(k,j,i+1)=uj(k,j,i), so
+     wk(k,j,i) = 0.
+
+     in noslip: uj(k,j,i+0.5)=0, so uj(k,j,i+1)=-uj(k,j,i) and
+     wk(k,j,i) = -2*uj(k,j,i)
+
+I also agree that we need to add a row of ghostpoints on the LEFT of
+each direction (for close BC). Ideadily we would like something like
+that
+
+replace
+u[nz,ny,nx] => u[nz,ny,nx+1]
+v[nz,ny,nx] => v[nz,ny+1,nx]
+w[nz,ny,nx] => w[nz+1,ny,nx]
+
+and
+w_x[nz,ny,nx] => w_x[nz+1,ny+1,nx]
+w_y[nz,ny,nx] => w_x[nz+1,ny,nx+1]
+w_z[nz,ny,nx] => w_x[nz,ny+1,nx+1]
+
+which is what CROCO does. But the big drawback is that arrays have
+then a different shape. I find it cumbersome. Also, to implement this
+we would need to change quite a lot of things.
+
+There is a painless solution:
+
+when there is a solid wall on the left (say in direction i): add one
+ghostpoint to all arrays (meaning in Scalar). We would do a little bit
+of extrawork for the tracer and also for the velocity component that
+is through that wall (which is equals to 0). But the shape can now
+afford the definition of tangential velocities and the vorticity
+everywhere we need. With that scheme, we need to implement a
+enforce_BC() function that sets the variables within that new row of
+ghostpoints.
+
+This enforce_BC() would be where we prescribe inlet and outlet BC too.

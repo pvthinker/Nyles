@@ -1,4 +1,4 @@
-
+import numpy as np
 
 def apply_bc_on_velocity(state, ngbs):
     """ apply no-flow BC on left walls, if any """
@@ -7,18 +7,24 @@ def apply_bc_on_velocity(state, ngbs):
     else:
         w = state.u['k'].view('k')
         w[:, :, 0] = 0.
+        b = state.b.view('k')
+        b[:, :, 0] = 99.
 
     if (0, -1, 0) in ngbs.keys():
         pass
-    else:
+    else: 
         v = state.u['j'].view('j')
         v[:, :, 0] = 0.
+        b = state.b.view('j')
+        b[:, :, 0] = 99.
         
     if (0, 0, -1) in ngbs.keys():
         pass
     else:
         u = state.u['i'].view('i')
         u[:, :, 0] = 0.
+        b = state.b.view('i')
+        b[:, :, 0] = 99.
 
         
 def apply_bc_on_vorticity(state, ngbs):

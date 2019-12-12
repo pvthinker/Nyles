@@ -1,5 +1,5 @@
 !----------------------------------------
-subroutine upwind(trac, u, dtrac, order, iflag, l, m, n)
+subroutine upwind(trac, u, dtrac, order, iflag, i0, l, m, n)
   !
   ! compute dtrac = -delta[ trac*U ]
   ! where delta[ ] is the finite difference in the i direction
@@ -15,13 +15,13 @@ subroutine upwind(trac, u, dtrac, order, iflag, l, m, n)
   !
   implicit none
 
-  integer, intent(in):: order, iflag, l, m, n
+  integer, intent(in):: order, iflag, i0, l, m, n
   real*8, dimension(l, m, n), intent(in) :: trac, u
   real*8, dimension(l, m, n), intent(inout) :: dtrac
 
   !f2py intent(inplace):: trac, dtrac, u
 
-  integer:: i, j, k
+  integer:: i, j, k, ii
   real*8::c1,c2,c3, b1, b2, b3, b4, b5
   real*8:: UU, up, um, qm, qp, fx, fxm
 
@@ -38,15 +38,18 @@ subroutine upwind(trac, u, dtrac, order, iflag, l, m, n)
   do k = 1, l
      do j = 1, m
         fxm = 0.
-        do i = 1, n
-
+        if (i0.eq.1)then
+           dtrac(k, j, 1) = 0.
+        endif
+        do i = 1+i0, n
+           ii = i-i0
            UU = abs(u(k,j,i))
            up = 0.5*(u(k,j,i)+UU) ! right-going flux
            um = 0.5*(u(k,j,i)-UU) ! left-going flux
 
-           if ((i.gt.2).and.(i.le.(n-2)).and.(order.eq.5)) then
+           if ((ii.gt.2).and.(i.le.(n-2)).and.(order.eq.5)) then
               qp = b1*trac(k,j,i-2) + b2*trac(k,j,i-1) + b3*trac(k,j,i) + b4*trac(k,j,i+1) + b5*trac(k,j,i+2)
-           elseif ((i.gt.1).and.(i.le.(n-1)).and.(order.ge.3)) then
+           elseif ((ii.gt.1).and.(i.le.(n-1)).and.(order.ge.3)) then
               ! 3rd order upwind interpolation at U point
               qp = c1*trac(k,j,i-1)+c2*trac(k,j,i  )+c3*trac(k,j,i+1)
            else
@@ -55,7 +58,7 @@ subroutine upwind(trac, u, dtrac, order, iflag, l, m, n)
            endif
 
 
-           if ((i.gt.1).and.(i.le.(n-3)).and.(order.eq.5)) then
+           if ((ii.gt.1).and.(i.le.(n-3)).and.(order.eq.5)) then
               qm = b5*trac(k,j,i-1) + b4*trac(k,j,i) + b3*trac(k,j,i+1) + b2*trac(k,j,i+2) + b1*trac(k,j,i+3)
            elseif ((i.le.(n-2)).and.(order.ge.3)) then
               ! 3rd order upwind

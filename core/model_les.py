@@ -54,7 +54,7 @@ class LES(object):
         if self.add_viscosity:
             self.viscosity = self.diff_coef['u']
 
-        self.tracer = tracer.Tracer_numerics(
+        self.tracer = tracer.Tracer_numerics(param,
             grid, self.traclist, self.orderA, self.diff_coef)
         if self.rotating:
             # convert Coriolis parameter (in s^-1) into its covariant quantity

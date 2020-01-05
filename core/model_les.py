@@ -71,9 +71,10 @@ class LES(object):
         bc.apply_bc_on_velocity(state, self.neighbours)
         self.halo.fill(state.b)
         self.halo.fill(state.u)
+
         # Diagnostic variables
         cov_to_contra.U_from_u(state, self.grid)
-        projection.compute_p(self.mg, state, self.grid)
+        projection.compute_p(self.mg, state, self.grid, self.neighbours)
         self.halo.fill(state.u)
         cov_to_contra.U_from_u(state, self.grid)
 
@@ -87,7 +88,7 @@ class LES(object):
 
         if self.nonlinear:
             vort.vorticity(state, self.fparameter)
-            bc.apply_bc_on_vorticity(state, self.neighbours)
+            #bc.apply_bc_on_vorticity(state, self.neighbours)
             kinetic.kinenergy(state, self.grid)
             self.halo.fill(state.vor)
             self.halo.fill(state.ke)

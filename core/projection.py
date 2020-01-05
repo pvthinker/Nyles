@@ -5,6 +5,7 @@ Projection functions to enforce div U = 0
 """
 import numpy as np
 from timing import timing
+import boundarycond as bc
 
 @timing
 def compute_div(state, **kwargs):
@@ -29,8 +30,8 @@ def compute_div(state, **kwargs):
 
 
 @timing
-def compute_p(mg, state, grid):
-    """ 
+def compute_p(mg, state, grid, ngbs):
+    """
     This solves the poisson equation with U (state.U),
     stores the result in p (state.p)
     and corrects u (state.u) with -delta[p]
@@ -64,6 +65,7 @@ def compute_p(mg, state, grid):
     # copy MG solution to pressure
     p = state.p.view('i')
     p[mg_idx] = x[:]
+    #bc.apply_bc_on_p(state, ngbs)
 
     # correct u (the covariant component)
     # now we start with the 'i' convention
@@ -125,7 +127,7 @@ if __name__ == "__main__":
     U[:] = u*grid.idx2
     V[:] = v*grid.idy2
     W[:] = w*grid.idz2
-    
+
     print('and make it divergent-free')
     compute_p(mg, s, ds, grid)
 
@@ -157,8 +159,8 @@ if __name__ == "__main__":
     plt.show()
     for direc in 'ijk':
         s.u[direc].view('i')[:] = ds.u[direc].view('i')[:]
-        
-    vort.vorticity(s, 0.)    
+
+    vort.vorticity(s, 0.)
     vor = s.vor
     wy = vor['j'].view('i')
     plt.figure()

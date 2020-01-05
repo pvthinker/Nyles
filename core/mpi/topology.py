@@ -85,7 +85,7 @@ def get_neighbours(location, procs, incr=[1, 1, 1], extension=26):
         k, j, i = location
     else:
         raise ValueError
-    
+
     nz, ny, nx = procs
     incz, incy, incx = incr
     k *= incz
@@ -145,9 +145,9 @@ def get_neighbours(location, procs, incr=[1, 1, 1], extension=26):
             ngs[(dk, dj, di)] = ng
     return ngs
 
-
+"""
 def get_variable_shape(innersize, ngbs, nh):
-    """ 
+    """"""
     innersize sets the interior domain size
     innersize = [nz, ny, nx]
 
@@ -159,7 +159,7 @@ def get_variable_shape(innersize, ngbs, nh):
 
     domainindices = (k0, k1, j0, j1, i0, i1),
                     the list of start and last index
-    """
+    """"""
     size = innersize.copy()
 
     if (-1, 0, 0) in ngbs.keys():
@@ -171,6 +171,8 @@ def get_variable_shape(innersize, ngbs, nh):
     k1 = size[0]
     if (+1, 0, 0) in ngbs.keys():
         size[0] += nh
+    else:
+        size[0] += 1
 
     if (0, -1, 0) in ngbs.keys():
         size[1] += nh
@@ -181,6 +183,8 @@ def get_variable_shape(innersize, ngbs, nh):
     j1 = size[1]
     if (0, +1, 0) in ngbs.keys():
         size[1] += nh
+    else:
+        size[1] += 1
 
     if (0, 0, -1) in ngbs.keys():
         size[2] += nh
@@ -191,6 +195,8 @@ def get_variable_shape(innersize, ngbs, nh):
     i1 = size[2]
     if (0, 0, +1) in ngbs.keys():
         size[2] += nh
+    else:
+        size[2] += 1
 
     # k0 is the vertical index of the first interior point
     # in python indexing convention (zero starting).
@@ -201,6 +207,7 @@ def get_variable_shape(innersize, ngbs, nh):
     # if k1 = nzl-1, there is no halo on this side
     domainindices = (k0, k1, j0, j1, i0, i1)
     return size, domainindices
+"""
 
 def check_graph(allneighbours):
     """
@@ -229,8 +236,9 @@ def check_graph(allneighbours):
     assert (connectivity == connectivity.transpose()).all(), msg
     print('connectivity matrix is symmetric')
 
+
 def get_variable_shape(innersize, ngbs, nh):
-    """ 
+    """
     innersize sets the interior domain size
     innersize = [nz, ny, nx]
 
@@ -242,7 +250,7 @@ def get_variable_shape(innersize, ngbs, nh):
 
     domainindices = (k0, k1, j0, j1, i0, i1),
                     the list of start and last index
-    """
+                    """
     size = innersize.copy()
 
     if (-1, 0, 0) in ngbs.keys():

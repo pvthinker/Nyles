@@ -60,10 +60,10 @@ class Tracer_numerics(object):
                 i0 = self.i0[direction]
                 if direction == 'i':
                     # overwrite rhs
-                    fortran.upwind(field, velocity, dfield, self.order, i0, 1)
+                    fortran.upwind(field, velocity, dfield, self.order, 0, 1)
                 else:
                     # add to rhs
-                    fortran.upwind(field, velocity, dfield, self.order, i0, 0)
+                    fortran.upwind(field, velocity, dfield, self.order, 0, 0)
 
                 if last and self.diffusion:
                     if (tracname in self.diff_coef.keys()):

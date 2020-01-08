@@ -25,13 +25,20 @@ class Tracer_numerics(object):
             self.ids2 = grid.ids2
             self.diff_coef = diff_coef
         self.i0 = {}
+        self.i1 = {}
         ngbs = param["neighbours"]
         for d in 'ijk':
             i0 = 0
+            i1 = 0
             if d == 'i' and not((0, 0, -1) in ngbs.keys()): i0 = 1
+            if d == 'i' and not((0, 0, +1) in ngbs.keys()): i1 = 1
             if d == 'j' and not((0, -1, 0) in ngbs.keys()): i0 = 1
+            if d == 'j' and not((0, +1, 0) in ngbs.keys()): i1 = 1
             if d == 'k' and not((-1, 0, 0) in ngbs.keys()): i0 = 1
+            if d == 'k' and not((+1, 0, 0) in ngbs.keys()): i1 = 1
+
             self.i0[d] = i0
+            self.i1[d] = i1
 
     @timing
     def rhstrac(self, state, rhs, last=False):
@@ -58,12 +65,14 @@ class Tracer_numerics(object):
                 field = trac.view(direction)
                 dfield = dtrac.view(direction)
                 i0 = self.i0[direction]
+                i1 = self.i1[direction]
+
                 if direction == 'i':
                     # overwrite rhs
-                    fortran.upwind(field, velocity, dfield, self.order, 0, 1)
+                    fortran.upwind(field, velocity, dfield, self.order, i0, i1, 1)
                 else:
                     # add to rhs
-                    fortran.upwind(field, velocity, dfield, self.order, 0, 0)
+                    fortran.upwind(field, velocity, dfield, self.order, i0, i1, 0)
 
                 if last and self.diffusion:
                     if (tracname in self.diff_coef.keys()):

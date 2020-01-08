@@ -12,7 +12,7 @@ def apply_bc_on_velocity(state, ngbs):
         v[:,:,0] = v[:,:,1]
         u[:,:,0] = u[:,:,1]
         b = state.b.view('k')
-        b[:, :, 0] = 0.
+        b[:, :, 0] = 10.
     if (+1, 0, 0) in ngbs.keys():
         pass
     else:
@@ -23,7 +23,7 @@ def apply_bc_on_velocity(state, ngbs):
         v[:,:,-1] = v[:,:,-2]
         u[:,:,-1] = u[:,:,-2]
         b = state.b.view('k')
-        b[:, :, -1] = 0.
+        b[:, :, -1] = 10.
 
     if (0, -1, 0) in ngbs.keys():
         pass
@@ -35,7 +35,7 @@ def apply_bc_on_velocity(state, ngbs):
         w[:,:,0] = w[:,:,1]
         u[:,:,0] = u[:,:,1]
         b = state.b.view('j')
-        b[:, :, 0] = 0.
+        b[:, :, 0] = 10.
     if (0, +1, 0) in ngbs.keys():
         pass
     else:
@@ -46,7 +46,7 @@ def apply_bc_on_velocity(state, ngbs):
         w[:,:,-1] = w[:,:,-2]
         u[:,:,-1] = u[:,:,-2]
         b = state.b.view('j')
-        b[:, :, -1] = 0.
+        b[:, :, -1] = 10.
 
     if (0, 0, -1) in ngbs.keys():
         pass
@@ -58,7 +58,7 @@ def apply_bc_on_velocity(state, ngbs):
         w[:,:,0] = w[:,:,1]
         v[:,:,0] = v[:,:,1]
         b = state.b.view('i')
-        b[:, :, 0] = 0.
+        b[:, :, 0] = 10.
     if (0, 0, +1) in ngbs.keys():
         pass
     else:
@@ -69,7 +69,7 @@ def apply_bc_on_velocity(state, ngbs):
         w[:,:,-1] = w[:,:,-2]
         v[:,:,-1] = v[:,:,-2]
         b = state.b.view('i')
-        b[:, :, -1] = 0.
+        b[:, :, -1] = 10.
 
 def apply_bc_on_p(state, ngbs):
     "Pressure continuity on walls"

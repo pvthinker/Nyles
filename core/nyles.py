@@ -131,7 +131,7 @@ class Nyles(object):
             t += dt
             n += 1
             stop = self.IO.do(self.model.state, t, n)
-            print(time_string.format(n, t, self.tend, dt), end='')
+            print(time_string.format(n, t, self.tend, dt), end='', flush=True)
             if blowup:
                 print('')
                 print('BLOW UP! ', end='')

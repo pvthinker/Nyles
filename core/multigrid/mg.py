@@ -2,8 +2,8 @@ import numpy as np
 import grids as grd
 import intergrids as intergrd
 import mpitools as mpi
-import subdomains as subdom
 import laplacian as laplac
+import gluetools
 
 
 class Multigrid(object):
@@ -16,15 +16,13 @@ class Multigrid(object):
         myrank = param['myrank']
 
         # 1/ determine the hierarchy: grids and subdomains partitions
-        allgrids = grd.define_grids(param)
+        allgrids = grd.define_grids_v2(param)
         if myrank == 0 and self.verbose:
             grd.print_grids(allgrids)
 
         self.verbose = False
         nlevs = len(allgrids)
         self.nlevs = nlevs
-        subdomains = subdom.set_subdomains(allgrids)
-        subdom.attach_subdomain_to_grids(allgrids, subdomains, myrank)
 
         # 2/ grid instances: contains the arrays x, b and r, the halofill and the information to glue
         self.grid = [1] * nlevs
@@ -46,13 +44,20 @@ class Multigrid(object):
                 g.set_ADS(Afinest)
             else:
                 Afine = self.grid[lev-1].A
-                intergrid = self.inter[lev-1]
-                Acoarse = intergrid.Restrict*Afine*intergrid.Interpol
+                inter = self.inter[lev-1]
+                if inter.glueflag:
+                    glue = inter.glue
+                    dummy = glue.dummy
+                    dummy.A = inter.Restrict*Afine*inter.Interpol
+                    Acoarse = glue.glue_matrix()
+
+                else:
+                    Acoarse = inter.Restrict*Afine*inter.Interpol
                 g.set_ADS(Acoarse)
 
         # store the statistics of the last 'solve_directly'
         self.stats = {}
-        
+
     def solve(self, x, b, cycle='V'):
         """
 
@@ -98,7 +103,6 @@ class Multigrid(object):
         else:
             return 0, 0.
 
-
         res = res0
         reslist = [res]
         nite = 0
@@ -109,7 +113,7 @@ class Multigrid(object):
         if normb > 1e6:
             ok = False
             blowup = True
-            
+
         while (nite < self.maxite) and (res0 > self.tol) and ok:
             if cycle == 'V':
                 self.Vcycle(0)
@@ -178,16 +182,21 @@ if __name__ == '__main__':
     import topology as topo
     import matplotlib.pyplot as plt
     import test_mg as tmg
+    import grid
 
     procs = [1, 1, 1]
     topology = 'perio_xy'
     topo.topology = topology
     nh = 1
 
-    param = {'nx': 128, 'ny': 32, 'nz': 32, 'nh': nh, 'procs': procs, 'myrank': 0,
-             'npre': 3, 'npost': 3, 'omega': 0.8, 'ndeepest': 20, 'maxite': 10, 'tol': 1e-6}
+    npz, npy, npx = procs
 
-    mg = Multigrid(param)
+    param = {'nx': 128, 'ny': 32, 'nz': 32, 'nh': nh, 'procs': procs, 'myrank': 0,
+             'npre': 3, 'npost': 3, 'omega': 0.8, 'ndeepest': 20, 'maxite': 10, 'tol': 1e-6,
+             "npx": npx, "npy": npy, "npz": npz, "Lx": 1, "Ly": 1, "Lz": 1}
+
+    modelgrid = grid.Grid(param)
+    mg = Multigrid(param, modelgrid)
 
     lev = 0
     g = mg.grid[lev]

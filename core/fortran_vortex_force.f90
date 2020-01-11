@@ -45,22 +45,22 @@ subroutine vortex_force_calc(U, vort, res, epsilon, order, m, n, l)
           up = 0.5*(U_interp+UU) ! right-going flux
           um = 0.5*(U_interp-UU) ! left-going flux
 
-          if ((k.gt.3).and.(k.le.(l-1)).and.(order.eq.5)) then
+          if ((k.gt.3).and.(k.lt.(l-1)).and.(order.eq.5)) then
              qp = b1*vort(j,i,k-3) + b2*vort(j,i,k-2) + b3*vort(j,i,k-1) + b4*vort(j,i,k) + b5*vort(j,i,k+1)
-          elseif ((k.gt.2).and.(k.le.(l)).and.(order.ge.3)) then
+          elseif ((k.gt.2).and.(k.lt.(l)).and.(order.ge.3)) then
              ! 3rd order upwind
              qp = c1*vort(j,i,k-2) + c2*vort(j,i,k-1) + c3*vort(j,i,k)
           elseif (k.gt.1) then
              ! 1st order
              qp = vort(j,i,k-1)
           else
-             qp = vort(j,i,k) ! <- very hazardous, CHECK!!!!
+             qp = 0.!vort(j,i,k) ! <- very hazardous, CHECK!!!!
           endif
 
 
-          if ((k.gt.2).and.(k.le.(l-2)).and.(order.eq.5)) then
+          if ((k.gt.2).and.(k.lt.(l-2)).and.(order.eq.5)) then
              qm = b5*vort(j,i,k-2) + b4*vort(j,i,k-1) + b3*vort(j,i,k) + b2*vort(j,i,k+1) + b1*vort(j,i,k+2)
-          elseif ((k.gt.1).and.(k.le.(l-1)).and.(order.ge.3)) then
+          elseif ((k.gt.1).and.(k.lt.(l-1)).and.(order.ge.3)) then
              ! 3rd order upwind
              qm = c3*vort(j,i,k-1) + c2*vort(j,i,k) + c1*vort(j,i,k+1)
           elseif (k.le.(l-1)) then
@@ -70,7 +70,7 @@ subroutine vortex_force_calc(U, vort, res, epsilon, order, m, n, l)
              ! no flux through the boundary
              ! TODO: change this in case of inflow/outflow
              ! cf Winters 2012
-             qm = vort(j,i,k) ! <- very hazardous, CHECK!!!!
+             qm = 0.!vort(j,i,k) ! <- very hazardous, CHECK!!!!
           endif
 
           ! this term is U_j * omega_k

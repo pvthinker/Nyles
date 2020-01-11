@@ -11,6 +11,6 @@ def get_nyles_hash_number():
     with open('/'.join(gitfolder+['HEAD'])) as fid:
         head = fid.readline().split(':')[-1].strip()
 
-    with open('/'.join(gitfolder+[head])) as fid:
-        githash = fid.readline().strip()
-    return githash
+    # with open('/'.join(gitfolder+[head])) as fid:
+    #     githash = fid.readline().strip()
+    return head#githash

@@ -21,7 +21,6 @@ Lx = 8.
 Ly = 1.
 Lz = 8.
 
-
 # Get the default parameters, then modify them as needed
 param = parameters.UserParameters()
 
@@ -35,6 +34,7 @@ param.IO["datadir"] = "~/data/Nyles"
 param.IO["expname"] = "tank_toy_1"
 param.IO["mode"] = "overwrite"
 param.IO["variables_in_history"] = ['b', 'u', 'vor', 'div']
+
 param.IO["timestep_history"] = 1.  # 0.0 saves every frame
 param.IO["disk_space_warning"] = 0.5  # in GB
 
@@ -57,6 +57,7 @@ param.MPI["nh"] = nh
 param.MPI["npx"] = npx
 param.MPI["npy"] = npy
 param.MPI["npz"] = npz
+
 
 #param.multigrid["nglue"] = 1
 

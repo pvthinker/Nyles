@@ -241,7 +241,7 @@ class Gluegrids(object):
         MPI.COMM_WORLD.Barrier()
         if ok:
             coarseA = sparse.coo_matrix((data, (row, col)), shape=(N, N))
-            print("SUCCESS for rank %i" % myrank)
+            # print("SUCCESS for rank %i" % myrank)
         else:
             print("matrix not defined for rank %i" % myrank)
             print("subdomains were", mat)

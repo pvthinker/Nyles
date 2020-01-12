@@ -53,7 +53,7 @@ class Grid(object):
 
         nh = 1
         procs0 = [i*p for i, p in zip(self.incr, self.procs)]
-        print("---------> procs0=", procs0, self.myrank)
+        # print("---------> procs0=", procs0, self.myrank)
         loc = topo.rank2loc(self.myrank, procs0)
         neighbours = topo.get_neighbours(loc, procs0, incr=self.incr)
         size, domainindices = topo.get_variable_shape(
@@ -301,10 +301,11 @@ def print_grids(grids):
         procs0 = [i*p for i, p in zip(g["incr"], g["procs"])]
         print('lev = %2i' % lev,
               '/ subdom size: %3i x %3i x %3i' % tuple(g['shape']),
-              '/ cores: %1i x %1i x %1i' % tuple(g['procs']),
-              '/ incr: %r' % (tuple(g["incr"]),),
-              '/ procs0: %r' % (tuple(procs0),),
-              '/ restrict: %3s' % r)
+              '/ cores: %1i x %1i x %1i' % tuple(g['procs']))
+        # lines below were useful during debuging
+              # '/ incr: %r' % (tuple(g["incr"]),),
+              # '/ procs0: %r' % (tuple(procs0),),
+              # '/ restrict: %3s' % r)
 #              '/ glue: %3s' % glue)
     print('-'*80)
 

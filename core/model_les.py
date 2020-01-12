@@ -68,7 +68,7 @@ class LES(object):
 
     @timing
     def diagnose_var(self, state):
-        bc.apply_bc_on_velocity(state, self.neighbours)
+        #bc.apply_bc_on_velocity(state, self.neighbours)
         self.halo.fill(state.b)
         self.halo.fill(state.u)
         # Diagnostic variables
@@ -87,7 +87,7 @@ class LES(object):
 
         if self.nonlinear:
             vort.vorticity(state, self.fparameter)
-            bc.apply_bc_on_vorticity(state, self.neighbours)
+            #bc.apply_bc_on_vorticity(state, self.neighbours)
             kinetic.kinenergy(state, self.grid)
             self.halo.fill(state.vor)
             self.halo.fill(state.ke)

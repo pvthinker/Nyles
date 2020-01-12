@@ -576,7 +576,7 @@ class NylesIO(object):
         gitfile = self.output_directory +'/nyles.git'
         import version
         githash = version.get_nyles_hash_number()
-        print(gitfile)
+        # print(gitfile)
         with open(gitfile, 'w') as fid:
             fid.write('# this experiment has been done with\n')
             fid.write('# Nyles commit\n')

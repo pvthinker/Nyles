@@ -38,7 +38,6 @@ class Nyles(object):
     """
 
     def __init__(self, user_param):
-        self.banner()
         # Check, freeze, and get user parameters
         user_param.check()
         user_param.freeze()
@@ -63,7 +62,10 @@ class Nyles(object):
         param["myrank"] = myrank
         param["neighbours"] = neighbours
         param["loc"] = loc
+        self.myrank = myrank
 
+        self.banner()
+        
         # Load the grid with the extended parameters
         self.grid = grid.Grid(param)
 
@@ -110,9 +112,11 @@ class Nyles(object):
             print("lean back in your seat and ...")
             input("... press Enter to start! ")
 
-        print("Creating output file:", self.IO.hist_path)
+        if self.myrank == 0:
+            print("Creating output file:", self.IO.hist_path)
         self.IO.init(self.model.state, self.grid, t, n)
-        print("Backing up script to:", self.IO.script_path)
+        if self.myrank == 0:
+            print("Backing up script to:", self.IO.script_path)
         self.IO.backup_scriptfile(sys.argv[0])
         self.IO.write_githashnumber()
 
@@ -131,7 +135,8 @@ class Nyles(object):
             t += dt
             n += 1
             stop = self.IO.do(self.model.state, t, n)
-            print(time_string.format(n, t, self.tend, dt), end='')
+            if self.myrank == 0:
+                print(time_string.format(n, t, self.tend, dt), end='')
             if blowup:
                 print('')
                 print('BLOW UP! ', end='')
@@ -140,13 +145,15 @@ class Nyles(object):
                 self.plotting.update(t, n)
             if t >= self.tend or stop:
                 break
-        if stop:
-            print("-- aborted.")
-        else:
-            print("-- finished.")
+        if self.myrank == 0:
+            if stop:
+                print("-- aborted.")
+            else:
+                print("-- finished.")
 
         self.IO.finalize(self.model.state, t, n)
-        print("Output written to:", self.IO.hist_path)
+        if self.myrank == 0:
+            print("Output written to:", self.IO.hist_path)
         self.model.write_stats(self.IO.output_directory)
         timing.write_timings(self.IO.output_directory)
         timing.analyze_timing(self.IO.output_directory)
@@ -200,9 +207,10 @@ class Nyles(object):
             "         __/ |             ",
             "        |___/              ",
             "                           "]
-        print("Welcome to")
-        for l in logo:
-            print(" "*10+l)
+        if self.myrank == 0:
+            print("Welcome to")
+            for l in logo:
+                print(" "*10+l)
 
 
 class Logger(object):

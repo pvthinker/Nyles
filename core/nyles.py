@@ -42,7 +42,7 @@ class Nyles(object):
         user_param.check()
         user_param.freeze()
         param = user_param.view_parameters()
-
+        self.param = param
         npx = param["npx"]
         npy = param["npy"]
         npz = param["npz"]

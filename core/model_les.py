@@ -48,7 +48,7 @@ class LES(object):
         self.orderA = param["orderA"]
         self.orderVF = param["orderVF"]
         self.rotating = param["rotating"]
-
+        self.forced = param["forced"]
         self.diff_coef = param['diff_coef']
         self.add_viscosity = "u" in self.diff_coef.keys()
         if self.add_viscosity:
@@ -109,6 +109,9 @@ class LES(object):
 
         if last and self.add_viscosity:
             visc.add_viscosity(self.grid, state, dstate, self.viscosity)
+
+        if self.forced:
+            self.forcing.add(state, dstate, t)
 
     @timing
     def forward(self, t, dt):

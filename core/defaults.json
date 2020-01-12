@@ -57,6 +57,12 @@
             "avail": [true, false],
             "doc": "Whether Coriolis force is present or not"
         },
+        "forced": {
+            "type": "bool",
+            "default": false,
+            "avail": [true, false],
+            "doc": "Whether the flow is forced or not. If True, the user must supply the forcing in the user script"
+        },
         "coriolis": {
             "type": "float",
             "default": 1.0,

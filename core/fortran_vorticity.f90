@@ -21,11 +21,11 @@ subroutine vorticity(ui, uj, wk, l, m, n)
         do i = 1, n-1
            wk(k,j,i) = uj(k,j,i+1) - uj(k,j,i) - ui(k,j+1,i) + ui(k,j,i)
         enddo
-        wk(k,j,n) = 9d99
+!        wk(k,j,n) = 9d99
      enddo
-     do i = 1, n
-        wk(k,m,i) = 9d99
-     enddo
+!     do i = 1, n
+!        wk(k,m,i) = 9d99
+!     enddo
   enddo
   
 end subroutine vorticity

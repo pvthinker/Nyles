@@ -9,7 +9,7 @@
         "geometry": {
             "type": "str",
             "default": "closed",
-            "avail": ["closed", "perio_x"],
+            "avail": ["closed", "perio_x", "perio_y", "perio_xy", "perio_xyz"],
             "doc": "Geometry of the domain"
         },
         "Lx": {

@@ -23,7 +23,7 @@ import itertools
 # at only one place and all modules
 # will see the change
 
-topology = 'closed'
+topology = 'undefined'
 
 
 def rank2loc(rank, procs):
@@ -80,6 +80,11 @@ def get_neighbours(location, procs, incr=[1, 1, 1], extension=26):
 
 
     """
+
+    possible = ["closed", "perio_x", "perio_xy", "perio_y", "perio_xyz"]
+
+    assert topology in possible, "you forgot to set the topology"
+
     if type(location) is int:
         k, j, i = rank2loc(location, procs)
     elif type(location) is list:

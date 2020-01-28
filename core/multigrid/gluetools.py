@@ -19,6 +19,7 @@ from scipy import sparse
 import pickle
 import os
 import itertools
+import mpitools
 
 
 class Gluegrids(object):
@@ -100,7 +101,7 @@ class Gluegrids(object):
         dummy.x needs to be assigned before this stage
         it is assigned by intergrids.py by applying the
         restriction matrix on fine.x
-        
+
         """
         assert which in "xrb"
 
@@ -118,7 +119,6 @@ class Gluegrids(object):
         self.localcomm.Allgatherv(msg, [rbuff, siz, off, MPI.DOUBLE])
         x = rbuff.reshape((np.prod(matshape),) + tuple(dummy.shape))
 
-        #print("rank=%2i" % myrank, "shape(x)=", np.shape(x))
         l = 0
         nz, ny, nx = dummy.shape
         coarseb = coarse.toarray(which)
@@ -181,11 +181,11 @@ class Gluegrids(object):
         rks = range(matshape[0])
         rjs = range(matshape[1])
         ris = range(matshape[2])
+        master = mat[0, 0, 0]
         for k, j, i in itertools.product(rks, rjs, ris):
             ka = k0+k*nz
             ja = j0+j*ny
             ia = i0+i*nx
-
             # core to core communication
             sender = mat[k, j, i]
             if myrank == sender:
@@ -211,23 +211,26 @@ class Gluegrids(object):
 
             # row
             kk, jj, ii = index_to_triplet(A.row, size, domainindices)
-            kk += ka
-            jj += ja
-            ii += ia
+
+            kk += ka-k0
+            jj += ja-j0
+            ii += ia-i0
             idx = triplet_to_index(
                 (kk, jj, ii), coarse.size, coarse.domainindices)
             row[counter:counter+n] = idx
             if (max(idx) >= N):
                 print("myrank=%i, sender=%i / row" % (myrank, sender))
+
                 ok = False
 
             # col
             kk, jj, ii = index_to_triplet(A.col, size, domainindices)
-            kk += ka
-            jj += ja
-            ii += ia
+            kk += ka-k0
+            jj += ja-j0
+            ii += ia-i0
             idx = triplet_to_index(
                 (kk, jj, ii), coarse.size, coarse.domainindices)
+
             col[counter:counter+n] = idx
             if (max(idx) >= N):
                 print("myrank=%i, sender=%i / col" % (myrank, sender))
@@ -241,13 +244,14 @@ class Gluegrids(object):
         MPI.COMM_WORLD.Barrier()
         if ok:
             coarseA = sparse.coo_matrix((data, (row, col)), shape=(N, N))
-            # print("SUCCESS for rank %i" % myrank)
+
         else:
             print("matrix not defined for rank %i" % myrank)
             print("subdomains were", mat)
             raise ValueError
 
         return coarseA
+
 
 def triplet_to_index(triplet, size, domainindices):
     """ 
@@ -272,5 +276,3 @@ def index_to_triplet(index, size, domainindices):
     j -= j0
     i -= i0
     return (k, j, i)
-
-

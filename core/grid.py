@@ -70,7 +70,7 @@ class Grid(object):
         #  coordinates of the bottom left front corner of the subdomain
         x0 = param['loc'][2]*self.nx*self.dx
         y0 = param['loc'][1]*self.ny*self.dy
-        z0 = param['loc'][0]*self.nz*self.dz        
+        z0 = param['loc'][0]*self.nz*self.dz
         self.x_b_1D = (np.arange(size['i'])+0.5-i0)*self.dx + x0
         self.y_b_1D = (np.arange(size['j'])+0.5-j0)*self.dy + y0
         self.z_b_1D = (np.arange(size['k'])+0.5-k0)*self.dz + z0

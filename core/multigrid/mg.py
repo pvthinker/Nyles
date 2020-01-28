@@ -4,6 +4,7 @@ import intergrids as intergrd
 import mpitools as mpi
 import laplacian as laplac
 import gluetools
+from scipy import sparse
 
 
 class Multigrid(object):
@@ -55,6 +56,7 @@ class Multigrid(object):
                     Acoarse = inter.Restrict*Afine*inter.Interpol
                 g.set_ADS(Acoarse)
 
+        mpi.barrier()
         # store the statistics of the last 'solve_directly'
         self.stats = {}
 

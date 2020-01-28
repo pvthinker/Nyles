@@ -18,6 +18,13 @@ def abort():
     comm = MPI.COMM_WORLD
     comm.Abort()
 
+def barrier():
+    comm = MPI.COMM_WORLD
+    myrank = comm.Get_rank()
+    comm.barrier()
+    if myrank == 0:
+        print("", flush=True, end="")
+
 def global_sum(localsum):
     return MPI.COMM_WORLD.allreduce(localsum, op=MPI.SUM)
 

@@ -65,7 +65,7 @@ class Nyles(object):
         self.myrank = myrank
 
         self.banner()
-        
+
         # Load the grid with the extended parameters
         self.grid = grid.Grid(param)
 
@@ -114,11 +114,13 @@ class Nyles(object):
 
         if self.myrank == 0:
             print("Creating output file:", self.IO.hist_path)
+
         self.IO.init(self.model.state, self.grid, t, n)
+
         if self.myrank == 0:
             print("Backing up script to:", self.IO.script_path)
-        self.IO.backup_scriptfile(sys.argv[0])
-        self.IO.write_githashnumber()
+            self.IO.backup_scriptfile(sys.argv[0])
+            self.IO.write_githashnumber()
 
         time_length = len(str(int(self.tend))) + 3
         time_string = "\r"+", ".join([
@@ -128,8 +130,10 @@ class Nyles(object):
             "dt = {:.4f}",
         ])
 
-        print("-"*50)
-        while True:
+        if self.myrank == 0:
+            print("-"*80)
+        stop = False
+        while not(stop):
             dt = self.compute_dt()
             blowup = self.model.forward(t, dt)
             t += dt
@@ -145,16 +149,23 @@ class Nyles(object):
                 self.plotting.update(t, n)
             if t >= self.tend or stop:
                 break
+            mpitools.barrier()
+        if self.myrank == 0:
+            print()
+            print("-"*80)
         if self.myrank == 0:
             if stop:
-                print("-- aborted.")
+                print("Job is aborted")
             else:
-                print("-- finished.")
+                print("Job completed as expected")
 
         self.IO.finalize(self.model.state, t, n)
+
         if self.myrank == 0:
             print("Output written to:", self.IO.hist_path)
+
         self.model.write_stats(self.IO.output_directory)
+
         timing.write_timings(self.IO.output_directory)
         timing.analyze_timing(self.IO.output_directory)
         # in case of a blowup, only core exits the time loop

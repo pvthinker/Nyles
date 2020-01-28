@@ -9,6 +9,7 @@ import topology as topo
 
 integers = "0123456789"
 
+
 def read_param(ncfile):
     param = {}
     with nc.Dataset(ncfile, "r") as fid:
@@ -29,6 +30,7 @@ def read_param(ncfile):
             param[p] = val
     return param
 
+
 def join(param, outfile="out.nc"):
     procs = param["procs"]
     nh = param["nh"]
@@ -36,11 +38,12 @@ def join(param, outfile="out.nc"):
     ny = param["ny"]
     nz = param["nz"]
 
+    topo.topology = param["geometry"]
+
     global_nx = param["global_nx"]
     global_ny = param["global_ny"]
     global_nz = param["global_nz"]
     size = [nz, ny, nx]
-
 
     with nc.Dataset(outfile, "w") as fid:
         fid.createDimension("t", None)
@@ -60,12 +63,12 @@ def join(param, outfile="out.nc"):
     print("subdomains partition :", procs)
     print("found %i snapshots" % nt)
     print("start joining 'b'")
-    
+
     with nc.Dataset(outfile, "r+") as fid:
         with nc.Dataset(template % 0, "r") as fin:
             for kt in range(nt):
                 fid["t"][kt] = fin["t"][kt]
-        
+
         for k in range(procs[0]):
             for j in range(procs[1]):
                 for i in range(procs[2]):
@@ -73,20 +76,23 @@ def join(param, outfile="out.nc"):
                     rank = topo.loc2rank(loc, procs)
                     ncfile = template % rank
                     ngs = topo.get_neighbours(loc, procs)
-                    shape, domainindices = topo.get_variable_shape(size, ngs, nh)
+                    shape, domainindices = topo.get_variable_shape(
+                        size, ngs, nh)
                     k0, k1, j0, j1, i0, i1 = domainindices
                     ka, kb = k*nz, (k+1)*nz
                     ja, jb = j*ny, (j+1)*ny
                     ia, ib = i*nx, (i+1)*nx
+                    print(rank, i0, i1, ia, ib, ngs)
                     with nc.Dataset(ncfile, "r") as fin:
                         for kt in range(nt):
-                            print("\r %i/%i - %i/%i"
-                                  % (rank, nranks-1, kt, nt-1), end="")
+                            # print("\r %i/%i - %i/%i"
+                            #      % (rank, nranks-1, kt, nt-1), end="")
                             var = fin["b"][kt][:, :, :]
                             z2d = var[k0:k1, j0:j1, i0:i1]
                             fid["b"][kt, ka:kb, ja:jb, ia:ib] = z2d
     print()
     print("b has been joined into '%s'" % outfile)
+
 
 if __name__ == '__main__':
     import sys
@@ -95,4 +101,3 @@ if __name__ == '__main__':
 
     param = read_param(ncfile)
     join(param)
-    

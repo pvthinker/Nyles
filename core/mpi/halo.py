@@ -79,8 +79,13 @@ class Halo():
             # reqs = comm.Send_init(self.sbuf[direc], yourrank, tag=myrank)
             # reqr = comm.Recv_init(self.rbuf[direc], yourrank, tag=yourrank)
             flipdirec = tuple([-k for k in direc])
-            reqs = comm.Send_init(self.sbuf[direc], yourrank, tag=tag)
-            reqr = comm.Recv_init(self.rbuf[flipdirec], yourrank, tag=tag)
+            tag = 0
+            ftag = 0
+            for k, d in enumerate(direc):
+                tag += (3**k)*(d+1)
+                ftag += (3**k)*(-d+1)
+            reqs = comm.Send_init(self.sbuf[direc], yourrank, tag=myrank+tag)
+            reqr = comm.Recv_init(self.rbuf[direc], yourrank, tag=yourrank+ftag)
             self.reqs += [reqs]
             self.reqr += [reqr]
             tag += 1

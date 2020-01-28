@@ -29,6 +29,7 @@ timeschemes, we need to store more than just one dstate
 
 """
 
+
 class Timescheme(object):
     """Catalogue and handler of timeschemes.
 
@@ -114,7 +115,7 @@ class Timescheme(object):
             ds = self.dstate.get(scalar_name).viewlike(scalar)
             s += dt * ds
         self.diagnose_var(state)
-        
+
     # ----------------------------------------
     def LFAM3(self, state, t, dt, **kwargs):
         # Predictor
@@ -133,7 +134,7 @@ class Timescheme(object):
                 s += dt * ds
             self.first = False
             self.diagnose_var(state)
-            
+
         else:
             for scalar_name in self.prognostic_scalars:
                 scalar = state.get(scalar_name)
@@ -169,6 +170,20 @@ class Timescheme(object):
                 s[:] = sn + dt*ds
 
             self.diagnose_var(state)
+    # ----------------------------------------
+
+    def RK3_SSP(self, state, t, dt, **kwargs):
+        """ work in progress """
+        self.rhs(state, t, self.dstate, last=True)
+        for scalar_name in self.prognostic_scalars:
+            scalar = state.get(scalar_name)
+            # Get a view on the data without changing its orientation
+            s = scalar.view("i")
+            # Get a view on dstate in the same orientation as state
+            ds = self.dstate.get(scalar_name).view("i")
+            s0 = s + dt * ds
+        self.diagnose_var(self.s0)
+
 
 # ----------------------------------------------------------------------
 if __name__ == '__main__':
@@ -187,7 +202,7 @@ if __name__ == '__main__':
     param = {'nx': 40, 'ny': 50, 'nz': 60, 'nh': nh,
              'neighbours': neighbours,
              'timestepping': 'LFAM3',
-    }
+             }
 
     state = var.get_state(param)
 

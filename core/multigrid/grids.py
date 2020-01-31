@@ -69,22 +69,64 @@ class Grid(object):
         self.x = np.zeros((self.N,))
         self.b = np.zeros((self.N,))
         self.r = np.zeros((self.N,))
+
+        self.msk = np.zeros(self.size)
+        k0, k1, j0, j1, i0, i1 = self.domainindices
+        self.msk[k0:k1, j0:j1, i0:i1] = 1.
+        # self.xx = self.x
+        # self.xx.shape = self.size
+        # self.bb = self.b
+        # self.bb.shape = self.size
+        # self.rr = self.r
+        # self.rr.shape = self.size
+
+        # self.xx = self.x.reshape(self.size)
+        # self.bb = self.b.reshape(self.size)
+        # self.rr = self.r.reshape(self.size)
+        
+        # self.xx = np.reshape(self.x, self.size)
+        # self.bb = np.reshape(self.b, self.size)
+        # self.rr = np.reshape(self.r, self.size)
+        
+        # self.xx = np.zeros(self.size)
+        # self.bb = np.zeros(self.size)
+        # self.rr = np.zeros(self.size)
+
+        # self.x = self.xx.ravel()
+        # self.b = self.bb.ravel()
+        # self.r = self.rr.ravel()
+
+        
         self.halo = halo.Halo({"nh": nh, "size": size, "neighbours": neighbours,
                                "domainindices": domainindices, "shape": self.shape})
 
+    @timing
     def toarray(self, x):
         """
         Return the 3D array view of 'x'
         """
         assert x in ['x', 'b', 'r']
-        return np.reshape(getattr(self, x), self.size)
+        getattr(self, x).shape = self.size
 
+    @timing
+    def tovec(self, x):
+        """
+        Put back x in vector form
+        """
+        assert x in ['x', 'b', 'r']
+        y = getattr(self, x)
+        #print(np.shape(y), self.N, np.isfortran(y), self.myrank)
+        y.shape = (self.N,)
+        
     @timing
     def halofill(self, x):
         """
         Fill x's halo, where 'x' is in ['xbr']
         """
-        self.halo.fill(self.toarray(x))
+        self.toarray(x)
+        self.halo.fill(getattr(self, x))
+        self.tovec(x)
+        
 
     def set_ADS(self, A):
         self.A = A
@@ -102,9 +144,17 @@ class Grid(object):
         Compute the norm of 'which'
         excluding the halo
         """
-        y = self.toarray(which)
+        self.toarray(which)
+        y = getattr(self, which)        
         k0, k1, j0, j1, i0, i1 = self.domainindices
-        localsum = fortran.norm(y, k0, k1, j0, j1, i0, i1)
+        #print("FLAGS", y.flags)
+        #z = y.copy()
+        #localsum = fortran.norm(z, k0, k1, j0, j1, i0, i1)
+        #del z
+        #localsum = np.linalg.norm( y[k0:k1, j0:j1, i0:i1], axis=None)
+        #localsum = np.sum( y[k0:k1, j0:j1, i0:i1]**2, axis=None)
+        localsum = np.sum( y**2*self.msk, axis=None)
+        #print("FLAGS", y.flags)        
         # Note: the global sum is done on  all cores,
         # meaning it works only on the finest partition,
         # viz. one subdomain per core.
@@ -112,6 +162,7 @@ class Grid(object):
         # we don't need to generalize this sum to
         # other partitions
         y2 = mpitools.global_sum(localsum)
+        self.tovec(which)
         return np.sqrt(y2)
 
     @timing
@@ -124,7 +175,7 @@ class Grid(object):
     def smooth(g, nite):
         # g is self
         for k in range(nite):
-            g.x[:] = g.x*(1.-g.omega) + (g.S*g.x-g.b)*(g.omega*g.idiag)
+            g.x[:] = (1.-g.omega)*g.x + (g.S*g.x-g.b)*(g.omega*g.idiag)
             g.halofill('x')
 
     def solveexactly(g):

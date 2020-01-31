@@ -59,5 +59,6 @@ def analyze_timing(path):
 
         plt.xlabel('iteration')
         plt.ylabel('time [s]')
+        plt.grid()
         plt.legend(loc='upper right', fontsize=10)
         plt.savefig(pngtiming)

@@ -5,6 +5,7 @@ Projection functions to enforce div U = 0
 """
 import numpy as np
 from timing import timing
+import fortran_array as fortran
 
 @timing
 def compute_div(state, **kwargs):
@@ -49,22 +50,38 @@ def compute_p(mg, state, grid):
 
     # copy divergence into the multigrid RHS
     # watch out, halo in MG is nh=1, it's wider for div
-    b = mg.grid[0].toarray('b')
-    x = mg.grid[0].toarray('x')
+    b = mg.grid[0].b
+    x = mg.grid[0].x
 
     # this is triplet of slices than span the MG domain (inner+MG halo)
     # typically mg_idx = (kidx, jidx, iidx)
     # with kidx = slice(k0, k1) the slice in the k direction
     mg_idx = state.div.mg_idx
+    idx = state.div.mg_idx2
+    #print(idx)
+    d = div.view('i')
+    #b[:] = div.view('i')[mg_idx]
+    #l,m,n = np.shape(d)
+    #ll,mm,nn = np.shape(b)
+    #print(l,m,n,ll,mm,nn)
+    mg.grid[0].toarray('b')
+    mg.grid[0].toarray('x')    
+    #fortran.var2mg(d,b,idx,l,m,n,ll,mm,nn)
     b[:] = div.view('i')[mg_idx]
+    mg.grid[0].tovec('b')
+    mg.grid[0].tovec('x')
+    
 #    x[:] = 0.
     # solve
     mg.solve_directly()
 
     # copy MG solution to pressure
     p = state.p.view('i')
-    p[mg_idx] = x[:]
-
+    mg.grid[0].toarray('x')    
+    p[mg_idx] = x
+    #fortran.mg2var(p,x,idx)
+    mg.grid[0].tovec('x')
+    
     # correct u (the covariant component)
     # now we start with the 'i' convention
     for i in 'ijk':

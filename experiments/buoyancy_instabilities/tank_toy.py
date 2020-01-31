@@ -5,20 +5,20 @@ import parameters
 
 
 nh = 3
-nxglo = 64
-nyglo = 8
-nzglo = 64
+nxglo = 32
+nyglo = 32
+nzglo = 32
 
-npx = 2
+npx = 1
 npy = 1
-npz = 2
+npz = 1
 
 nx = nxglo//npx
 ny = nyglo//npy
 nz = nzglo//npz
 
 Lx = 8.
-Ly = 1.
+Ly = 8.
 Lz = 8.
 
 # Get the default parameters, then modify them as needed
@@ -33,13 +33,13 @@ param.model["Lz"] = Lz
 param.IO["datadir"] = "~/data/Nyles"
 param.IO["expname"] = "tank_toy_1"
 param.IO["mode"] = "overwrite"
-param.IO["variables_in_history"] = ['b', 'u', 'vor', 'div']
+param.IO["variables_in_history"] = ['b', 'u']
 
 param.IO["timestep_history"] = 1.  # 0.0 saves every frame
 param.IO["disk_space_warning"] = 0.5  # in GB
 
 param.time["timestepping"] = "LFAM3"
-param.time["tend"] = 10.0
+param.time["tend"] = 40.0
 param.time["auto_dt"] = True
 # parameter if auto_dt is False
 param.time["dt"] = 0.2
@@ -59,7 +59,7 @@ param.MPI["npy"] = npy
 param.MPI["npz"] = npz
 
 
-#param.multigrid["nglue"] = 1
+param.multigrid["nglue"] = 1
 
 # param.physics["diff_coef"] = {"u": 1e-1}
 

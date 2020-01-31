@@ -10,12 +10,12 @@ import parameters
 from mpi4py import MPI
 
 nh = 3
-nxglo = 32
-nyglo = 32
+nxglo = 32*2
+nyglo = 32*2
 nzglo = 32
 
-npx = 1
-npy = 1
+npx = 2
+npy = 2
 npz = 1
 
 nx = nxglo//npx
@@ -40,12 +40,12 @@ param.IO["expname"] = "ekman_2"
 param.IO["mode"] = "overwrite"
 param.IO["variables_in_history"] = ['b', 'u', 'vor', 'div']
 
-param.IO["timestep_history"] = .25  # 0.0 saves every frame
+param.IO["timestep_history"] = 0.5  # 0.0 saves every frame
 param.IO["disk_space_warning"] = 0.5  # in GB
 param.IO["simplified_grid"] = True
 
 param.time["timestepping"] = "LFAM3"
-param.time["tend"] = 20.0
+param.time["tend"] = 10.
 param.time["auto_dt"] = False
 # parameter if auto_dt is False
 param.time["dt"] = 0.02
@@ -84,7 +84,7 @@ class Forcing(object):
 
         yy, xx = np.meshgrid(y, x, indexing="ij")
 
-        self.tau = 2e-2#*np.exp(-yy**2/(2*.2**2))  # wind stress
+        self.tau = 1e-2#*np.exp(-yy**2/(2*.2**2))  # wind stress
         self.u_wind = 0.1
         
         self.tau *= 1./grid.dz
@@ -98,7 +98,7 @@ class Forcing(object):
         if self.toplevel:
 #            du[-1, :, :] += (self.u_wind-u[-1, :, :])*self.cff
             du[-1, :, :] += self.tau
-            du[-2, :, :] += self.tau
+            du[-2, :, :] += self.tau*.5
 
 
 nyles = nyles_module.Nyles(param)
@@ -116,7 +116,7 @@ z = nyles.grid.z_b.view('i') / Lz
 # linear stratification
 #b[:] = 1e-3*(z-0.5)
 
-np.random.seed(1)
+np.random.seed(nyles.myrank)
 b += 1e-2*np.random.normal(0, 1, size=np.shape(b))
 
 nyles.model.diagnose_var(nyles.model.state)

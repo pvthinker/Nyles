@@ -136,6 +136,7 @@ class Scalar(object):
         idx = slice(starti, endi)
 
         self.mg_idx = (kdx, jdx, idx)
+        self.mg_idx2 = np.array([startk, endk, startj, endj, starti, endi], dtype=int)
 
         # Create arrays extended by the halo;
         # it might be smarter to remove the halo

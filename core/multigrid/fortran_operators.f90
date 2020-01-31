@@ -11,7 +11,7 @@ subroutine norm(x, res, k0, k1, j0, j1, i0, i1, l, m, n)
   real*8, dimension(l, m, n), intent(in) :: x
   real*8, intent(out) :: res
 
-  !f2py intent(inplace):: x
+  !!!!f2py intent(inplace):: x
 
   integer:: i, j, k
 

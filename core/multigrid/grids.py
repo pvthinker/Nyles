@@ -100,7 +100,6 @@ class Grid(object):
         self.halo = halo.Halo({"nh": nh, "size": size, "neighbours": neighbours,
                                "domainindices": domainindices, "shape": self.shape})
 
-    @timing
     def toarray(self, x):
         """
         Return the 3D array view of 'x'
@@ -108,7 +107,6 @@ class Grid(object):
         assert x in ['x', 'b', 'r']
         getattr(self, x).shape = self.size
 
-    @timing
     def tovec(self, x):
         """
         Put back x in vector form
@@ -147,14 +145,7 @@ class Grid(object):
         self.toarray(which)
         y = getattr(self, which)        
         k0, k1, j0, j1, i0, i1 = self.domainindices
-        #print("FLAGS", y.flags)
-        #z = y.copy()
-        #localsum = fortran.norm(z, k0, k1, j0, j1, i0, i1)
-        #del z
-        #localsum = np.linalg.norm( y[k0:k1, j0:j1, i0:i1], axis=None)
-        #localsum = np.sum( y[k0:k1, j0:j1, i0:i1]**2, axis=None)
-        localsum = np.sum( y**2*self.msk, axis=None)
-        #print("FLAGS", y.flags)        
+        localsum = fortran.norm(y, k0, k1, j0, j1, i0, i1)
         # Note: the global sum is done on  all cores,
         # meaning it works only on the finest partition,
         # viz. one subdomain per core.
@@ -168,14 +159,16 @@ class Grid(object):
     @timing
     def residual(g):
         # g is self
-        g.r[:] = g.b - g.A * g.x
+        g.r[:] = g.b - g.A.dot(g.x)
         g.halofill('r')
 
     @timing
     def smooth(g, nite):
         # g is self
+        c1 = (1.-g.omega)
+        c2 = (g.omega*g.idiag)
         for k in range(nite):
-            g.x[:] = (1.-g.omega)*g.x + (g.S*g.x-g.b)*(g.omega*g.idiag)
+            g.x[:] =  c1*g.x + c2*(g.S.dot(g.x)-g.b)
             g.halofill('x')
 
     def solveexactly(g):

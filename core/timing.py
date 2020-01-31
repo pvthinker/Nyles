@@ -55,10 +55,12 @@ def analyze_timing(path):
         plt.figure(figsize=(10, 5))
         for k in idx[::-1]:
             vals = timing[keys[k]]
-            plt.loglog(vals, label=keys[k])
+            plt.loglog(vals, label=keys[k], alpha=0.8)
 
         plt.xlabel('iteration')
         plt.ylabel('time [s]')
+        gca = plt.gca()
+        gca.set_ylim([1e-5, 1])
         plt.grid()
         plt.legend(loc='upper right', fontsize=10)
         plt.savefig(pngtiming)

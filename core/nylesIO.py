@@ -55,6 +55,7 @@ import netCDF4 as nc
 # Local imports
 from variables import State
 from grid import Grid
+import mpitools
 
 
 class NylesIO(object):
@@ -245,6 +246,11 @@ class NylesIO(object):
         if not os.path.isdir(self.output_directory):
             if self.myrank == 0:
                 os.makedirs(self.output_directory)
+        # block all ranks until rank 0 has created the folder(s)
+        mpitools.barrier()
+        # let be very cautious
+        assert os.path.isdir(self.output_directory)
+
         # Create the history file and save the initial state
         self.create_history_file(grid, variables)
         self.write_history_file(state, t, n)

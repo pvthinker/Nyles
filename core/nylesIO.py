@@ -56,6 +56,7 @@ import netCDF4 as nc
 from variables import State
 from grid import Grid
 import mpitools
+from timing import timing
 
 
 class NylesIO(object):
@@ -256,7 +257,8 @@ class NylesIO(object):
         self.write_history_file(state, t, n)
         self.t_next_hist = t + self.dt_hist
 
-    def do(self, state, t, n):
+    @timing
+    def write(self, state, t, n):
         """Write the current state to the history file if it is time.
 
         When new data was written to the disk, check if the available

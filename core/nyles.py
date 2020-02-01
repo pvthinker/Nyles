@@ -146,7 +146,7 @@ class Nyles(object):
             blowup = self.model.forward(t, dt)
             t += dt
             n += 1
-            stop = self.IO.do(self.model.state, t, n)
+            stop = self.IO.write(self.model.state, t, n)
             if self.myrank == 0:
                 realtime = time()
                 # cpu per iteration per grid cell

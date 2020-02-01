@@ -28,6 +28,7 @@ class Gluegrids(object):
         self.set_dummy(fine, coarse)
         self.fine = fine
         self.coarse = coarse
+        self.set_split_matrix()
 
     def set_localcomm(self, fine, coarse):
         """ define a local communicator for the gluing
@@ -144,17 +145,10 @@ class Gluegrids(object):
         # coarse.halofill(which)
         coarse.tovec(which)
 
+    def set_split_matrix(self):
+        G = np.arange(self.coarse.N)
+        G.shape = self.coarse.size
 
-    def split_array(self, which):
-        """ split array coarse.which into dummy.x
-
-        """
-        assert which in "xrb"
-        self.dummy.toarray("x")
-        self.coarse.toarray(which)
-        x = self.dummy.x
-        xcoarse = getattr(self.coarse, which)
-        #
         k0, k1, j0, j1, i0, i1 = self.coarse.domainindices
         k, j, i = np.where(self.myrank == self.mat)
         k, j, i = int(k), int(j), int(i)
@@ -166,16 +160,56 @@ class Gluegrids(object):
         k0, k1, j0, j1, i0, i1 = self.dummy.domainindices
         # this instruction is very slow
         # x[k0:k1, j0:j1, i0:i1] = xcoarse[ka:kb, ja:jb, ia:ib]
-        l,m,n = self.dummy.size
+        l, m, n = self.dummy.size
         ka -= k0
         kb += (l-k1)
         ja -= j0
         jb += (m-j1)
         ia -= i0
         ib += (n-i1)
-        x[...] = xcoarse[ka:kb, ja:jb, ia:ib]
-        self.dummy.tovec("x")
-        self.coarse.tovec(which)
+        col = G[ka:kb, ja:jb, ia:ib].ravel()
+        n = len(col)
+        row = np.arange(n)
+        data = np.ones((n,))
+        Ndummy = self.dummy.N
+        Ncoarse = self.coarse.N
+        Split = sparse.coo_matrix((data, (row, col)),
+                                  shape=(Ndummy, Ncoarse))
+        self.Split = Split.tocsr()
+
+    def split_array(self, which):
+        """ split array coarse.which into dummy.x
+
+        """
+        assert which in "xrb"
+        # self.dummy.toarray("x")
+        # self.coarse.toarray(which)
+        # x = self.dummy.x
+        # xcoarse = getattr(self.coarse, which)
+        # #
+        # k0, k1, j0, j1, i0, i1 = self.coarse.domainindices
+        # k, j, i = np.where(self.myrank == self.mat)
+        # k, j, i = int(k), int(j), int(i)
+        # nz, ny, nx = self.dummy.shape
+        # ka, kb = k0+k*nz, k0+k*nz+nz
+        # ja, jb = j0+j*ny, j0+j*ny+ny
+        # ia, ib = i0+i*nx, i0+i*nx+nx
+        # #
+        # k0, k1, j0, j1, i0, i1 = self.dummy.domainindices
+        # # this instruction is very slow
+        # # x[k0:k1, j0:j1, i0:i1] = xcoarse[ka:kb, ja:jb, ia:ib]
+        # l,m,n = self.dummy.size
+        # ka -= k0
+        # kb += (l-k1)
+        # ja -= j0
+        # jb += (m-j1)
+        # ia -= i0
+        # ib += (n-i1)
+        # x[...] = xcoarse[ka:kb, ja:jb, ia:ib]
+        # self.dummy.tovec("x")
+        # self.coarse.tovec(which)
+        xcoarse = getattr(self.coarse, which)
+        self.dummy.x[:] = self.Split.dot(xcoarse)
 
     def glue_matrix(self):
         """ glue dummy.A into coarse.A

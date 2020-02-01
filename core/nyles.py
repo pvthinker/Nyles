@@ -13,6 +13,8 @@ import plotting
 import timing
 import topology as topo
 import mpitools
+from time import time
+
 
 
 class Nyles(object):
@@ -98,6 +100,8 @@ class Nyles(object):
                 param, self.model.state, self.grid)
         else:
             self.plotting = None
+        # number of grid cell per subdomain
+        self.gridcellpersubdom = param["nx"]*param["ny"]*param["nz"]
 
     def run(self):
         t = 0.0
@@ -128,11 +132,15 @@ class Nyles(object):
             "t = {:" + str(time_length) + ".2f}/{:" +
             str(time_length) + ".2f}",
             "dt = {:.4f}",
+            "perf = {:.2e}"
         ])
 
         if self.myrank == 0:
             print("-"*80)
         stop = False
+
+        realtime0 = time()
+
         while not(stop):
             dt = self.compute_dt()
             blowup = self.model.forward(t, dt)
@@ -140,7 +148,11 @@ class Nyles(object):
             n += 1
             stop = self.IO.do(self.model.state, t, n)
             if self.myrank == 0:
-                print(time_string.format(n, t, self.tend, dt), end='')
+                realtime = time()
+                # cpu per iteration per grid cell
+                perf = (realtime-realtime0)/(self.gridcellpersubdom)
+                realtime0 = realtime
+                print(time_string.format(n, t, self.tend, dt, perf), end='')
             if blowup:
                 print('')
                 print('BLOW UP! ', end='')

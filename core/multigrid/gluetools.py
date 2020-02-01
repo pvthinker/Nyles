@@ -81,8 +81,10 @@ class Gluegrids(object):
         matshape = self.matshape
         # exchange vectors (glue dummy vectors together)
         k0, k1, j0, j1, i0, i1 = dummy.domainindices
-        msg = dummy.toarray("x")[k0:k1, j0:j1, i0:i1].ravel()
+        dummy.toarray("x")
+        msg = dummy.x[k0:k1, j0:j1, i0:i1].ravel()
         length = len(msg)
+        dummy.tovec("x")
         self.rbuff = np.zeros(matshape+(length,))
 
     def set_dummy_Amatrix(self):
@@ -110,8 +112,10 @@ class Gluegrids(object):
         matshape = self.matshape
         # exchange vectors (glue dummy vectors together)
         k0, k1, j0, j1, i0, i1 = dummy.domainindices
-        msg = dummy.toarray("x")[k0:k1, j0:j1, i0:i1].ravel()
+        dummy.toarray("x")
+        msg = dummy.x[k0:k1, j0:j1, i0:i1].ravel()
         length = len(msg)
+        dummy.tovec("x")
         rbuff = self.rbuff  # pre-allocated
         siz = np.ones(np.prod(matshape))*length
         off = np.zeros(np.prod(matshape))
@@ -121,7 +125,8 @@ class Gluegrids(object):
 
         l = 0
         nz, ny, nx = dummy.shape
-        coarseb = coarse.toarray(which)
+        coarse.toarray(which)
+        coarseb = coarse.b
         k0, k1, j0, j1, i0, i1 = coarse.domainindices
         for k in range(matshape[0]):
             ka = k0+k*nz
@@ -134,16 +139,20 @@ class Gluegrids(object):
                     ib = ia+nx
                     coarseb[ka:kb, ja:jb, ia:ib] = x[l][:]
                     l += 1
-    # the halofill is done in intergrids
-    # coarse.halofill(which)
+        # the halofill is done in intergrids
+        # coarse.halofill(which)
+        coarse.tovec(which)
+
 
     def split_array(self, which):
         """ split array coarse.which into dummy.x
 
         """
         assert which in "xrb"
-        x = self.dummy.toarray("x")
-        xcoarse = self.coarse.toarray(which)
+        self.dummy.toarray("x")
+        x = self.dummy.x
+        self.coarse.toarray(which)
+        xcoarse = getattr(self.coarse, which)
         #
         k0, k1, j0, j1, i0, i1 = self.coarse.domainindices
         k, j, i = np.where(self.myrank == self.mat)
@@ -155,6 +164,8 @@ class Gluegrids(object):
         #
         k0, k1, j0, j1, i0, i1 = self.dummy.domainindices
         x[k0:k1, j0:j1, i0:i1] = xcoarse[ka:kb, ja:jb, ia:ib]
+        self.dummy.tovec("x")
+        self.coarse.tovec(which)
 
     def glue_matrix(self):
         """ glue dummy.A into coarse.A

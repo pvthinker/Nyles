@@ -113,7 +113,6 @@ class Grid(object):
         """
         assert x in ['x', 'b', 'r']
         y = getattr(self, x)
-        #print(np.shape(y), self.N, np.isfortran(y), self.myrank)
         y.shape = (self.N,)
         
     @timing
@@ -417,12 +416,21 @@ class Dummygrid(Grid):
         self.x = np.zeros((self.N,))
         self.A = []
 
-    def toarray(self, which):
+    def toarray(self, x):
         """
         Return the 3D array view of 'x'
         """
-        assert which == "x"
-        return np.reshape(getattr(self, which), self.size)
+        assert x is 'x'
+        getattr(self, x).shape = self.size
+
+    def tovec(self, x):
+        """
+        Put back x in vector form
+        """
+        assert x is 'x'
+        y = getattr(self, x)
+        y.shape = (self.N,)
+
 
 
 # ----------------------------------------------------------------------

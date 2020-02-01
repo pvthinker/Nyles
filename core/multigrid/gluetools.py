@@ -121,6 +121,7 @@ class Gluegrids(object):
         off = np.zeros(np.prod(matshape))
         off[1:] = np.cumsum(siz)[:-1]
         self.localcomm.Allgatherv(msg, [rbuff, siz, off, MPI.DOUBLE])
+        del msg
         x = rbuff.reshape((np.prod(matshape),) + tuple(dummy.shape))
 
         l = 0
@@ -150,8 +151,8 @@ class Gluegrids(object):
         """
         assert which in "xrb"
         self.dummy.toarray("x")
-        x = self.dummy.x
         self.coarse.toarray(which)
+        x = self.dummy.x
         xcoarse = getattr(self.coarse, which)
         #
         k0, k1, j0, j1, i0, i1 = self.coarse.domainindices
@@ -163,7 +164,16 @@ class Gluegrids(object):
         ia, ib = i0+i*nx, i0+i*nx+nx
         #
         k0, k1, j0, j1, i0, i1 = self.dummy.domainindices
-        x[k0:k1, j0:j1, i0:i1] = xcoarse[ka:kb, ja:jb, ia:ib]
+        # this instruction is very slow
+        # x[k0:k1, j0:j1, i0:i1] = xcoarse[ka:kb, ja:jb, ia:ib]
+        l,m,n = self.dummy.size
+        ka -= k0
+        kb += (l-k1)
+        ja -= j0
+        jb += (m-j1)
+        ia -= i0
+        ib += (n-i1)
+        x[...] = xcoarse[ka:kb, ja:jb, ia:ib]
         self.dummy.tovec("x")
         self.coarse.tovec(which)
 

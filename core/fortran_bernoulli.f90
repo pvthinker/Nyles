@@ -56,3 +56,43 @@ subroutine gradkeandb(ke, b, du, dz, l, m, n)
   enddo
   
 end subroutine gradkeandb
+
+!----------------------------------------
+subroutine div(d, u, iflag, l, m, n)
+  !
+  ! d += delta[ u ]
+  ! where delta[ ] is the LEFT finite difference in the 'u' direction
+  ! the 'u' direction is the third entry of the 3D array
+  !
+  implicit none
+
+  integer, intent(in):: l, m, n, iflag
+  real*8, dimension(l, m, n), intent(inout) :: d
+  real*8, dimension(l, m, n), intent(in) :: u
+
+  !f2py intent(inplace):: d, u
+
+  integer:: i, j, k
+
+  if (iflag.gt.0) then
+     do k = 1, l
+        do j = 1, m
+           d(k,j,1) = d(k,j,1) + u(k,j,1)
+           do i = 2, n
+              d(k,j,i) = d(k,j,i) + (u(k,j,i)-u(k,j,i-1))
+           enddo
+        enddo
+     enddo
+  else
+     do k = 1, l
+        do j = 1, m
+           d(k,j,1) = u(k,j,1)
+           do i = 2, n
+              d(k,j,i) = (u(k,j,i)-u(k,j,i-1))
+           enddo
+        enddo
+     enddo
+  endif
+
+end subroutine div
+

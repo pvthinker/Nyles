@@ -169,6 +169,7 @@ class Grid(object):
         for k in range(nite):
             g.x[:] =  c1*g.x + c2*(g.S.dot(g.x)-g.b)
             g.halofill('x')
+        del c1, c2
 
     def solveexactly(g):
         # g is self

@@ -4,8 +4,8 @@ Projection functions to enforce div U = 0
 
 """
 import numpy as np
+import fortran_bernoulli as fortran
 from timing import timing
-import fortran_array as fortran
 
 @timing
 def compute_div(state, **kwargs):
@@ -18,15 +18,16 @@ def compute_div(state, **kwargs):
 
     div = delta[U]
     """
-    for count, i in enumerate('jki'):
+    for count, i in enumerate('ijk'):
         div = state.div.view(i)
         dU = state.U[i].view(i)
-        if count == 0:
-            div[:, :, 0] = dU[:, :, 0]
-            div[:, :, 1:] = np.diff(dU)
-        else:
-            div[:, :, 0] += dU[:, :, 0]
-            div[:, :, 1:] += np.diff(dU)
+        fortran.div(div, dU, count)
+        # if count == 0:
+        #     div[:, :, 0] = dU[:, :, 0]
+        #     div[:, :, 1:] = np.diff(dU)
+        # else:
+        #     div[:, :, 0] += dU[:, :, 0]
+        #     div[:, :, 1:] += np.diff(dU)
 
 
 @timing
@@ -87,7 +88,8 @@ def compute_p(mg, state, grid):
     for i in 'ijk':
         p = state.p.view(i)
         u = state.u[i].view(i)
-        u[:, :, :-1] -= np.diff(p)
+        fortran.gradke(p, u)
+        #u[:, :, :-1] -= np.diff(p)
 
 
 if __name__ == "__main__":

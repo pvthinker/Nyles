@@ -134,7 +134,6 @@ class LES(object):
         pickle.dump(self.stats, fid)
 
 
-@timing
 def reset_state(state):
     for var_name, var_type in state.toc.items():
         if var_type == "scalar":

@@ -35,7 +35,7 @@ class Intergrids(object):
         assert which in "rb"
 
         y = self.dummy.x if self.glueflag else self.coarse.b
-        y[:] = self.Restrict * self.fine.r
+        y[:] = self.Restrict.dot(self.fine.r)
 
         if self.glueflag:
             # glue dummy.b onto coarse.b
@@ -56,7 +56,7 @@ class Intergrids(object):
         else:
             x = self.coarse.x
 
-        self.fine.x += self.Interpol*x
+        self.fine.x += self.Interpol.dot(x)
         # halofill might be skept because
         # Interpol does the halo
         self.fine.halofill('x')

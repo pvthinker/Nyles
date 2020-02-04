@@ -42,7 +42,14 @@ class Advection(object):
 
         cov_to_contra.U_from_u(self.state, self.grid)
         projection.compute_p(mg, self.state, self.grid)
+        self.halo.fill(self.state.u)
         cov_to_contra.U_from_u(self.state, self.grid)
+        # this computation is only to check the divergence
+        # after the projection, this could be drop if
+        # we don't need to know the information (that can
+        # always be estimated offline, from 'u')
+        projection.compute_div(self.state, timing=False)
+        self.halo.fill(self.state.div)
 
     @timing
     def forward(self, t, dt):

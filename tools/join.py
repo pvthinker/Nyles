@@ -9,6 +9,7 @@ import topology as topo
 
 integers = "0123456789"
 
+varname = "b"
 
 def read_param(ncfile):
     param = {}
@@ -31,7 +32,8 @@ def read_param(ncfile):
     return param
 
 
-def join(param, outfile="out.nc"):
+def join(param):
+    outfile="%s.nc" % varname
     procs = param["procs"]
     nh = param["nh"]
     nx = param["nx"]
@@ -50,8 +52,8 @@ def join(param, outfile="out.nc"):
         fid.createDimension("x", global_nx)
         fid.createDimension("y", global_ny)
         fid.createDimension("z", global_nz)
-        v = fid.createVariable("b", "f", ("t", "z", "y", "x"))
-        v.long_name = "buoyancy"
+        v = fid.createVariable(varname, "f", ("t", "z", "y", "x"))
+        v.long_name = varname
         v = fid.createVariable("t", "f", ("t", ))
         v.long_name = "time"
 
@@ -62,7 +64,7 @@ def join(param, outfile="out.nc"):
     nranks = np.prod(procs)
     print("subdomains partition :", procs)
     print("found %i snapshots" % nt)
-    print("start joining 'b'")
+    print("start joining '%s'" % varname)
 
     with nc.Dataset(outfile, "r+") as fid:
         with nc.Dataset(template % 0, "r") as fin:
@@ -82,16 +84,16 @@ def join(param, outfile="out.nc"):
                     ka, kb = k*nz, (k+1)*nz
                     ja, jb = j*ny, (j+1)*ny
                     ia, ib = i*nx, (i+1)*nx
-                    print(rank, i0, i1, ia, ib, ngs)
+                    #print(rank, i0, i1, ia, ib, ngs)
                     with nc.Dataset(ncfile, "r") as fin:
                         for kt in range(nt):
-                            # print("\r %i/%i - %i/%i"
-                            #      % (rank, nranks-1, kt, nt-1), end="")
-                            var = fin["b"][kt][:, :, :]
+                            print("\r %i/%i - %i/%i"
+                                 % (rank, nranks-1, kt, nt-1), end="")
+                            var = fin[varname][kt][:, :, :]
                             z2d = var[k0:k1, j0:j1, i0:i1]
-                            fid["b"][kt, ka:kb, ja:jb, ia:ib] = z2d
+                            fid[varname][kt, ka:kb, ja:jb, ia:ib] = z2d
     print()
-    print("b has been joined into '%s'" % outfile)
+    print("%s has been joined into '%s'" % (varname, outfile))
 
 
 if __name__ == '__main__':

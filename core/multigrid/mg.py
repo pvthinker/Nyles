@@ -98,11 +98,12 @@ class Multigrid(object):
 
         normb = g.norm(which='b')
         if self.verbose:
-            print('||b|| = ', normb)
+            print('||b|| = %g' % normb)
 
         if normb > 0:
             res0 = g.norm()/normb
         else:
+            self.stats = {'normb': 0, 'res': [0], 'blowup': False}
             return 0, 0.
 
         res = res0

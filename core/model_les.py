@@ -100,7 +100,6 @@ class LES(object):
         # add the reset to the vortex_force term.
         # buoyancy
         self.tracer.rhstrac(state, dstate)
-
         # vortex force
         if self.nonlinear:
             vortf.vortex_force(state, dstate, self.orderVF)

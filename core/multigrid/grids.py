@@ -55,6 +55,7 @@ class Grid(object):
         procs0 = [i*p for i, p in zip(self.incr, self.procs)]
         # print("---------> procs0=", procs0, self.myrank)
         loc = topo.rank2loc(self.myrank, procs0)
+
         neighbours = topo.get_neighbours(loc, procs0, incr=self.incr)
         size, domainindices = topo.get_variable_shape(
             self.shape, neighbours, nh)
@@ -83,11 +84,11 @@ class Grid(object):
         # self.xx = self.x.reshape(self.size)
         # self.bb = self.b.reshape(self.size)
         # self.rr = self.r.reshape(self.size)
-        
+
         # self.xx = np.reshape(self.x, self.size)
         # self.bb = np.reshape(self.b, self.size)
         # self.rr = np.reshape(self.r, self.size)
-        
+
         # self.xx = np.zeros(self.size)
         # self.bb = np.zeros(self.size)
         # self.rr = np.zeros(self.size)
@@ -96,7 +97,6 @@ class Grid(object):
         # self.b = self.bb.ravel()
         # self.r = self.rr.ravel()
 
-        
         self.halo = halo.Halo({"nh": nh, "size": size, "neighbours": neighbours,
                                "domainindices": domainindices, "shape": self.shape})
 
@@ -114,7 +114,7 @@ class Grid(object):
         assert x in ['x', 'b', 'r']
         y = getattr(self, x)
         y.shape = (self.N,)
-        
+
     @timing
     def halofill(self, x):
         """
@@ -123,7 +123,6 @@ class Grid(object):
         self.toarray(x)
         self.halo.fill(getattr(self, x))
         self.tovec(x)
-        
 
     def set_ADS(self, A):
         self.A = A
@@ -142,7 +141,7 @@ class Grid(object):
         excluding the halo
         """
         self.toarray(which)
-        y = getattr(self, which)        
+        y = getattr(self, which)
         k0, k1, j0, j1, i0, i1 = self.domainindices
         localsum = fortran.norm(y, k0, k1, j0, j1, i0, i1)
         # Note: the global sum is done on  all cores,
@@ -167,7 +166,7 @@ class Grid(object):
         c1 = (1.-g.omega)
         c2 = (g.omega*g.idiag)
         for k in range(nite):
-            g.x[:] =  c1*g.x + c2*(g.S.dot(g.x)-g.b)
+            g.x[:] = c1*g.x + c2*(g.S.dot(g.x)-g.b)
             g.halofill('x')
         del c1, c2
 
@@ -347,9 +346,9 @@ def print_grids(grids):
               '/ subdom size: %3i x %3i x %3i' % tuple(g['shape']),
               '/ cores: %1i x %1i x %1i' % tuple(g['procs']))
         # lines below were useful during debuging
-              # '/ incr: %r' % (tuple(g["incr"]),),
-              # '/ procs0: %r' % (tuple(procs0),),
-              # '/ restrict: %3s' % r)
+        # '/ incr: %r' % (tuple(g["incr"]),),
+        # '/ procs0: %r' % (tuple(procs0),),
+        # '/ restrict: %3s' % r)
 #              '/ glue: %3s' % glue)
     print('-'*80)
 
@@ -417,6 +416,9 @@ class Dummygrid(Grid):
         self.x = np.zeros((self.N,))
         self.A = []
 
+        self.halo = halo.Halo({"nh": nh, "size": dummysize, "neighbours": ngbs,
+                               "domainindices": domainindices, "shape": self.shape})
+
     def toarray(self, x):
         """
         Return the 3D array view of 'x'
@@ -431,7 +433,6 @@ class Dummygrid(Grid):
         assert x is 'x'
         y = getattr(self, x)
         y.shape = (self.N,)
-
 
 
 # ----------------------------------------------------------------------

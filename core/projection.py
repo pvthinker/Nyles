@@ -58,7 +58,7 @@ def compute_p(mg, state, grid):
     # typically mg_idx = (kidx, jidx, iidx)
     # with kidx = slice(k0, k1) the slice in the k direction
     mg_idx = state.div.mg_idx
-    idx = state.div.mg_idx2
+    #idx = state.div.mg_idx
     #print(idx)
     d = div.view('i')
     #b[:] = div.view('i')[mg_idx]
@@ -68,6 +68,7 @@ def compute_p(mg, state, grid):
     mg.grid[0].toarray('b')
     mg.grid[0].toarray('x')    
     #fortran.var2mg(d,b,idx,l,m,n,ll,mm,nn)
+    #print(np.shape(b), mg_idx)
     b[:] = div.view('i')[mg_idx]
     mg.grid[0].tovec('b')
     mg.grid[0].tovec('x')

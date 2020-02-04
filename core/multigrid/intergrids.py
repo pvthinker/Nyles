@@ -53,6 +53,7 @@ class Intergrids(object):
         if self.glueflag:
             self.glue.split_array("x")
             x = self.dummy.x
+            # self.dummy.halofill('x')
         else:
             x = self.coarse.x
 
@@ -128,12 +129,14 @@ def set_interpolation_matrix(fine, coarse):
 
     nk, nj, ni = fine.size
 
-    Gc = np.arange(coarse.N).reshape(coarse.size)
-    Gf = np.arange(fine.N).reshape(fine.size)
+    Gc = np.arange(coarse.N)
+    Gc.shape = coarse.size
+    Gf = np.arange(fine.N)
+    Gf.shape = fine.size
 
     k0, k1, j0, j1, i0, i1 = fine.domainindices
     K0, K1, J0, J1, I0, I1 = coarse.domainindices
-    for k in range(k0, k1):
+    for k in range(nk):#(k0, k1):
 
         if interpk:
             dk, ck = get_di_coef(k, nk, k0)
@@ -141,14 +144,14 @@ def set_interpolation_matrix(fine, coarse):
         else:
             dk, ck = [0], [1.]
             k2 = k
-        for j in range(j0, j1):
+        for j in range(nj):#(j0, j1):
             if interpj:
                 dj, cj = get_di_coef(j, nj, j0)
                 j2 = J0+(j-j0)//2
             else:
                 dj, cj = [0], [1.]
                 j2 = j
-            for i in range(i0, i1):
+            for i in range(ni):#(i0, i1):
                 if interpi:
                     di, ci = get_di_coef(i, ni, i0)
                     i2 = I0+(i-i0)//2

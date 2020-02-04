@@ -23,7 +23,8 @@ def set_finest(fine, modelgrid):
     Ax = 1./dx**2
     
     nk, nj, ni = fine.size
-    Gf = np.arange(fine.N).reshape(fine.size)
+    Gf = np.arange(fine.N)
+    Gf.shape = fine.size
 
     k0, k1, j0, j1, i0, i1 = fine.domainindices
     for k in range(k0, k1):

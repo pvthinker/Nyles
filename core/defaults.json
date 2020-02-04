@@ -171,8 +171,8 @@
         "timestepping": {
             "type": "str",
             "default": "LFAM3",
-            "avail": ["LFAM3", "EF"],
-            "doc": "Time scheme used to integrate the model in time; EF: Euler forward; LFAM3: a predictor-corrector method"
+            "avail": ["RK3_SSP", "LFAM3", "EF"],
+            "doc": "Time scheme used to integrate the model in time; EF: Euler forward; LFAM3: a predictor-corrector method; RK3_SSP: stable strongly preserving RK3"
         },
         "auto_dt": {
             "type": "bool",

@@ -16,7 +16,6 @@ import mpitools
 from time import time
 
 
-
 class Nyles(object):
     """
     Attributes :
@@ -66,6 +65,8 @@ class Nyles(object):
         param["loc"] = loc
         self.myrank = myrank
 
+        if self.myrank == 0:
+            print("-"*80)
         self.banner()
 
         # Load the grid with the extended parameters
@@ -149,13 +150,33 @@ class Nyles(object):
             stop = self.IO.write(self.model.state, t, n)
             if self.myrank == 0:
                 realtime = time()
-                # cpu per iteration per grid cell
+                # cpu per iteration per grid cell (in second)
+                # this is very good metric of how fast the code runs
+                # typical values are O(4e-6)
+                # > 1e-5 is not good (e.g. too large subdomains)
+                # < 2e-6 is excellent, report it to the developpers!
                 perf = (realtime-realtime0)/(self.gridcellpersubdom)
                 realtime0 = realtime
                 print(time_string.format(n, t, self.tend, dt, perf), end='')
-            if blowup:
-                print('')
-                print('BLOW UP! ', end='')
+            # Blowup might be detected on one subdomain
+            # and not on the other.
+            # We need to spread the word that blowup
+            # had occured and that all cores should stop.
+            # An easy way to do it is to do a global sum
+            # of localmood (0=fine, 1=blowup)
+            localmood = 1. if blowup else 0.
+            globalmood = mpitools.global_sum(localmood)
+            # and test globalmood
+            if globalmood > 0.:
+                if self.myrank == 0:
+                    print('')
+                    print('BLOW UP!')
+                    print('write a last snapshot at blowup time', end="")
+                # force a last write in the netCDF
+                # might help locate the origin of the
+                # blowup
+                self.IO.t_next_hist = t
+                stop = self.IO.write(self.model.state, t, n)
                 stop = True
             if self.plotting:
                 self.plotting.update(t, n)
@@ -180,9 +201,6 @@ class Nyles(object):
 
         timing.write_timings(self.IO.output_directory)
         timing.analyze_timing(self.IO.output_directory)
-        # in case of a blowup, only core exits the time loop
-        # the others remain waiting, they need to be stopped
-        # mpitools.abort()
 
     def compute_dt(self):
         """Calculate timestep dt from contravariant velocity U and cfl.

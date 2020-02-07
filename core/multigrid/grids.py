@@ -127,7 +127,7 @@ class Grid(object):
         self.tovec(x)
 
     def set_ADS(self, A):
-        self.A = A
+        self.A = A.tocsr()
 
         D = A.diagonal()
         self.S = A-sparse.diags(D)

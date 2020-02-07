@@ -19,6 +19,6 @@ cleanemacs:
 
 
 zip:	
-	cd .. ; zip -r Nyles/nyles_`date '+%d_%m_%Y'`.zip Nyles/Makefile Nyles/README* Nyles/activate.* Nyles/LICENSE Nyles/core  -x \*.so \*~ \*.pyc \*.nc \.* \*checkpoint* \*pycache* \*.rst \*.png
+	cd .. ; zip -r Nyles/nyles_`date '+%d_%m_%Y'`.zip Nyles/Makefile Nyles/README* Nyles/activate.* Nyles/LICENSE Nyles/core Nyles/tools -x \*.so \*~ \*.pyc \*.nc \.* \*checkpoint* \*pycache* \*.rst \*.png
 
 

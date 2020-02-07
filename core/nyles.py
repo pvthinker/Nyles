@@ -125,7 +125,12 @@ class Nyles(object):
         if self.myrank == 0:
             print("Backing up script to:", self.IO.script_path)
             self.IO.backup_scriptfile(sys.argv[0])
-            self.IO.write_githashnumber()
+            try:
+                self.IO.write_githashnumber()
+            except:
+                # this occurs at TGCC where the code
+                # can't be installed from github
+                print("Failed to save the git version of the code experiment")
 
         time_length = len(str(int(self.tend))) + 3
         time_string = "\r"+", ".join([

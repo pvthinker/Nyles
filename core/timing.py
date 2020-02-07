@@ -1,13 +1,15 @@
 from functools import wraps
 from time import time
 import pickle
-import matplotlib as mpl
-import matplotlib.pyplot as plt
 import numpy as np
 import mpitools
+import socket
 
 # https://stackoverflow.com/questions/1622943/timeit-versus-timing-decorator
 stats = {}
+
+# list of hostnames where doing a plot fails
+blacklist = ["irene"]
 
 def timing(f):
     @wraps(f)
@@ -33,7 +35,13 @@ def write_timings(path):
         pickle.dump(stats, fid)
     
 def analyze_timing(path):
-    if mpitools.get_myrank() == 0:
+    host = socket.gethostname()
+    skip = any([machine in host for machine in blacklist])
+
+    if (mpitools.get_myrank() == 0) and not(skip):
+
+        import matplotlib as mpl
+        import matplotlib.pyplot as plt
 
         mpl.rcParams['font.size'] = 14
         mpl.rcParams['lines.linewidth'] = 2

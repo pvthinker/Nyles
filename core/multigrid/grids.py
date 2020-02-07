@@ -30,6 +30,7 @@ from timing import timing
 import mpitools
 from mpi4py import MPI
 import topology as topo
+import optimizations as optim
 
 
 class Grid(object):
@@ -68,6 +69,7 @@ class Grid(object):
         self.neighbours = neighbours
 
         self.x = np.zeros((self.N,))
+        self.y = np.zeros((self.N,))
         self.b = np.zeros((self.N,))
         self.r = np.zeros((self.N,))
 
@@ -134,6 +136,9 @@ class Grid(object):
         self.idiag = np.zeros_like(D)
         self.idiag[idx] = -1./D[idx]
 
+        self.Axr = optim.MatVecObj(self.A, self.x, self.r)
+        self.Sxy = optim.MatVecObj(self.S, self.x, self.y)
+
     @timing
     def norm(self, which='r'):
         """
@@ -157,7 +162,10 @@ class Grid(object):
     @timing
     def residual(g):
         # g is self
-        g.r[:] = g.b - g.A.dot(g.x)
+        #g.r[:] = g.b - g.A.dot(g.x)
+        g.Axr.do()
+        #optim.MatVecmult(g.A, g.x, g.r)
+        g.r[:] = g.b - g.r
         g.halofill('r')
 
     @timing
@@ -166,7 +174,10 @@ class Grid(object):
         c1 = (1.-g.omega)
         c2 = (g.omega*g.idiag)
         for k in range(nite):
-            g.x[:] = c1*g.x + c2*(g.S.dot(g.x)-g.b)
+            #g.x[:] = c1*g.x + c2*(g.S.dot(g.x)-g.b)
+            #optim.MatVecmult(g.S, g.x, g.y)
+            g.Sxy.do()
+            g.x[:] = c1*g.x + c2*(g.y-g.b)
             g.halofill('x')
         del c1, c2
 

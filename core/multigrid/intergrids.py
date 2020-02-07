@@ -12,6 +12,7 @@ from scipy import sparse
 from timing import timing
 import topology as topo
 import gluetools
+import optimizations as optim
 
 
 class Intergrids(object):
@@ -30,12 +31,21 @@ class Intergrids(object):
             self.Interpol = set_interpolation_matrix(fine, coarse)
             self.Restrict = set_restriction_matrix(fine, coarse)
 
+        if self.glueflag:
+            self.Rry = optim.MatVecObj(self.Restrict, self.fine.r, self.dummy.x)
+            self.Ixy = optim.MatVecObj(self.Interpol, self.dummy.x, self.fine.y)
+        else:
+            self.Rry = optim.MatVecObj(self.Restrict, self.fine.r, self.coarse.b)
+            self.Ixy = optim.MatVecObj(self.Interpol, self.coarse.x, self.fine.y)
+
     @timing
     def fine2coarse(self, which='r'):
         assert which in "rb"
 
         y = self.dummy.x if self.glueflag else self.coarse.b
-        y[:] = self.Restrict.dot(self.fine.r)
+        #y[:] = self.Restrict.dot(self.fine.r)
+        self.Rry.do()
+        #optim.MatVecmult(self.Restrict, self.fine.r, y)
 
         if self.glueflag:
             # glue dummy.b onto coarse.b
@@ -57,7 +67,11 @@ class Intergrids(object):
         else:
             x = self.coarse.x
 
-        self.fine.x += self.Interpol.dot(x)
+        y = self.fine.y
+        self.Ixy.do()
+        # optim.MatVecmult(self.Interpol, x, y)
+        self.fine.x += y
+        # self.fine.x += self.Interpol.dot(x)
         # halofill might be skept because
         # Interpol does the halo
         self.fine.halofill('x')

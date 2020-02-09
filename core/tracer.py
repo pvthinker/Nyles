@@ -17,7 +17,7 @@ class Tracer_numerics(object):
         - diffcoef is a dictionnary with diffusion coefficient for each variable
         """
         self.traclist = traclist
-        assert(order in {1, 3, 5})
+        assert(order in {1, 2, 3, 4, 5})
         self.order = order
         diffusion = len(diff_coef) > 0
         self.diffusion = diffusion
@@ -51,11 +51,8 @@ class Tracer_numerics(object):
                 dfield = dtrac.view(direction)
 
                 if direction == 'i':
-                    # overwrite rhs
-                    fortran.upwind(field, velocity, dfield, self.order, 1)
-                else:
-                    # add to rhs
-                    fortran.upwind(field, velocity, dfield, self.order, 0)
+                    dfield[...] = 0.
+                fortran.upwind(field, velocity, dfield, self.order)
 
                 if last and self.diffusion:
                     if (tracname in self.diff_coef.keys()):

@@ -4,7 +4,7 @@ from timing import timing
 
 
 @timing
-def kinenergy(state, grid):
+def kinenergy(state, grid, order):
     """Compute kinetic energy from the model state.
 
     In z-coordinates, the kinetic energy is
@@ -17,12 +17,11 @@ def kinenergy(state, grid):
         # U = state.U[direction].view(direction)
         # Get array of kinetic energy
         ke = state.ke.view(direction)
+        if direction == "i": ke[...] = 0.
         # Get the metric term 1/dx**2 or 1/dy**2 or 1/dz**2
         ids2 = grid.ids2[direction]
-        if direction == 'i':
-            fortran.kin(u, u, ke, ids2, 1)  # overwrite ke
-        else:
-            fortran.kin(u, u, ke, ids2, 0)  # add to ke
+
+        fortran.kin(u, u, ke, ids2, order)
 
 
 # ----------------------------------------------------------------------

@@ -9,6 +9,7 @@ import fortran_vortex_force as fortran
 from timing import timing
 import numpy as np
 
+
 @timing
 def vortex_force(state, rhs, order):
     """
@@ -51,34 +52,33 @@ def vortex_force(state, rhs, order):
 
     """
 
-    upw_orders = {1,3,5}
+    upw_orders = {1, 2, 3, 4, 5}
 
     assert(order in upw_orders)
 
+    # if order == 1:
+    #     calc_direct = fortran.vortex_force_direc_1
+    #     calc_flip = fortran.vortex_force_flip_1
+    # elif order == 3:
+    #     calc_direct = fortran.vortex_force_direc_3
+    #     calc_flip = fortran.vortex_force_flip_3
+    # else:
+    #     calc_direct = fortran.vortex_force_direc_5
+    #     calc_flip = fortran.vortex_force_flip_5
 
-
-    # for k, j, i in ["kji", "ikj", "jik"]:
     for k, j, i in ["ikj", "jik", "kji"]:
-         #Using the convention of taking the inner index as the index of the upwinding of vorticity
+         # Using the convention of taking the inner index as the index of the upwinding of vorticity
 
         u_i = rhs.u[i].flipview(j)
-        U_k = state.U[k].flipview(j)
-        w_j = state.vor[j].flipview(j)
-        fortran.vortex_force_calc(U_k, w_j, u_i, 1, order)
-
         u_k = rhs.u[k].flipview(j)
         U_i = state.U[i].flipview(j)
-        uk = flipij(u_k)
-        Ui = flipij(U_i)
-        wj = flipij(w_j)
+        U_k = state.U[k].flipview(j)
+        w_j = state.vor[j].flipview(j)
 
-        fortran.vortex_force_calc(Ui, wj, uk, -1, order)
-        u_k[:] = flipij(uk)
- 
- 
-def flipij(phi):
-    return np.transpose(phi, [0, 2, 1])
-
+        # calc_direct(U_k, w_j, u_i)
+        # calc_flip(U_i, w_j, u_k)
+        fortran.vortex_force_direc(U_k, w_j, u_i, order)
+        fortran.vortex_force_flip(U_i, w_j, u_k, order)
 
 
 if __name__ == '__main__':
@@ -99,7 +99,7 @@ if __name__ == '__main__':
     ny = 32
     nz = 64
 
-    param = {'nx': nx, 'ny': ny, 'nz': nz, 'nh': 2, 'neighbours' : neighbours}
+    param = {'nx': nx, 'ny': ny, 'nz': nz, 'nh': 2, 'neighbours': neighbours}
     state = var.get_state(param)
 
     Ui = state.U['i'].view('k')
@@ -113,18 +113,18 @@ if __name__ == '__main__':
     wj = state.vor['j'].view('k')
     wk = state.vor['k'].view('k')
 
-    x = np.linspace(0,nx,nx)
-    y = np.linspace(0,ny,ny)
+    x = np.linspace(0, nx, nx)
+    y = np.linspace(0, ny, ny)
 
-    X, Y = np.meshgrid(x,y)
+    X, Y = np.meshgrid(x, y)
     x0 = nx//2
     y0 = ny//2
 
     x1 = nx//2 + 5
     y1 = ny//2 + 5
 
-    X = np.repeat(X[:,:,np.newaxis], nz, axis = 2)
-    Y = np.repeat(Y[:,:,np.newaxis], nz, axis = 2)
+    X = np.repeat(X[:, :, np.newaxis], nz, axis=2)
+    Y = np.repeat(Y[:, :, np.newaxis], nz, axis=2)
 
     Omega = 2
     wj[...] = Omega * np.exp(-((X-x0)**2/20 + (Y-y0)**2/20))
@@ -139,31 +139,30 @@ if __name__ == '__main__':
 
     plt.figure()
     plt.title('ui')
-    cs = plt.pcolor(ui[:,:,10])
+    cs = plt.pcolor(ui[:, :, 10])
     #plt.contour(wj[:,:,10], 5, colors = 'k')
     plt.colorbar(cs)
 
     plt.figure()
     plt.title('uj')
-    cs = plt.pcolor(uj[:,:,10])
+    cs = plt.pcolor(uj[:, :, 10])
     #plt.contour(wj[:,:,10], 5, colors = 'k')
     plt.colorbar(cs)
 
     plt.figure()
     plt.title('ui')
-    cs = plt.pcolor(uk[:,:,10])
+    cs = plt.pcolor(uk[:, :, 10])
     #plt.contour(wj[:,:,10], 5, colors = 'k')
     plt.colorbar(cs)
 
     plt.figure()
     plt.title('wj')
-    plt.pcolor(wj[:,:,10])
+    plt.pcolor(wj[:, :, 10])
     plt.colorbar()
 
-
     plt.figure()
-    plt.plot(ui[:,8,10], label = 'vf_i')
-    plt.plot(wj[:,8,10], label = 'w_j')
+    plt.plot(ui[:, 8, 10], label='vf_i')
+    plt.plot(wj[:, 8, 10], label='w_j')
     plt.legend()
 
     plt.show()

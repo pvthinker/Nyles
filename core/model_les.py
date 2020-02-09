@@ -47,6 +47,7 @@ class LES(object):
         self.timescheme.set(self.rhs, self.diagnose_var)
         self.orderA = param["orderA"]
         self.orderVF = param["orderVF"]
+        self.orderKE = param["orderKE"]
         self.rotating = param["rotating"]
         self.forced = param["forced"]
         self.diff_coef = param['diff_coef']
@@ -88,7 +89,7 @@ class LES(object):
         if self.nonlinear:
             vort.vorticity(state, self.fparameter)
             #bc.apply_bc_on_vorticity(state, self.neighbours)
-            kinetic.kinenergy(state, self.grid)
+            kinetic.kinenergy(state, self.grid, self.orderKE)
             self.halo.fill(state.vor)
             self.halo.fill(state.ke)
 
@@ -137,11 +138,11 @@ def reset_state(state):
     for var_name, var_type in state.toc.items():
         if var_type == "scalar":
             var = state.get(var_name).view()
-            var *= 0.0
+            var[...]= 0.0
         else:
             for i in "ijk":
                 var = state.get(var_name)[i].view()
-                var *= 0.0
+                var[...]= 0.0
 
 
 if __name__ == "__main__":

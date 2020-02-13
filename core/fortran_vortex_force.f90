@@ -40,8 +40,11 @@ subroutine vortex_force_direc(U, vort, res, order, m, n, l)
         UU_0 = 0.
         do k=1,l
            UU_1 = 0.5 * ( U(j,i,k) + U(j,i+1,k))
-           vU(k) =  vort(j,i,k)*UU_1
+           vU(k) =  vort(j,i,k)!*UU_1
            U_interp(k) = 0.5*(UU_0+UU_1)
+           UU = abs(U_interp(k))
+           up(k) = 0.5*(U_interp(k)+UU) ! right-going flux
+           um(k) = 0.5*(U_interp(k)-UU) ! left-going flux
            UU_0 = UU_1
         enddo
         !
@@ -53,11 +56,7 @@ subroutine vortex_force_direc(U, vort, res, order, m, n, l)
            enddo
         else
            do k=1,l
-              if (U_interp(k).gt.0.) then
-                 res(j,i,k) = res(j,i,k)-qp(k-1)
-              else
-                 res(j,i,k) = res(j,i,k)-qm(k)
-              endif
+              res(j,i,k) = res(j,i,k)-qp(k-1)*up(k)-qm(k)*um(k)
            enddo
         endif
     end do
@@ -98,22 +97,23 @@ subroutine vortex_force_flip(U, vort, res, order, m, n, l)
         UU_0 = 0.
         do i=1,n
            UU_1 = 0.5 * ( U(j,i,k) + U(j,i,k+1))
-           vU(i) =  vort(j,i,k)*UU_1
+           vU(i) =  vort(j,i,k)!*UU_1
            U_interp(i) = 0.5*(UU_0+UU_1)
+           UU = abs(U_interp(i))
+           up(i) = 0.5*(U_interp(i)+UU) ! right-going flux
+           um(i) = 0.5*(U_interp(i)-UU) ! left-going flux
            UU_0 = UU_1
-        enddo
+        enddo!
+        !
         call interpolate(vU, qp, qm, order, n)
+
         if (mod(order, 2).eq.0) then
            do i=1,n
-                 res(j,i,k) = res(j,i,k)+qm(i)
+              res(j,i,k) = res(j,i,k)+qm(i)
            enddo
         else
            do i=1,n
-              if (U_interp(i).gt.0.) then
-                 res(j,i,k) = res(j,i,k)+qp(i-1)
-              else
-                 res(j,i,k) = res(j,i,k)+qm(i)
-              endif
+              res(j,i,k) = res(j,i,k)+qp(i-1)*up(i)+qm(i)*um(i)
            enddo
         endif
 

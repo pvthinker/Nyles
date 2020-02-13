@@ -55,7 +55,7 @@ subroutine interpolate(vU, qp, qm, order, n)
      qp(i) = vU(i)
      qm(i) = vU(i)
      !
-     qm(n) = 0.
+     qm(n) = vU(n)
      !
   elseif (order.eq.3) then
      !
@@ -74,7 +74,7 @@ subroutine interpolate(vU, qp, qm, order, n)
      qp(i) = vU(i)
      qm(i) = vU(i)
      !
-     qm(n) = 0.
+     qm(n) = vu(n)
      !
   !1st order
   elseif (order.eq.1) then
@@ -86,7 +86,7 @@ subroutine interpolate(vU, qp, qm, order, n)
         qm(i) = vU(i)
      enddo
      !
-     qm(n) = 0.
+     qm(n) = vU(n)
      !
   ! 2nd order
   elseif (order.eq.2) then

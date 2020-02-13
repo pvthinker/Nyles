@@ -33,7 +33,7 @@ def vorticity(state, fparameter):
         if (fparameter > 0.) and (dirk is 'k'):
             wk[:, :-1, :-1] += fparameter
 
-        if dirk=='j':
+        #if dirk=='j':
             # this is the future way of imposing a stress at a boundary
             # below is the implementation for the lid driven cavity
             # wk[:, :, -1] = (5e-1-uj[:,:,-1])

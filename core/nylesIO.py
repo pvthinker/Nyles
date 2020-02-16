@@ -133,9 +133,9 @@ class NylesIO(object):
         self.last_saved_frame = None
         self.myrank = param["myrank"]
         # Define a function to replace dimensions by units for convenience
-        self.unit = lambda dimension: (
-            dimension.replace("T", param["unit_duration"]).replace("L", param["unit_length"])
-        )
+        self.unit = self.generate_units
+        self.unitT = param["unit_duration"]
+        self.unitL = param["unit_length"]
         self.n_tracers = param["n_tracers"]
 
         # Create a copy of the experiment parameters to save them it in the history file
@@ -591,6 +591,14 @@ class NylesIO(object):
             fid.write(githash+'\n')
             fid.write('# to rerun it with same version \n')
             fid.write('# git checkout %s' % githash[:7])
+
+    def generate_units(self, dimensions):
+        units = dimensions
+        substitutions = {"T": self.unitT, "L": self.unitL,
+                         "^": "", ".": " "}
+        for k, v in substitutions.items():
+            units = units.replace(k, v)
+        return units
 
 if __name__ == "__main__":
     import numpy as np

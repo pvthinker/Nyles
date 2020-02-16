@@ -248,10 +248,11 @@ class Vector(dict):
         """
         # Create a scalar for each of the three components (self['i'],
         # self['j'], self['k']) in a loop over the three directions
+        dirname = {"i": "x", "j": "y", "k": "z"}
         for direction in 'ijk':
             self[direction] = Scalar(
                 param,
-                name + ' (' + direction + ')',
+                name + " %s-component" % dirname[direction],
                 nickname + '_' + direction,
                 dimension,
                 prognostic,

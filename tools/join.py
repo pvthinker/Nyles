@@ -11,6 +11,7 @@ integers = "0123456789"
 
 varname = "b"
 
+
 def read_param(ncfile):
     param = {}
     with nc.Dataset(ncfile, "r") as fid:
@@ -33,7 +34,7 @@ def read_param(ncfile):
 
 
 def join(param):
-    outfile="%s.nc" % varname
+    outfile = "%s.nc" % varname
     procs = param["procs"]
     nh = param["nh"]
     nx = param["nx"]
@@ -53,7 +54,7 @@ def join(param):
         dims = fin.dimensions
         var = fin.variables
         assert varname in var
-        
+
         fid.createDimension("t", nt)
         fid.createDimension("x", global_nx)
         fid.createDimension("y", global_ny)
@@ -62,7 +63,7 @@ def join(param):
         v = fid.createVariable(varname, "f", ("t", "z", "y", "x"))
         v.long_name = var[varname].long_name
         v.units = var[varname].units
-        
+
         for d in dims:
             v = fid.createVariable(d, "f", (d, ))
             v.long_name = var[d].long_name
@@ -77,37 +78,43 @@ def join(param):
         with nc.Dataset(template % 0, "r") as fin:
             for kt in range(nt):
                 fid["t"][kt] = fin["t"][kt]
-                
-            for k in range(procs[0]):
-                j, i = 0, 0
-                loc = [k, j, i]
-                ngs = topo.get_neighbours(loc, procs)
-                shape, domainindices = topo.get_variable_shape(
-                    size, ngs, nh)
-                k0, k1, j0, j1, i0, i1 = domainindices
-                ka, kb = k*nz, (k+1)*nz                
+
+        for k in range(procs[0]):
+            j, i = 0, 0
+            loc = [k, j, i]
+            r = topo.loc2rank(loc, procs)
+            ngs = topo.get_neighbours(loc, procs)
+            shape, domainindices = topo.get_variable_shape(
+                size, ngs, nh)
+            k0, k1, j0, j1, i0, i1 = domainindices
+            ka, kb = k*nz, (k+1)*nz
+            with nc.Dataset(template % r, "r") as fin:
                 fid["z"][ka:kb] = fin["z"][k0:k1]
 
-            for j in range(procs[1]):
-                k, i = 0, 0
-                loc = [k, j, i]
-                ngs = topo.get_neighbours(loc, procs)
-                shape, domainindices = topo.get_variable_shape(
-                    size, ngs, nh)
-                k0, k1, j0, j1, i0, i1 = domainindices
-                ja, jb = j*ny, (j+1)*ny
+        for j in range(procs[1]):
+            k, i = 0, 0
+            loc = [k, j, i]
+            r = topo.loc2rank(loc, procs)
+            ngs = topo.get_neighbours(loc, procs)
+            shape, domainindices = topo.get_variable_shape(
+                size, ngs, nh)
+            k0, k1, j0, j1, i0, i1 = domainindices
+            ja, jb = j*ny, (j+1)*ny
+            with nc.Dataset(template % r, "r") as fin:
                 fid["y"][ja:jb] = fin["y"][j0:j1]
 
-            for i in range(procs[0]):
-                k, j = 0, 0
-                loc = [k, j, i]
-                ngs = topo.get_neighbours(loc, procs)
-                shape, domainindices = topo.get_variable_shape(
-                    size, ngs, nh)
-                k0, k1, j0, j1, i0, i1 = domainindices
-                ia, ib = i*nx, (i+1)*nx
+        for i in range(procs[2]):
+            k, j = 0, 0
+            loc = [k, j, i]
+            r = topo.loc2rank(loc, procs)
+            ngs = topo.get_neighbours(loc, procs)
+            shape, domainindices = topo.get_variable_shape(
+                size, ngs, nh)
+            k0, k1, j0, j1, i0, i1 = domainindices
+            ia, ib = i*nx, (i+1)*nx
+            with nc.Dataset(template % r, "r") as fin:
                 fid["x"][ia:ib] = fin["x"][i0:i1]
-                
+
         for k in range(procs[0]):
             for j in range(procs[1]):
                 for i in range(procs[2]):
@@ -125,7 +132,7 @@ def join(param):
                     with nc.Dataset(ncfile, "r") as fin:
                         for kt in range(nt):
                             print("\r %3i/%3i - %3i/%3i"
-                                 % (rank, nranks-1, kt, nt-1), end="")
+                                  % (rank, nranks-1, kt, nt-1), end="")
                             var = fin[varname][kt][:, :, :]
                             z2d = var[k0:k1, j0:j1, i0:i1]
                             fid[varname][kt, ka:kb, ja:jb, ia:ib] = z2d
@@ -137,12 +144,13 @@ if __name__ == '__main__':
     import sys
     import glob
 
-    ncfile = sorted(glob.glob("*hist.nc") )[0]
+    ncfile = sorted(glob.glob("*hist.nc"))[0]
     varname = sys.argv[-1]
 
     param = read_param(ncfile)
 
-    msg = "call join.py with one of the following variables: " +  ", ".join(param["variables_in_history"])
+    msg = "call join.py with one of the following variables: " + \
+        ", ".join(param["variables_in_history"])
     assert varname in param["variables_in_history"], msg
-    
+
     join(param)

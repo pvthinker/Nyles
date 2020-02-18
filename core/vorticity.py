@@ -71,6 +71,14 @@ def vorticity2D(state, fparameter):
             # this is the future way of imposing a stress at a boundary
             # below is the implementation for the lid driven cavity
             # wk[:, :, -1] = (5e-1-uj[:,:,-1])
+
+def diag_rsw_pv(state):
+    dirk = "k"
+    vorticity = state.vor[dirk].flipview(dirk)
+    h = state.h.flipview(dirk)
+    pv = state.pv.flipview(dirk)
+    pv[:, :-1, :-1] = h[:, :-1, :-1] + h[:, :-1, 1:] + h[:, 1:, :-1] + h[:, 1:, 1:]
+    pv[:, :-1, :-1] = 4*vorticity[:, :-1, :-1]/pv[:, :-1, :-1]
             
 @timing
 def vorticity_all_comp(state):

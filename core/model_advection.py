@@ -9,6 +9,16 @@ from timing import timing
 import pickle
 import halo
 
+ModelVariable = var.ModelVariable
+Advectionvar = {
+    'b': ModelVariable('scalar', 'tracer', '1', prognostic=True),
+    'p': ModelVariable('scalar', 'pressure', 'L^2.T^-2', prognostic=False),
+    'ke': ModelVariable('scalar', 'kinetic energy', 'L^2.T^-2', prognostic=False),
+    'div': ModelVariable('scalar', 'divergence', 'T^-1', prognostic=False),
+    'u': ModelVariable('velocity', 'covariant velocity', 'L^2.T^-1', prognostic=True),
+    'U': ModelVariable('velocity', 'contravariant velocity',  'T^-1', prognostic=False),
+    'vor': ModelVariable('vorticity', 'vorticity',  'L^2.T^-1', prognostic=False),
+}
 
 class Advection(object):
     """Pure advection model.

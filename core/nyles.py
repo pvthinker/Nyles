@@ -5,6 +5,7 @@ import sys
 import numpy as np
 
 import model_les
+import model_rsw
 import model_advection as model_adv
 import variables
 import grid
@@ -83,10 +84,22 @@ class Nyles(object):
 
     def initiate(self, param):
         if param['modelname'] == 'LES':
+            import model_les
+            variables.modelvar = model_les.LESvar
             self.model = model_les.LES(param, self.grid)
+
         elif param['modelname'] == 'linear':
+            import model_les
+            variables.modelvar = model_les.LESvar
             self.model = model_les.LES(param, self.grid, linear=True)
+
+        elif param['modelname'] == 'RSW':
+            import model_rsw
+            variables.modelvar = model_rsw.RSWvar
+            self.model = model_rsw.RSW(param, self.grid)
+
         elif param['modelname'] == 'advection':
+            import model_advection as model_adv
             self.model = model_adv.Advection(param, self.grid)
 
         self.tend = param['tend']

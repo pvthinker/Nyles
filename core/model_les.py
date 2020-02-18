@@ -16,7 +16,6 @@ import cov_to_contra
 import halo
 
 import numpy as np
-import matplotlib.pyplot as plt
 
 """
 LES model
@@ -26,6 +25,17 @@ It follows the procedure from the Ferziger p.180
 
 """
 
+# Define the variables in the LES model
+ModelVariable = var.ModelVariable
+LESvar = {
+    'b': ModelVariable('scalar', 'buoyancy', 'L.T^-2', prognostic=True),
+    'p': ModelVariable('scalar', 'pressure', 'L^2.T^-2', prognostic=False),
+    'ke': ModelVariable('scalar', 'kinetic energy', 'L^2.T^-2', prognostic=False),
+    'div': ModelVariable('scalar', 'divergence', 'T^-1', prognostic=False),
+    'u': ModelVariable('velocity', 'covariant velocity', 'L^2.T^-1', prognostic=True),
+    'U': ModelVariable('velocity', 'contravariant velocity',  'T^-1', prognostic=False),
+    'vor': ModelVariable('vorticity', 'vorticity',  'L^2.T^-1', prognostic=False),
+}
 
 class LES(object):
 
@@ -147,6 +157,7 @@ def reset_state(state):
 
 if __name__ == "__main__":
     from grid import Grid
+    import matplotlib.pyplot as plt
 
     procs = [1, 1, 1]
     topo.topology = 'closed'

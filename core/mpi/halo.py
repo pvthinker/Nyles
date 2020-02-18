@@ -201,8 +201,10 @@ def set_halo(param, state):
     nh = param["nh"]
     procs = param["procs"]
     neighbours = param["neighbours"]
-    shape = state.b.shape
-    size, domainindices = np.shape(state.b.view('i')), state.b.domainindices
+    scalarname = list(state.toc.keys())[0]
+    scalar = getattr(state, scalarname)
+    shape = scalar.shape
+    size, domainindices = np.shape(scalar.view('i')), scalar.domainindices
     localgrid = {'shape': shape,
         'size': size,
         'nh': nh,

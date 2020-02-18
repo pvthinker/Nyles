@@ -39,6 +39,40 @@ def vorticity(state, fparameter):
             # wk[:, :, -1] = (5e-1-uj[:,:,-1])
 
 @timing
+def vorticity2D(state, fparameter):
+    """
+    compute the vorticity
+
+    omega_k = delta_i[u_j] - delta_j[u_i]
+
+    direction 'k' should be the first one,
+    flipview('k') does that
+
+    TODO:
+       carefully handle the boundary condition: no-slip or free-slip
+    """
+
+    perm = {'i': ('k', 'j'),
+            'j': ('i', 'k'),
+            'k': ('j', 'i')}
+
+    for dirk in 'k':
+        dirj, diri = perm[dirk]
+
+        ui = state.u[diri].flipview(dirk)
+        uj = state.u[dirj].flipview(dirk)
+        wk = state.vor[dirk].flipview(dirk)
+
+        fortran.vorticity(ui, uj, wk)
+        if (fparameter > 0.) and (dirk is 'k'):
+            wk[:, :-1, :-1] += fparameter
+
+        #if dirk=='j':
+            # this is the future way of imposing a stress at a boundary
+            # below is the implementation for the lid driven cavity
+            # wk[:, :, -1] = (5e-1-uj[:,:,-1])
+            
+@timing
 def vorticity_all_comp(state):
     """
     purpose : reference point to compare with the previous

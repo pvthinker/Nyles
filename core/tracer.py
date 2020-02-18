@@ -7,7 +7,7 @@ from timing import timing
 
 
 class Tracer_numerics(object):
-    def __init__(self, grid, traclist, order, diff_coef=[]):
+    def __init__(self, grid, traclist, order, diff_coef=[], directions="ijk"):
         """
         - grid: nyles grid object
         - traclist: list of prognostic variables that are advected, e.g.,
@@ -18,6 +18,7 @@ class Tracer_numerics(object):
         """
         self.traclist = traclist
         assert(order in {1, 2, 3, 4, 5})
+        self.directions = directions
         self.order = order
         diffusion = len(diff_coef) > 0
         self.diffusion = diffusion
@@ -45,7 +46,7 @@ class Tracer_numerics(object):
             trac = state.get(tracname)  # trac is a 'Scalar' instance
             dtrac = rhs.get(tracname)
 
-            for direction in 'ijk':
+            for direction in self.directions:
                 velocity = state.U[direction].view(direction)
                 field = trac.view(direction)
                 dfield = dtrac.view(direction)

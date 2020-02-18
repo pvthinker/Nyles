@@ -22,6 +22,17 @@ def bernoulli(state, rhs, grid):
             b = state.b.view(i)
             fortran.gradkeandb(ke, b, du_i, grid.dz)
 
+@timing
+def bernoulli2D(state, rhs, grid):
+    """Add -grad(ke+g*h) to the rhs."""
+
+    g = 1.
+    for i in 'ij':
+        du_i = rhs.u[i].view(i)
+        ke = state.ke.view(i)
+        h = state.h.view(i)
+        fortran.gradber(ke, h, du_i, g)
+
 
 # ----------------------------------------------------------------------
 if __name__ == '__main__':

@@ -3,7 +3,7 @@
         "modelname": {
             "type": "str",
             "default": "LES",
-            "avail": ["LES", "linear", "advection"],
+            "avail": ["LES", "linear", "RSW", "advection"],
             "doc": "Type of the model: (1) LES (Large Eddy Simulation): full 3D incompressible Navier-Stokes equations (2) linear: 3D incompressible Navier-Stokes equations linearized around a stationary mean state, i.e., without the vortex-force and kinetic-energy terms, which are quadratic in velocity (3) advection: 3D advection equations applied on a passive tracer in a steady flow"
         },
         "geometry": {

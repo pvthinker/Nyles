@@ -23,6 +23,26 @@ def kinenergy(state, grid, order):
 
         fortran.kin(u, u, ke, ids2, order)
 
+@timing
+def kinenergy2D(state, grid, order):
+    """Compute kinetic energy from the model state.
+
+    In z-coordinates, the kinetic energy is
+      ke = 1/2 * (u**2 / dx**2 + v**2 / dy**2 + w**2 / dz**2).
+    """
+    for direction in 'ij':
+        # Get array of covariant velocity
+        u = state.u[direction].view(direction)
+        # In sigma-coordinates, use the contravariant velocity
+        # U = state.U[direction].view(direction)
+        # Get array of kinetic energy
+        ke = state.ke.view(direction)
+        if direction == "i": ke[...] = 0.
+        # Get the metric term 1/dx**2 or 1/dy**2 or 1/dz**2
+        ids2 = grid.ids2[direction]
+
+        fortran.kin(u, u, ke, ids2, order)
+
 
 # ----------------------------------------------------------------------
 if __name__ == '__main__':

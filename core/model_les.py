@@ -96,10 +96,7 @@ class LES(object):
     @timing
     def rhs(self, state, t, dstate, last=False):
         reset_state(dstate)
-        # TODO: if this function call stays here, the flag in rhstrac
-        # can be removed.  Other possibility: remove the reset_state and
-        # add the reset to the vortex_force term.
-        # buoyancy
+        # transport the tracers
         self.tracer.rhstrac(state, dstate)
         # vortex force
         if self.nonlinear:

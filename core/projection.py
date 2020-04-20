@@ -7,6 +7,9 @@ import numpy as np
 import fortran_bernoulli as fortran
 from timing import timing
 
+localite = 0
+pback = []
+
 @timing
 def compute_div(state, **kwargs):
     """Compute divergence from U, the contravariant velocity
@@ -43,6 +46,7 @@ def compute_p(mg, state, grid):
 
     grid is the Grid object with the metric tensor
     """
+    global localite, pback
     div = state.div
     compute_div(state)
 
@@ -73,14 +77,23 @@ def compute_p(mg, state, grid):
     mg.grid[0].tovec('b')
     mg.grid[0].tovec('x')
     
-#    x[:] = 0.
+    p = state.p.view('i')
+    # if localite>2:
+    #     mg.grid[0].toarray('x')
+    #     x[:] = pback[localite %3][mg_idx]
+    #     mg.grid[0].tovec('x')
     # solve
     mg.solve_directly()
 
     # copy MG solution to pressure
-    p = state.p.view('i')
+
     mg.grid[0].toarray('x')    
     p[mg_idx] = x
+    if localite>2:
+        pback[localite%3][:] = p
+    else:
+        pback += [p.copy()]
+    localite += 1
     #fortran.mg2var(p,x,idx)
     mg.grid[0].tovec('x')
     

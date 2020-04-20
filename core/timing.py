@@ -11,21 +11,33 @@ stats = {}
 # list of hostnames where doing a plot fails
 blacklist = ["irene"]
 
+
 def timing(f):
     @wraps(f)
     def wrap(*args, **kw):
-        ts = time()
-        result = f(*args, **kw)
-        te = time()
-        if 'timing' in kw.keys():
-            pass
-        else:
-            name = f.__name__
-            if name in stats.keys():
-                stats[name] += [te-ts]
+        if "forward" in stats.keys():
+            if len(stats["forward"]) >= 100:
+                ok = True
             else:
-                stats[name] = [te-ts]
-        #print('func:%r took: %2.4e sec' % (f.__name__,  te-ts))
+                ok = False
+        else:
+            ok = False
+        if ok:
+            result = f(*args, **kw)
+        else:
+            ts = time()
+            result = f(*args, **kw)
+            te = time()
+            if 'timing' in kw.keys():
+                pass
+            else:
+                name = f.__name__
+                if name in stats.keys():
+                    stats[name] += [te-ts]
+                else:
+                    stats[name] = [te-ts]
+
+            #print('func:%r took: %2.4e sec' % (f.__name__,  te-ts))
         return result
     return wrap
 
@@ -68,7 +80,7 @@ def analyze_timing(path):
         plt.xlabel('iteration')
         plt.ylabel('time [s]')
         gca = plt.gca()
-        gca.set_ylim([1e-5, 1])
+        gca.set_ylim([1e-5, 10])
         plt.grid()
         plt.legend(loc='upper right', fontsize=10)
         plt.savefig(pngtiming)

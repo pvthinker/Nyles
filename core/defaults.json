@@ -305,7 +305,7 @@
         },
         "nglue": {
             "type": "int",
-            "default": 16,
+            "default": 4,
             "avail": ">= 0",
             "doc": "Subdomain width (in any direction) below which subdomains are glued together"
         },

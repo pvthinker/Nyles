@@ -9,7 +9,7 @@
         "geometry": {
             "type": "str",
             "default": "closed",
-            "avail": ["closed", "perio_x"],
+            "avail": ["closed", "perio_x", "perio_y", "perio_xy", "perio_xyz"],
             "doc": "Geometry of the domain"
         },
         "Lx": {
@@ -56,6 +56,12 @@
             "default": false,
             "avail": [true, false],
             "doc": "Whether Coriolis force is present or not"
+        },
+        "forced": {
+            "type": "bool",
+            "default": false,
+            "avail": [true, false],
+            "doc": "Whether the flow is forced or not. If True, the user must supply the forcing in the user script"
         },
         "coriolis": {
             "type": "float",
@@ -165,8 +171,8 @@
         "timestepping": {
             "type": "str",
             "default": "LFAM3",
-            "avail": ["LFAM3", "EF"],
-            "doc": "Time scheme used to integrate the model in time; EF: Euler forward; LFAM3: a predictor-corrector method"
+            "avail": ["RK3_SSP", "LFAM3", "EF"],
+            "doc": "Time scheme used to integrate the model in time; EF: Euler forward; LFAM3: a predictor-corrector method; RK3_SSP: stable strongly preserving RK3"
         },
         "auto_dt": {
             "type": "bool",
@@ -216,14 +222,20 @@
         "orderVF": {
             "type": "int",
             "default": 5,
-            "avail": [1, 3, 5],
-            "doc": "Order of the upwind scheme used for the computation of the vortex-force term"
+            "avail": [1, 2, 3, 4, 5],
+            "doc": "Order of the interpolation of the vortex-force term"
+        },
+        "orderKE": {
+            "type": "int",
+            "default": 5,
+            "avail": [1, 2, 3, 4, 5],
+            "doc": "Order of the interpolation of the kinetic energy term"
         },
         "orderA": {
             "type": "int",
             "default": 5,
-            "avail": [1, 3, 5],
-            "doc": "Order of the upwind scheme used for the computation of the advection term"
+            "avail": [1, 2, 3, 4, 5],
+            "doc": "Order of the interpolation of the advection term"
         }
     },
 
@@ -293,7 +305,7 @@
         },
         "nglue": {
             "type": "int",
-            "default": 16,
+            "default": 4,
             "avail": ">= 0",
             "doc": "Subdomain width (in any direction) below which subdomains are glued together"
         },

@@ -55,6 +55,8 @@ import netCDF4 as nc
 # Local imports
 from variables import State
 from grid import Grid
+import mpitools
+from timing import timing
 
 
 class NylesIO(object):
@@ -131,9 +133,9 @@ class NylesIO(object):
         self.last_saved_frame = None
         self.myrank = param["myrank"]
         # Define a function to replace dimensions by units for convenience
-        self.unit = lambda dimension: (
-            dimension.replace("T", param["unit_duration"]).replace("L", param["unit_length"])
-        )
+        self.unit = self.generate_units
+        self.unitT = param["unit_duration"]
+        self.unitL = param["unit_length"]
         self.n_tracers = param["n_tracers"]
 
         # Create a copy of the experiment parameters to save them it in the history file
@@ -245,12 +247,18 @@ class NylesIO(object):
         if not os.path.isdir(self.output_directory):
             if self.myrank == 0:
                 os.makedirs(self.output_directory)
+        # block all ranks until rank 0 has created the folder(s)
+        mpitools.barrier()
+        # let be very cautious
+        assert os.path.isdir(self.output_directory)
+
         # Create the history file and save the initial state
         self.create_history_file(grid, variables)
         self.write_history_file(state, t, n)
         self.t_next_hist = t + self.dt_hist
 
-    def do(self, state, t, n):
+    @timing
+    def write(self, state, t, n):
         """Write the current state to the history file if it is time.
 
         When new data was written to the disk, check if the available
@@ -576,13 +584,21 @@ class NylesIO(object):
         gitfile = self.output_directory +'/nyles.git'
         import version
         githash = version.get_nyles_hash_number()
-        print(gitfile)
+        # print(gitfile)
         with open(gitfile, 'w') as fid:
             fid.write('# this experiment has been done with\n')
             fid.write('# Nyles commit\n')
             fid.write(githash+'\n')
             fid.write('# to rerun it with same version \n')
             fid.write('# git checkout %s' % githash[:7])
+
+    def generate_units(self, dimensions):
+        units = dimensions
+        substitutions = {"T": self.unitT, "L": self.unitL,
+                         "^": "", ".": " "}
+        for k, v in substitutions.items():
+            units = units.replace(k, v)
+        return units
 
 if __name__ == "__main__":
     import numpy as np

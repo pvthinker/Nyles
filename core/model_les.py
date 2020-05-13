@@ -47,8 +47,9 @@ class LES(object):
         self.timescheme.set(self.rhs, self.diagnose_var)
         self.orderA = param["orderA"]
         self.orderVF = param["orderVF"]
+        self.orderKE = param["orderKE"]
         self.rotating = param["rotating"]
-
+        self.forced = param["forced"]
         self.diff_coef = param['diff_coef']
         self.add_viscosity = "u" in self.diff_coef.keys()
         if self.add_viscosity:
@@ -68,7 +69,7 @@ class LES(object):
 
     @timing
     def diagnose_var(self, state):
-        bc.apply_bc_on_velocity(state, self.neighbours)
+        #bc.apply_bc_on_velocity(state, self.neighbours)
         self.halo.fill(state.b)
         self.halo.fill(state.u)
 
@@ -89,19 +90,15 @@ class LES(object):
         if self.nonlinear:
             vort.vorticity(state, self.fparameter)
             #bc.apply_bc_on_vorticity(state, self.neighbours)
-            kinetic.kinenergy(state, self.grid)
+            kinetic.kinenergy(state, self.grid, self.orderKE)
             self.halo.fill(state.vor)
             self.halo.fill(state.ke)
 
     @timing
     def rhs(self, state, t, dstate, last=False):
         reset_state(dstate)
-        # TODO: if this function call stays here, the flag in rhstrac
-        # can be removed.  Other possibility: remove the reset_state and
-        # add the reset to the vortex_force term.
-        # buoyancy
+        # transport the tracers
         self.tracer.rhstrac(state, dstate)
-
         # vortex force
         if self.nonlinear:
             vortf.vortex_force(state, dstate, self.orderVF)
@@ -110,6 +107,9 @@ class LES(object):
 
         if last and self.add_viscosity:
             visc.add_viscosity(self.grid, state, dstate, self.viscosity)
+
+        if self.forced:
+            self.forcing.add(state, dstate, t)
 
     @timing
     def forward(self, t, dt):
@@ -132,16 +132,15 @@ class LES(object):
         pickle.dump(self.stats, fid)
 
 
-@timing
 def reset_state(state):
     for var_name, var_type in state.toc.items():
         if var_type == "scalar":
             var = state.get(var_name).view()
-            var *= 0.0
+            var[...]= 0.0
         else:
             for i in "ijk":
                 var = state.get(var_name)[i].view()
-                var *= 0.0
+                var[...]= 0.0
 
 
 if __name__ == "__main__":

@@ -29,6 +29,7 @@ timeschemes, we need to store more than just one dstate
 
 """
 
+
 class Timescheme(object):
     """Catalogue and handler of timeschemes.
 
@@ -72,7 +73,7 @@ class Timescheme(object):
             # 'AB2': self.AB2,
             # 'AB3': self.AB3,
             'LFAM3': self.LFAM3,
-            # 'RK3_SSP': self.RK3_SSP,
+            'RK3_SSP': self.RK3_SSP,
             # 'RK3': self.RK3,
             # 'RK4_LS': self.RK4_LS,
         }
@@ -91,6 +92,11 @@ class Timescheme(object):
             self.stateb = state.duplicate_prognostic_variables()
             self.state = state.duplicate_prognostic_variables()
             self.first = True
+        if timestepping == 'RK3_SSP':
+            self.ds0 = self.dstate
+            self.ds1 = state.duplicate_prognostic_variables()
+            self.ds2 = state.duplicate_prognostic_variables()
+
 
     def set(self, rhs, diagnose_var):
         """Assign the right hand side of the model.
@@ -114,7 +120,7 @@ class Timescheme(object):
             ds = self.dstate.get(scalar_name).viewlike(scalar)
             s += dt * ds
         self.diagnose_var(state)
-        
+
     # ----------------------------------------
     def LFAM3(self, state, t, dt, **kwargs):
         # Predictor
@@ -133,7 +139,7 @@ class Timescheme(object):
                 s += dt * ds
             self.first = False
             self.diagnose_var(state)
-            
+
         else:
             for scalar_name in self.prognostic_scalars:
                 scalar = state.get(scalar_name)
@@ -169,6 +175,51 @@ class Timescheme(object):
                 s[:] = sn + dt*ds
 
             self.diagnose_var(state)
+    # ----------------------------------------
+
+    def RK3_SSP(self, state, t, dt, **kwargs):
+        """ RK3 SSP
+
+        The three stages are
+
+        s1 = s^n + dt*L(s^n)
+        s2 = s^n + (dt/4)*( L(s^n)+L(s1) )
+        s^n+1 =  s^n + (dt/6)*( L(s^n)+L(s1)+4*L(s2) )
+
+        or equivalently
+
+        ds0 = L(s)
+        s = s+dt*ds0
+        ds1 = L(s)
+        s = s+(dt/4)*(ds1-3*ds0)
+        ds2 = L(s)
+        s = s+(dt/12)*(8*ds2-ds0-ds1)
+
+        """
+        self.rhs(state, t, self.ds0, last=False)
+        for scalar_name in self.prognostic_scalars:
+            s = state.get(scalar_name).view("i")
+            ds = self.ds0.get(scalar_name).view("i")
+            s += dt * ds
+        self.diagnose_var(state)
+
+        self.rhs(state, t+dt, self.ds1, last=False)
+        for scalar_name in self.prognostic_scalars:
+            s = state.get(scalar_name).view("i")
+            ds0 = self.ds0.get(scalar_name).view("i")
+            ds1 = self.ds1.get(scalar_name).view("i")
+            s += (dt/4.) * (ds1-3*ds0)
+        self.diagnose_var(state)
+
+        self.rhs(state, t+dt*0.5, self.ds2, last=True)
+        for scalar_name in self.prognostic_scalars:
+            s = state.get(scalar_name).view("i")
+            ds0 = self.ds0.get(scalar_name).view("i")
+            ds1 = self.ds1.get(scalar_name).view("i")
+            ds2 = self.ds2.get(scalar_name).view("i")
+            s += (dt/12.) * (8*ds2-ds0-ds1)
+        self.diagnose_var(state)
+
 
 # ----------------------------------------------------------------------
 if __name__ == '__main__':
@@ -187,7 +238,7 @@ if __name__ == '__main__':
     param = {'nx': 40, 'ny': 50, 'nz': 60, 'nh': nh,
              'neighbours': neighbours,
              'timestepping': 'LFAM3',
-    }
+             }
 
     state = var.get_state(param)
 

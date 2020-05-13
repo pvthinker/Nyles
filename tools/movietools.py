@@ -9,7 +9,16 @@ class Movie():
     def __init__(self, fig, name='mymovie', framerate=30):
         """ input: fig is the handle to the figure """
         self.fig = fig
+        #dpi = fig.get_dpi()
         canvas_width, canvas_height = self.fig.canvas.get_width_height()
+        #canvas_width *= dpi/100
+        #canvas_height *= dpi/100
+        print()
+        print("dpi:", fig.get_dpi())
+        print("fig:", fig)
+        print("fig size inches:", fig.get_size_inches())
+        print("canvas widthxheight:", fig.canvas.get_width_height())
+
         # Open an ffmpeg process
         outf = '%s.mp4' % name
         videoencoder = None
@@ -45,6 +54,8 @@ class Movie():
                                         stderr=devnull)
 
     def addframe(self):
+        self.fig.set_dpi(100)
+        print(self.fig.canvas.get_width_height())
         string = self.fig.canvas.tostring_argb()
         self.process.stdin.write(string)
 
@@ -90,6 +101,11 @@ if __name__ == '__main__':
     t = 0.
     template = 'time = %.2f'
     fig = plt.figure()
+    fig.set_dpi(200)
+    print(fig)
+    print(fig.get_size_inches())
+    print(fig.get_dpi())
+    print(fig.canvas.get_width_height())
     p = plt.plot(x, f(t))
     plt.axis([-1, 1, -1, 1])
     p = p[0]

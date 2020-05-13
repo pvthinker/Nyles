@@ -127,15 +127,16 @@ class Scalar(object):
         # as a MG array
         k0, k1, j0, j1, i0, i1 = domainindices
 
-        startk, endk = max(0, k0-1), max(nz, k1+1)
-        startj, endj = max(0, j0-1), max(ny, j1+1)
-        starti, endi = max(0, i0-1), max(nx, i1+1)
+        startk, endk = max(0, k0-1), min(nzl, k1+1)
+        startj, endj = max(0, j0-1), min(nyl, j1+1)
+        starti, endi = max(0, i0-1), min(nxl, i1+1)
 
         kdx = slice(startk, endk)
         jdx = slice(startj, endj)
         idx = slice(starti, endi)
 
         self.mg_idx = (kdx, jdx, idx)
+        self.mg_idx2 = np.array([startk, endk, startj, endj, starti, endi], dtype=int)
 
         # Create arrays extended by the halo;
         # it might be smarter to remove the halo
@@ -247,10 +248,11 @@ class Vector(dict):
         """
         # Create a scalar for each of the three components (self['i'],
         # self['j'], self['k']) in a loop over the three directions
+        dirname = {"i": "x", "j": "y", "k": "z"}
         for direction in 'ijk':
             self[direction] = Scalar(
                 param,
-                name + ' (' + direction + ')',
+                name + " %s-component" % dirname[direction],
                 nickname + '_' + direction,
                 dimension,
                 prognostic,

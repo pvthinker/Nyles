@@ -13,6 +13,7 @@ import plotting
 import timing
 import topology as topo
 import mpitools
+from time import time
 
 
 class Nyles(object):
@@ -38,12 +39,11 @@ class Nyles(object):
     """
 
     def __init__(self, user_param):
-        self.banner()
         # Check, freeze, and get user parameters
         user_param.check()
         user_param.freeze()
         param = user_param.view_parameters()
-
+        self.param = param
         npx = param["npx"]
         npy = param["npy"]
         npz = param["npz"]
@@ -63,6 +63,11 @@ class Nyles(object):
         param["myrank"] = myrank
         param["neighbours"] = neighbours
         param["loc"] = loc
+        self.myrank = myrank
+
+        if self.myrank == 0:
+            print("-"*80)
+        self.banner()
 
         # Load the grid with the extended parameters
         self.grid = grid.Grid(param)
@@ -96,6 +101,8 @@ class Nyles(object):
                 param, self.model.state, self.grid)
         else:
             self.plotting = None
+        # number of grid cell per subdomain
+        self.gridcellpersubdom = param["nx"]*param["ny"]*param["nz"]
 
     def run(self):
         t = 0.0
@@ -110,11 +117,20 @@ class Nyles(object):
             print("lean back in your seat and ...")
             input("... press Enter to start! ")
 
-        print("Creating output file:", self.IO.hist_path)
+        if self.myrank == 0:
+            print("Creating output file:", self.IO.hist_path)
+
         self.IO.init(self.model.state, self.grid, t, n)
-        print("Backing up script to:", self.IO.script_path)
-        self.IO.backup_scriptfile(sys.argv[0])
-        self.IO.write_githashnumber()
+
+        if self.myrank == 0:
+            print("Backing up script to:", self.IO.script_path)
+            self.IO.backup_scriptfile(sys.argv[0])
+            try:
+                self.IO.write_githashnumber()
+            except:
+                # this occurs at TGCC where the code
+                # can't be installed from github
+                print("Failed to save the git version of the code experiment")
 
         time_length = len(str(int(self.tend))) + 3
         time_string = "\r"+", ".join([
@@ -122,37 +138,74 @@ class Nyles(object):
             "t = {:" + str(time_length) + ".2f}/{:" +
             str(time_length) + ".2f}",
             "dt = {:.4f}",
+            "perf = {:.2e}"
         ])
 
-        print("-"*50)
-        while True:
+        if self.myrank == 0:
+            print("-"*80)
+        stop = False
+
+        realtime0 = time()
+
+        while not(stop):
             dt = self.compute_dt()
             blowup = self.model.forward(t, dt)
             t += dt
             n += 1
-            stop = self.IO.do(self.model.state, t, n)
-            print(time_string.format(n, t, self.tend, dt), end='', flush=True)
-            if blowup:
-                print('')
-                print('BLOW UP! ', end='')
-                stop = True
+            stop = self.IO.write(self.model.state, t, n)
+            if self.myrank == 0:
+                realtime = time()
+                # cpu per iteration per grid cell (in second)
+                # this is very good metric of how fast the code runs
+                # typical values are O(4e-6)
+                # > 1e-5 is not good (e.g. too large subdomains)
+                # < 2e-6 is excellent, report it to the developpers!
+                perf = (realtime-realtime0)/(self.gridcellpersubdom)
+                realtime0 = realtime
+                print(time_string.format(n, t, self.tend, dt, perf), end='')
+            # Blowup might be detected on one subdomain
+            # and not on the other.
+            # We need to spread the word that blowup
+            # had occured and that all cores should stop.
+            # An easy way to do it is to do a global sum
+            # of localmood (0=fine, 1=blowup)
+            localmood = 1. if blowup else 0.
+            globalmood = mpitools.global_sum(localmood)
+            # and test globalmood
+            if globalmood > 0.:
+                if self.myrank == 0:
+                    print('')
+                    print('BLOW UP!')
+                    print('write a last snapshot at blowup time', end="")
+                # force a last write in the netCDF
+                # might help locate the origin of the
+                # blowup
+                self.IO.t_next_hist = t
+                stop = self.IO.write(self.model.state, t, n)
+
             if self.plotting:
                 self.plotting.update(t, n)
             if t >= self.tend or stop:
                 break
-        if stop:
-            print("-- aborted.")
-        else:
-            print("-- finished.")
+            mpitools.barrier()
+        if self.myrank == 0:
+            print()
+            print("-"*80)
+        if self.myrank == 0:
+            if stop:
+                print("Job is aborted")
+            else:
+                print("Job completed as expected")
 
         self.IO.finalize(self.model.state, t, n)
-        print("Output written to:", self.IO.hist_path)
+
+        if self.myrank == 0:
+            print("Output written to:", self.IO.hist_path)
+
         self.model.write_stats(self.IO.output_directory)
+
         timing.write_timings(self.IO.output_directory)
         timing.analyze_timing(self.IO.output_directory)
-        # in case of a blowup, only core exits the time loop
-        # the others remain waiting, they need to be stopped
-        # mpitools.abort()
 
     def compute_dt(self):
         """Calculate timestep dt from contravariant velocity U and cfl.
@@ -200,9 +253,10 @@ class Nyles(object):
             "         __/ |             ",
             "        |___/              ",
             "                           "]
-        print("Welcome to")
-        for l in logo:
-            print(" "*10+l)
+        if self.myrank == 0:
+            print("Welcome to")
+            for l in logo:
+                print(" "*10+l)
 
 
 class Logger(object):

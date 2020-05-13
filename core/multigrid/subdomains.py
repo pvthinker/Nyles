@@ -1,5 +1,6 @@
 import numpy as np
 import topology as topo
+import DOESNTEXISTMODULE  # to force an error, subdomains has been superseded
 
 
 def set_subdomains(allgrids):
@@ -16,7 +17,6 @@ def set_subdomains(allgrids):
     doms = []
     first = True
     tags = ranks*0
-
     subdom_partition = []
 
     for lev, grid in enumerate(allgrids):
@@ -53,6 +53,7 @@ def set_subdomains(allgrids):
             dd = set(dom)
             neighbours = [{}]*len(ranks)
             domloc = {}
+            glued = {}
             for d in dd:
                 family = [r for r in ranks if dom[r] == d]
                 # in a family, all ranks have the same loc
@@ -60,8 +61,11 @@ def set_subdomains(allgrids):
                 locs = [(k0[r], j0[r], i0[r]) for r in family]
 
                 # tags is defined from the previous domain decomposition
-                glued = [[r for r in family if tags[r] == t]
-                         for t in set(tags[family])]
+                fam = family[0]
+                glued[d] = [[r for r in family if tags[r] == t]
+                            for t in set(tags[family])]
+                if len(glued[d]) == 1:
+                    glued[d] = glued[d][0]
 
                 # print(' - subdomain : ', set([d]))
                 # print('     located at ', locs[0])
@@ -127,16 +131,24 @@ def set_subdomains(allgrids):
 def attach_subdomain_to_grids(allgrids, subdomains, myrank):
     for isub, subd in enumerate(subdomains):
         ngbs = subd['allneighbours'][myrank]
-        for lev in subd['levels']:
+        for count, lev in enumerate(subd['levels']):
             g = allgrids[lev]
             shape = g['shape']
             nh = g['nh']
             size, domainindices = topo.get_variable_shape(shape, ngbs, nh)
+            g['subd'] = subd
             g['subdomain'] = isub
             g['neighbours'] = ngbs
             g['N'] = np.prod(size)
             g['size'] = size
             g['domainindices'] = domainindices
+            if (count == 0) and (len(subd["gluing"]) > 0):
+                g["glueflag"] = True
+                g["gluing"] = subd["gluing"]
+                dom = subd["dom"]
+                g["glued"] = subd["glued"]
+            else:
+                g["glueflag"] = False
 
 
 def fixneighbours(neighbours, myrank, masterrank):
@@ -202,7 +214,7 @@ def print_subdomains(subdomains):
             #          for t in set(tags[family])]
 
             print(' - subdomain : ', set([d]))
-            print('     located at ', domloc)  # s[0])
+            print('     located at ', domloc[d])  # s[0])
             print('     computed by ' % d, family)
             if 'gluing' in subdom.keys():
                 print('     obtained by gluing ranks:', glued)
@@ -215,18 +227,35 @@ if __name__ == '__main__':
 
     import grids as grd
 
-    procs = [4, 8, 4]
+    #procs = [4, 8, 4]
+    procs = [2, 4, 2]
     topo.topology = 'closed'
     nh = 2
     myrank = 3
-    param = {'nx': 128, 'ny': 128, 'nz': 256, 'nh': nh, 'procs': procs}
+    param = {'nx': 128, 'ny': 128, 'nz': 256, 'nh': nh, 'procs': procs,
+             "nglue": 32, "ncellscoarsest": 16}
 
     allgrids = grd.define_grids(param)
 
     subdomains = set_subdomains(allgrids)
+
+    for s in subdomains:
+        print(s["glued"])
+        print("*"*80)
+
     print_subdomains(subdomains)
+    exit(0)
     attach_subdomain_to_grids(allgrids, subdomains, myrank)
     #print(isolate(subdomains, 3, 3))
 
-    # for lev, g in enumerate(allgrids):
-    #     print(lev, g)
+    # print(len(subdomains))
+    for lev, g in enumerate(allgrids):
+        isubd = g["subdomain"]
+        subd = subdomains[isubd]
+        levs = subd["levels"]
+        gl = subd["gluing"]
+        glueflag = g["glueflag"]
+        if glueflag:
+            print(lev, isubd, subd["procs"], levs, glueflag, gl, g["glued"])
+        else:
+            print(lev, isubd, subd["procs"], levs, glueflag)

@@ -6,30 +6,50 @@ Provide the functions to coarsen and interpolate
 
 import numpy as np
 import itertools as iter
+import grids as gr
+from mpi4py import MPI
 from scipy import sparse
 from timing import timing
+import topology as topo
+import gluetools
+import optimizations as optim
+
 
 class Intergrids(object):
     def __init__(self, fine, coarse):
         self.fine = fine
         self.coarse = coarse
-        self.Interpol = set_interpolation_matrix(fine, coarse)
-        self.Restrict = set_restriction_matrix(fine, coarse)
-        # todo: implement glue and split
-        self.gluing = False
-        if self.gluing:
-            # define self.dummy and gluing process
-            raise ValueError('not yet implemented')
+        # glueflag indicates if this intergrid needs glue/split
+        self.glueflag = any(coarse.incr != fine.incr)
+        if self.glueflag:
+            self.glue = gluetools.Gluegrids(fine, coarse)
+            self.dummy = self.glue.dummy
+            self.Interpol = set_interpolation_matrix(fine, self.dummy)
+            self.Restrict = set_restriction_matrix(fine, self.dummy)
+
+        else:
+            self.Interpol = set_interpolation_matrix(fine, coarse)
+            self.Restrict = set_restriction_matrix(fine, coarse)
+
+        if self.glueflag:
+            self.Rry = optim.MatVecObj(self.Restrict, self.fine.r, self.dummy.x)
+            self.Ixy = optim.MatVecObj(self.Interpol, self.dummy.x, self.fine.y)
+        else:
+            self.Rry = optim.MatVecObj(self.Restrict, self.fine.r, self.coarse.b)
+            self.Ixy = optim.MatVecObj(self.Interpol, self.coarse.x, self.fine.y)
 
     @timing
     def fine2coarse(self, which='r'):
-        assert which in ['r', 'b']
+        assert which in "rb"
 
-        y = self.dummy if self.gluing else self.coarse.b
-        y[:] = self.Restrict * self.fine.r
+        y = self.dummy.x if self.glueflag else self.coarse.b
+        #y[:] = self.Restrict.dot(self.fine.r)
+        self.Rry.do()
+        #optim.MatVecmult(self.Restrict, self.fine.r, y)
 
-        if self.gluing:
-            self.glue(self.dummy, self.coarse.b)
+        if self.glueflag:
+            # glue dummy.b onto coarse.b
+            self.glue.glue_array("b")
 
         self.coarse.halofill('b')
 
@@ -40,24 +60,21 @@ class Intergrids(object):
 
     @timing
     def coarse2fine(self):
-        if self.gluing:
-            self.split(self.coarse.x, self.dummy)
-            x = self.dummy
+        if self.glueflag:
+            self.glue.split_array("x")
+            x = self.dummy.x
+            # self.dummy.halofill('x')
         else:
             x = self.coarse.x
 
-        self.fine.x += self.Interpol*x
+        y = self.fine.y
+        self.Ixy.do()
+        # optim.MatVecmult(self.Interpol, x, y)
+        self.fine.x += y
+        # self.fine.x += self.Interpol.dot(x)
         # halofill might be skept because
         # Interpol does the halo
-        # self.fine.halofill('x')
-
-    def glue(self, x, y):
-        """ glue x's into y """
-        pass
-
-    def split(self, x, y):
-        """ split x into y """
-        pass
+        self.fine.halofill('x')
 
 
 def get_di_coef(i, n, i0):
@@ -65,20 +82,28 @@ def get_di_coef(i, n, i0):
     Provide the index/indices (di) and coef/coefs (cx)
     for the interpolation at point 'i' in the 'i' direction
     """
-    if (i-i0) % 2 == 0:
-        if (i == 0):
-            cx = [1.]
-            di = [0]
-        else:
-            cx = [0.25, 0.75]
-            di = [-1, 0]
+    if (i == 0) or (i == n-1):
+        cx = [1.]
+        di = [0]
     else:
-        if (i == n-1):
-            cx = [1.]
-            di = [0]
-        else:
-            cx = [0.25, 0.75]
-            di = [+1, 0]
+        direc = -1 if (i-i0) % 2 == 0 else +1
+        cx = [0.25, 0.75]
+        di = [direc, 0]
+
+    # if (i-i0) % 2 == 0:
+    #     if (i == 0) or (i==n-1):
+    #         cx = [1.]
+    #         di = [0]
+    #     else:
+    #         cx = [0.25, 0.75]
+    #         di = [-1, 0]
+    # else:
+    #     if (i==0) or (i == n-1):
+    #         cx = [1.]
+    #         di = [0]
+    #     else:
+    #         cx = [0.25, 0.75]
+    #         di = [+1, 0]
     return di, cx
 
 
@@ -100,7 +125,7 @@ def set_interpolation_matrix(fine, coarse):
     on the coarse grid (see mg.py for more explanations)
 
     """
-    nh = coarse.nh
+    nh = 1  # coarse.nh
     nzc, nyc, nxc = coarse.shape
     nzf, nyf, nxf = fine.shape
     # determine which direction has to be interpolated
@@ -118,29 +143,32 @@ def set_interpolation_matrix(fine, coarse):
 
     nk, nj, ni = fine.size
 
-    Gc = np.arange(coarse.N).reshape(coarse.size)
-    Gf = np.arange(fine.N).reshape(fine.size)
+    Gc = np.arange(coarse.N)
+    Gc.shape = coarse.size
+    Gf = np.arange(fine.N)
+    Gf.shape = fine.size
 
     k0, k1, j0, j1, i0, i1 = fine.domainindices
-    for k in range(nk):
+    K0, K1, J0, J1, I0, I1 = coarse.domainindices
+    for k in range(nk):#(k0, k1):
 
         if interpk:
             dk, ck = get_di_coef(k, nk, k0)
-            k2 = k0+(k-k0)//2
+            k2 = K0+(k-k0)//2
         else:
             dk, ck = [0], [1.]
             k2 = k
-        for j in range(nj):
+        for j in range(nj):#(j0, j1):
             if interpj:
                 dj, cj = get_di_coef(j, nj, j0)
-                j2 = j0+(j-j0)//2
+                j2 = J0+(j-j0)//2
             else:
                 dj, cj = [0], [1.]
                 j2 = j
-            for i in range(ni):
+            for i in range(ni):#(i0, i1):
                 if interpi:
                     di, ci = get_di_coef(i, ni, i0)
-                    i2 = i0+(i-i0)//2
+                    i2 = I0+(i-i0)//2
                 else:
                     di, ci = [0], [1.]
                     i2 = i
@@ -164,7 +192,7 @@ def set_restriction_matrix(fine, coarse):
     Define the restriction matrix
 
     restriction is defined by a basic two points averaging
-    
+
     restriction can be 1D, 2D or 3D. 
     """
     nh = coarse.nh
@@ -185,25 +213,26 @@ def set_restriction_matrix(fine, coarse):
     Gc = np.arange(coarse.N).reshape(coarse.size)
     Gf = np.arange(fine.N).reshape(fine.size)
 
-    k0, k1, j0, j1, i0, i1 = coarse.domainindices
-    for k in range(k0, k1):
+    k0, k1, j0, j1, i0, i1 = fine.domainindices
+    K0, K1, J0, J1, I0, I1 = coarse.domainindices
+    for k in range(K0, K1):
         if interpk:
             dk, ck = [0, 1], [0.5, 0.5]
-            k2 = k0+(k-k0)*2
+            k2 = k0+(k-K0)*2
         else:
             dk, ck = [0], [1.]
             k2 = k
-        for j in range(j0, j1):
+        for j in range(J0, J1):
             if interpj:
                 dj, cj = [0, 1], [0.5, 0.5]
-                j2 = j0+(j-j0)*2
+                j2 = j0+(j-J0)*2
             else:
                 dj, cj = [0], [1.]
                 j2 = j
-            for i in range(i0, i1):
+            for i in range(I0, I1):
                 if interpi:
                     di, ci = [0, 1], [0.5, 0.5]
-                    i2 = i0+(i-i0)*2
+                    i2 = i0+(i-I0)*2
                 else:
                     di, ci = [0], [1.]
                     i2 = i
@@ -229,7 +258,7 @@ if __name__ == '__main__':
     import topology as topo
     import subdomains as subdom
 
-    procs = [1, 1, 1]
+    procs = [4, 4, 1]
     topo.topology = 'perio_y'
     myrank = 0
     nh = 1
@@ -240,23 +269,26 @@ if __name__ == '__main__':
     nx, ny, nz = 8, 8, 1
 #    nx, ny, nz = 4, 4, 4
 
-    param = {'nx': nx, 'ny': ny, 'nz': nz, 'nh': nh, 'procs': procs}
+    param = {'nx': nx, 'ny': ny, 'nz': nz, 'nh': nh, 'procs': procs,
+             "nglue": 32, "ncellscoarsest": 16,
+             "omega": 0.8, "ndeepest": 32}
 
     allgrids = gr.define_grids(param)
 
     nlevs = len(allgrids)
 
     subdomains = subdom.set_subdomains(allgrids)
+    subdom.attach_subdomain_to_grids(allgrids, subdomains, myrank)
     # subdom.print_subdomains(subdomains)
 
     grids = []
     for lev in range(nlevs):
         grd = allgrids[lev]
-        subdomain = subdom.isolate(subdomains, lev, myrank)
+        subdomain = subdomains[grd["subdomain"]]
         subdomain['myrank'] = myrank
-        grd['neighbours'] = subdomain['neighbours']
+        grd['neighbours'] = subdomain['allneighbours'][myrank]
         grd['extension'] = 26
-        grids += [grd.Grid(grd)]
+        grids += [gr.Grid(grd, param)]
 
     lev = 0
     fine = grids[lev]
@@ -290,3 +322,5 @@ if __name__ == '__main__':
     print(fine.toarray('x'))
 
     print(coarse.nh)
+    print(coarse.infos["glueflag"])
+    print(coarse.infos["subd"])

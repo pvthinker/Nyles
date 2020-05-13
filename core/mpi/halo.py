@@ -74,11 +74,21 @@ class Halo():
         # define MPI requests
         self.reqs = []
         self.reqr = []
+        tag = 0
         for direc, yourrank in neighbours.items():
-            reqs = comm.Send_init(self.sbuf[direc], yourrank, tag=myrank)
-            reqr = comm.Recv_init(self.rbuf[direc], yourrank, tag=yourrank)
+            # reqs = comm.Send_init(self.sbuf[direc], yourrank, tag=myrank)
+            # reqr = comm.Recv_init(self.rbuf[direc], yourrank, tag=yourrank)
+            flipdirec = tuple([-k for k in direc])
+            tag = 0
+            ftag = 0
+            for k, d in enumerate(direc):
+                tag += (3**k)*(d+1)
+                ftag += (3**k)*(-d+1)
+            reqs = comm.Send_init(self.sbuf[direc], yourrank, tag=myrank+tag)
+            reqr = comm.Recv_init(self.rbuf[direc], yourrank, tag=yourrank+ftag)
             self.reqs += [reqs]
             self.reqr += [reqr]
+            tag += 1
 
         # define interior domain slices
         domi = self.domainindices
@@ -174,7 +184,8 @@ class Halo():
         TODO: see if it's worth optimizing
         """
         for direc in 'ijk':
-            self.fillarray(vector[direc].view('i'))
+            u = vector[direc].view('i')
+            self.fillarray(u)
 
     def _print(self):
         """

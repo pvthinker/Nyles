@@ -21,6 +21,7 @@ subroutine vorticity(ui, uj, wk, l, m, n)
         do i = 1, n-1
            wk(k,j,i) = uj(k,j,i+1) - uj(k,j,i) - ui(k,j+1,i) + ui(k,j,i)
         enddo
+        wk(k,j,n) = 0.
      enddo
   enddo
   

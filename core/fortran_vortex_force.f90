@@ -1,3 +1,4 @@
+include "interpolate.f90"
 !-----------------------------------------
 !
 ! compute du_i/dt += epsilon * w_j * U^k (epsilon=-1)
@@ -6,11 +7,11 @@
 ! w_j upwinded in the k direction
 ! 
 
-subroutine vortex_force_calc(U, vort, res, epsilon, order, m, n, l)
+subroutine vortex_force_direc(U, vort, res, order, m, n, l)
 
   implicit none
 
-  integer, intent(in):: l, m, n, epsilon, order
+  integer, intent(in):: l, m, n, order
   real*8, dimension(m, n, l), intent(in) :: U, vort
   real*8, dimension(m, n, l), intent(inout) :: res
 
@@ -18,7 +19,10 @@ subroutine vortex_force_calc(U, vort, res, epsilon, order, m, n, l)
 
   integer:: i, j, k
   real*8:: c1,c2,c3, b1, b2, b3, b4, b5
-  real*8:: UU, up, um, qm, qp, U_interp, U_omega
+  real*8:: UU, UU_0, UU_1, U_omega
+  real*8,dimension(l) :: qm
+  real*8,dimension(0:l-1):: qp
+  real*8,dimension(l) :: vU, U_interp, um, up
 
   c1 = -1./6.
   c2 =  5./6.
@@ -33,53 +37,87 @@ subroutine vortex_force_calc(U, vort, res, epsilon, order, m, n, l)
 
   do j = 1,m
      do i = 1,n-1 ! because u_i[:,:,-1] = 0. (BC)
-        do k = 1,l
-          if (k.gt.1) then
-             U_interp = 0.25 * ( U(j,i,k  ) + U(j,i+1,k) &
-                               + U(j,i,k-1) + U(j,i+1,k-1))
-          else
-            U_interp = 0.25 * ( U(j,i,k) + U(j,i+1,k)) !no normal velocity
-          endif
-
-          UU = abs(U_interp)
-          up = 0.5*(U_interp+UU) ! right-going flux
-          um = 0.5*(U_interp-UU) ! left-going flux
-
-          if ((k.gt.3).and.(k.le.(l-1)).and.(order.eq.5)) then
-             qp = b1*vort(j,i,k-3) + b2*vort(j,i,k-2) + b3*vort(j,i,k-1) + b4*vort(j,i,k) + b5*vort(j,i,k+1)
-          elseif ((k.gt.2).and.(k.le.(l)).and.(order.ge.3)) then
-             ! 3rd order upwind
-             qp = c1*vort(j,i,k-2) + c2*vort(j,i,k-1) + c3*vort(j,i,k)
-          elseif (k.gt.1) then
-             ! 1st order
-             qp = vort(j,i,k-1)
-          else
-             qp = vort(j,i,k) ! <- very hazardous, CHECK!!!!
-          endif
-
-
-          if ((k.gt.2).and.(k.le.(l-2)).and.(order.eq.5)) then
-             qm = b5*vort(j,i,k-2) + b4*vort(j,i,k-1) + b3*vort(j,i,k) + b2*vort(j,i,k+1) + b1*vort(j,i,k+2)
-          elseif ((k.gt.1).and.(k.le.(l-1)).and.(order.ge.3)) then
-             ! 3rd order upwind
-             qm = c3*vort(j,i,k-1) + c2*vort(j,i,k) + c1*vort(j,i,k+1)
-          elseif (k.le.(l-1)) then
-             ! 1st order
-             qm = vort(j,i,k)
-          else
-             ! no flux through the boundary
-             ! TODO: change this in case of inflow/outflow
-             ! cf Winters 2012
-             qm = vort(j,i,k) ! <- very hazardous, CHECK!!!!
-          endif
-
-          ! this term is U_j * omega_k
-          U_omega = up*qp + um*qm
-
-          res(j,i,k) = res(j,i,k) - epsilon * U_omega
-
-      end do
+        UU_0 = 0.
+        do k=1,l
+           UU_1 = 0.5 * ( U(j,i,k) + U(j,i+1,k))
+           vU(k) =  vort(j,i,k)!*UU_1
+           U_interp(k) = 0.5*(UU_0+UU_1)
+           UU = abs(U_interp(k))
+           up(k) = 0.5*(U_interp(k)+UU) ! right-going flux
+           um(k) = 0.5*(U_interp(k)-UU) ! left-going flux
+           UU_0 = UU_1
+        enddo
+        !
+        call interpolate(vU, qp, qm, order, l)
+        !
+        if (mod(order, 2).eq.0) then
+           do k=1,l
+                 res(j,i,k) = res(j,i,k)-qm(k)
+           enddo
+        else
+           do k=1,l
+              res(j,i,k) = res(j,i,k)-qp(k-1)*up(k)-qm(k)*um(k)
+           enddo
+        endif
     end do
   end do
 
-end subroutine vortex_force_calc
+end subroutine vortex_force_direc
+
+subroutine vortex_force_flip(U, vort, res, order, m, n, l)
+  ! directions 1 and 2 are swapped compared to above
+  ! the force is counted with a +
+  implicit none
+
+  integer, intent(in):: l, m, n, order
+  real*8, dimension(m, n, l), intent(in) :: U, vort
+  real*8, dimension(m, n, l), intent(inout) :: res
+
+  !f2py intent(inplace):: vort, res, U
+
+  integer:: i, j, k
+  real*8:: c1,c2,c3, b1, b2, b3, b4, b5
+  real*8:: UU, UU_0, UU_1, U_omega
+  real*8,dimension(n):: qm
+  real*8,dimension(0:n-1):: qp
+  real*8,dimension(n) :: vU, U_interp, up, um
+
+  c1 = -1./6.
+  c2 =  5./6.
+  c3 =  2./6.
+
+  b1 = 2./60.
+  b2 = -13./60.
+  b3 = 47./60.
+  b4 = 27./60.
+  b5 = -3./60.
+
+  do j = 1,m
+     do k=1,l-1
+        UU_0 = 0.
+        do i=1,n
+           UU_1 = 0.5 * ( U(j,i,k) + U(j,i,k+1))
+           vU(i) =  vort(j,i,k)!*UU_1
+           U_interp(i) = 0.5*(UU_0+UU_1)
+           UU = abs(U_interp(i))
+           up(i) = 0.5*(U_interp(i)+UU) ! right-going flux
+           um(i) = 0.5*(U_interp(i)-UU) ! left-going flux
+           UU_0 = UU_1
+        enddo!
+        !
+        call interpolate(vU, qp, qm, order, n)
+
+        if (mod(order, 2).eq.0) then
+           do i=1,n
+              res(j,i,k) = res(j,i,k)+qm(i)
+           enddo
+        else
+           do i=1,n
+              res(j,i,k) = res(j,i,k)+qp(i-1)*up(i)+qm(i)*um(i)
+           enddo
+        endif
+
+     enddo
+  enddo
+
+end subroutine vortex_force_flip

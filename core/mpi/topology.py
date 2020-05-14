@@ -156,9 +156,9 @@ def get_neighbours(location, procs, incr=[1, 1, 1], extension=26):
             ngs[(dk, dj, di)] = ng
     return ngs
 
-"""
+
 def get_variable_shape(innersize, ngbs, nh):
-    """"""
+    """
     innersize sets the interior domain size
     innersize = [nz, ny, nx]
 
@@ -170,7 +170,7 @@ def get_variable_shape(innersize, ngbs, nh):
 
     domainindices = (k0, k1, j0, j1, i0, i1),
                     the list of start and last index
-    """"""
+    """
     size = innersize.copy()
 
     if (-1, 0, 0) in ngbs.keys():
@@ -218,7 +218,7 @@ def get_variable_shape(innersize, ngbs, nh):
     # if k1 = nzl-1, there is no halo on this side
     domainindices = (k0, k1, j0, j1, i0, i1)
     return size, domainindices
-"""
+
 
 
 def check_graph(allneighbours):

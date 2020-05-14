@@ -128,6 +128,7 @@ class NylesIO(object):
         self.simplified_grid = param["simplified_grid"]
         self.variables_in_history = param["variables_in_history"]
         self.dt_hist = param["timestep_history"]
+        self.include_halo = param["include_halo"]
         self.t_next_hist = 0.0
         self.n_hist = 0
         self.last_saved_frame = None
@@ -370,13 +371,27 @@ class NylesIO(object):
 
             # Create the dimensions
             ncfile.createDimension("t")  # unlimited size
+            self.idx = {}
+            k0, k1, j0, j1, i0, i1 = grid.domainindices
+            self.idx = {}
+            self.idx = {"x": slice(i0, i1),
+                        "y": slice(j0, j1),
+                        "z": slice(k0, k1)}
+
             for x, i in zip("xyz", "ijk"):
+                if self.include_halo:
+                    dimsize = grid.size[i]
+                    # correct slice to None (i.e. all elements)
+                    self.idx[x] = slice(None)
+                else:
+                    dimsize = getattr(grid, "n"+x)
+
                 if self.simplified_grid:
-                    ncfile.createDimension("{}".format(x), grid.size[i])
+                    ncfile.createDimension("{}".format(x), dimsize)
                     continue
                 # “p” stands for “point”: b-point, u-point, v-point, etc.
                 for p in ["b", "u", "v", "w", "vor_i", "vor_j", "vor_k"]:
-                    ncfile.createDimension("{}_{}".format(x, p), grid.size[i])
+                    ncfile.createDimension("{}_{}".format(x, p), dimsize)
 
             # Create the variables with one dimension
             v = ncfile.createVariable("n", int, ("t",))
@@ -390,107 +405,107 @@ class NylesIO(object):
                 v = ncfile.createVariable("x", float, ("x",))
                 v.long_name = grid.x_b.name
                 v.units = self.unit(grid.x_b.dimension)
-                v[:] = grid.x_b_1D
+                v[:] = grid.x_b_1D[self.idx["x"]]
                 v = ncfile.createVariable("y", float, ("y",))
                 v.long_name = grid.y_b.name
                 v.units = self.unit(grid.y_b.dimension)
-                v[:] = grid.y_b_1D
+                v[:] = grid.y_b_1D[self.idx["y"]]
                 v = ncfile.createVariable("z", float, ("z",))
                 v.long_name = grid.z_b.name
                 v.units = self.unit(grid.z_b.dimension)
-                v[:] = grid.z_b_1D
+                v[:] = grid.z_b_1D[self.idx["z"]]
 
             else:
                 v = ncfile.createVariable("x_b", float, ("x_b",))
                 v.long_name = grid.x_b.name
                 v.units = self.unit(grid.x_b.dimension)
-                v[:] = grid.x_b_1D
+                v[:] = grid.x_b_1D[self.idx["x"]]
                 v = ncfile.createVariable("y_b", float, ("y_b",))
                 v.long_name = grid.y_b.name
                 v.units = self.unit(grid.y_b.dimension)
-                v[:] = grid.y_b_1D
+                v[:] = grid.y_b_1D[self.idx["y"]]
                 v = ncfile.createVariable("z_b", float, ("z_b",))
                 v.long_name = grid.z_b.name
                 v.units = self.unit(grid.z_b.dimension)
-                v[:] = grid.z_b_1D
+                v[:] = grid.z_b_1D[self.idx["z"]]
 
                 v = ncfile.createVariable("x_u", float, ("x_u",))
                 v.long_name = grid.x_vel["i"].name
                 v.units = self.unit(grid.x_vel["i"].dimension)
-                v[:] = grid.x_u_1D
+                v[:] = grid.x_u_1D[self.idx["x"]]
                 v = ncfile.createVariable("y_u", float, ("y_u",))
                 v.long_name = grid.y_vel["i"].name
                 v.units = self.unit(grid.y_vel["i"].dimension)
-                v[:] = grid.y_u_1D
+                v[:] = grid.y_u_1D[self.idx["y"]]
                 v = ncfile.createVariable("z_u", float, ("z_u",))
                 v.long_name = grid.z_vel["i"].name
                 v.units = self.unit(grid.z_vel["i"].dimension)
-                v[:] = grid.z_u_1D
+                v[:] = grid.z_u_1D[self.idx["z"]]
 
                 v = ncfile.createVariable("x_v", float, ("x_v",))
                 v.long_name = grid.x_vel["j"].name
                 v.units = self.unit(grid.x_vel["j"].dimension)
-                v[:] = grid.x_v_1D
+                v[:] = grid.x_v_1D[self.idx["x"]]
                 v = ncfile.createVariable("y_v", float, ("y_v",))
                 v.long_name = grid.y_vel["j"].name
                 v.units = self.unit(grid.y_vel["j"].dimension)
-                v[:] = grid.y_v_1D
+                v[:] = grid.y_v_1D[self.idx["y"]]
                 v = ncfile.createVariable("z_v", float, ("z_v",))
                 v.long_name = grid.z_vel["j"].name
                 v.units = self.unit(grid.z_vel["j"].dimension)
-                v[:] = grid.z_v_1D
+                v[:] = grid.z_v_1D[self.idx["z"]]
 
                 v = ncfile.createVariable("x_w", float, ("x_w",))
                 v.long_name = grid.x_vel["k"].name
                 v.units = self.unit(grid.x_vel["k"].dimension)
-                v[:] = grid.x_w_1D
+                v[:] = grid.x_w_1D[self.idx["x"]]
                 v = ncfile.createVariable("y_w", float, ("y_w",))
                 v.long_name = grid.y_vel["k"].name
                 v.units = self.unit(grid.y_vel["k"].dimension)
-                v[:] = grid.y_w_1D
+                v[:] = grid.y_w_1D[self.idx["y"]]
                 v = ncfile.createVariable("z_w", float, ("z_w",))
                 v.long_name = grid.z_vel["k"].name
                 v.units = self.unit(grid.z_vel["k"].dimension)
-                v[:] = grid.z_w_1D
+                v[:] = grid.z_w_1D[self.idx["z"]]
 
                 v = ncfile.createVariable("x_vor_i", float, ("x_vor_i",))
                 v.long_name = grid.x_vor["i"].name
                 v.units = self.unit(grid.x_vor["i"].dimension)
-                v[:] = grid.x_vor_i_1D
+                v[:] = grid.x_vor_i_1D[self.idx["x"]]
                 v = ncfile.createVariable("y_vor_i", float, ("y_vor_i",))
                 v.long_name = grid.y_vor["i"].name
                 v.units = self.unit(grid.y_vor["i"].dimension)
-                v[:] = grid.y_vor_i_1D
+                v[:] = grid.y_vor_i_1D[self.idx["y"]]
                 v = ncfile.createVariable("z_vor_i", float, ("z_vor_i",))
                 v.long_name = grid.z_vor["i"].name
                 v.units = self.unit(grid.z_vor["i"].dimension)
-                v[:] = grid.z_vor_i_1D
+                v[:] = grid.z_vor_i_1D[self.idx["z"]]
 
                 v = ncfile.createVariable("x_vor_j", float, ("x_vor_j",))
                 v.long_name = grid.x_vor["j"].name
                 v.units = self.unit(grid.x_vor["j"].dimension)
-                v[:] = grid.x_vor_j_1D
+                v[:] = grid.x_vor_j_1D[self.idx["x"]]
                 v = ncfile.createVariable("y_vor_j", float, ("y_vor_j",))
                 v.long_name = grid.y_vor["j"].name
                 v.units = self.unit(grid.y_vor["j"].dimension)
-                v[:] = grid.y_vor_j_1D
+                v[:] = grid.y_vor_j_1D[self.idx["y"]]
                 v = ncfile.createVariable("z_vor_j", float, ("z_vor_j",))
                 v.long_name = grid.z_vor["j"].name
                 v.units = self.unit(grid.z_vor["j"].dimension)
-                v[:] = grid.z_vor_j_1D
+                v[:] = grid.z_vor_j_1D[self.idx["z"]]
 
                 v = ncfile.createVariable("x_vor_k", float, ("x_vor_k",))
                 v.long_name = grid.x_vor["k"].name
                 v.units = self.unit(grid.x_vor["k"].dimension)
-                v[:] = grid.x_vor_k_1D
+                v[:] = grid.x_vor_k_1D[self.idx["x"]]
                 v = ncfile.createVariable("y_vor_k", float, ("y_vor_k",))
                 v.long_name = grid.y_vor["k"].name
                 v.units = self.unit(grid.y_vor["k"].dimension)
-                v[:] = grid.y_vor_k_1D
+                v[:] = grid.y_vor_k_1D[self.idx["y"]]
                 v = ncfile.createVariable("z_vor_k", float, ("z_vor_k",))
                 v.long_name = grid.z_vor["k"].name
                 v.units = self.unit(grid.z_vor["k"].dimension)
-                v[:] = grid.z_vor_k_1D
+                v[:] = grid.z_vor_k_1D[self.idx["z"]]
 
             # TODO: add mask if a mask is implemented
 
@@ -564,8 +579,9 @@ class NylesIO(object):
         with nc.Dataset(self.hist_path, "a") as ncfile:
             ncfile["t"][self.n_hist] = t
             ncfile["n"][self.n_hist] = n
+            idx = (self.idx["z"], self.idx["y"], self.idx["x"])
             for hist_name, nickname in self.hist_variables.items():
-                ncfile[hist_name][self.n_hist] = state.get(nickname).view("i")
+                ncfile[hist_name][self.n_hist] = state.get(nickname).view("i")[idx]
         self.n_hist += 1
         self.last_saved_frame = n
 

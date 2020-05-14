@@ -114,6 +114,12 @@
             "avail": [true, false],
             "doc": "Whether to save in the history file every variable at its actual coordinates of the staggered grid (physically and numerically correct) or to simplify and to save all variables at cell centers (slightly incorrect but sometimes more convenient); this does not influence the calcuations or the numerics, it only affects the history file"
         },
+        "include_halo": {
+            "type": "bool",
+            "default": false,
+            "avail": [true, false],
+            "doc": "Whether to include the halo in the netCDF file"
+        },
         "disk_space_warning": {
             "type": "float",
             "default": 0.5,

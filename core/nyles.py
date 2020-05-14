@@ -3,6 +3,7 @@
 import sys
 
 import numpy as np
+import pickle
 
 import model_les
 import model_advection as model_adv
@@ -77,6 +78,11 @@ class Nyles(object):
 
         # redirect the x11 to output.txt
         #sys.stdout = Logger(self.IO.output_directory+'/output.txt')
+
+        # save the param dictionary in a pkl file
+        if self.myrank == 0:
+            with open(self.IO.output_directory+"/param.pkl", "wb") as fid:
+                pickle.dump(param, fid)
 
         # Initiate the model and needed variables
         self.initiate(param)

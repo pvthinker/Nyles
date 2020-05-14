@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import os
 
 class Variable(object):
-    def __init__(self, nctemplate, varname):
+    def __init__(self, nctemplate, varname, debug=False):
         """
 
         the name of the template should be passed here,
@@ -36,6 +36,7 @@ class Variable(object):
         self.procs = procs
         self.varname = varname
         self.nctemplate = nctemplate
+        self.debug = debug
 
     def get_infos(self, ncfile):
         paramlist = ["nx", "ny", "nz",
@@ -78,8 +79,9 @@ object with bracket and indexing. See
         procs = self.procs
         nprocs = np.prod(procs)
 
-        print("*"*60)
-        print("elem:", elem)
+        if self.debug:
+            print("*"*60)
+            print("elem:", elem)
 
         s = slice(None)
         slices = [s, s, s, s]
@@ -94,14 +96,15 @@ object with bracket and indexing. See
                 if type(e) is slice:
                     gloshape += [shape[kk]*procs[kk]]
                 elif type(e) is int:
-                    print("cut in direction %i at %i" % (kk, e))
+                    if self.debug:
+                        print("cut in direction %i at %i" % (kk, e))
                     slices[k] = e
                     k0 = kk
                     e0 = e//shape[kk]
 
-        print("global returned variable slice is %r" % (gloshape,))
-        #print("subdomain slice in direction k0=%i at e0=%i" % (k0, e0))
-        print("slice is :", slices)
+        if self.debug:
+            print("global returned variable slice is %r" % (gloshape,))
+            print("slice is :", slices)
 
         # allocate the returned array
         data = np.zeros(gloshape)
@@ -141,18 +144,20 @@ object with bracket and indexing. See
                     pass
                 else:
                     ncfile = self.nctemplate % rank
-                    print("gloelem  :", gloelem)
-                    print("localelem:", localelem, "rank=",rank)
+                    if self.debug:
+                        print("gloelem  :", gloelem)
+                        print("localelem:", localelem, "rank=",rank)
                     with Dataset(ncfile, "r") as nc:
                         b = nc["b"][tuple(localelem)]
-                        print(b.shape)
                         data[tuple(gloelem)] = b
                         nfreads += 1
             else:
                 # no data to read
                 pass
 
-        print("to complete this slice, I read %i netcdf files" % nfreads)
+        if self.debug:
+            print("to complete this slice, I read %i netcdf files" % nfreads)
+
         return data
 
 def set_rank(loc):

@@ -199,6 +199,11 @@ class NylesIO(object):
         self.script_path = os.path.join(out_dir, expname + ".py")
         self.output_directory = out_dir
 
+        # Create the output directory if necessary
+        if not os.path.isdir(self.output_directory):
+            if self.myrank == 0:
+                os.makedirs(self.output_directory)
+
     def init(self, state: State, grid: Grid, t=0.0, n=0):
         """Create a new history file with the initial data.
 
@@ -244,10 +249,6 @@ class NylesIO(object):
         # Make list of strings into list of Scalar and Vector objects
         variables = [state.get(v) for v in self.variables_in_history]
 
-        # Create the output directory if necessary
-        if not os.path.isdir(self.output_directory):
-            if self.myrank == 0:
-                os.makedirs(self.output_directory)
         # block all ranks until rank 0 has created the folder(s)
         mpitools.barrier()
         # let be very cautious

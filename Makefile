@@ -18,7 +18,5 @@ cleanemacs:
 	find . -name '*~' -exec rm {} \;
 
 
-zip:	
-	cd .. ; zip -r Nyles/nyles_`date '+%d_%m_%Y'`.zip Nyles/Makefile Nyles/README* Nyles/activate.* Nyles/LICENSE Nyles/core Nyles/tools -x \*.so \*~ \*.pyc \*.nc \.* \*checkpoint* \*pycache* \*.rst \*.png
-
-
+zip:
+	git archive master -onyles_`date '+%d_%m_%Y'`.zip

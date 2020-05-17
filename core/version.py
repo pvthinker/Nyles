@@ -1,6 +1,7 @@
 
 
 import nyles
+import subprocess
 
 
 def get_nyles_hash_number():
@@ -14,3 +15,8 @@ def get_nyles_hash_number():
     # with open('/'.join(gitfolder+[head])) as fid:
     #     githash = fid.readline().strip()
     return head#githash
+
+def get_git_commit():
+    commit = subprocess.check_output("git log -n 1", shell=True)
+    status = subprocess.check_output("git status -uno --porcelain", shell=True)
+    return commit+status

@@ -600,14 +600,10 @@ class NylesIO(object):
     def write_githashnumber(self):
         gitfile = self.output_directory +'/nyles.git'
         import version
-        githash = version.get_nyles_hash_number()
+        gitinfos = version.get_git_commit()
         # print(gitfile)
-        with open(gitfile, 'w') as fid:
-            fid.write('# this experiment has been done with\n')
-            fid.write('# Nyles commit\n')
-            fid.write(githash+'\n')
-            fid.write('# to rerun it with same version \n')
-            fid.write('# git checkout %s' % githash[:7])
+        with open(gitfile, 'wb') as fid:
+            fid.write(gitinfos)
 
     def generate_units(self, dimensions):
         units = dimensions

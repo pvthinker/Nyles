@@ -31,9 +31,9 @@ param.model["Ly"] = Ly
 param.model["Lz"] = Lz
 
 param.IO["datadir"] = "~/data/Nyles"
-param.IO["expname"] = "forced_plume_nudging"
+param.IO["expname"] = "plume_ref"
 param.IO["mode"] = "overwrite"
-param.IO["variables_in_history"] = ['b', 'u', 'vor', 'div']
+param.IO["variables_in_history"] = ['b', 'u']
 
 param.IO["timestep_history"] = 600.  # 0.0 saves every frame
 param.IO["disk_space_warning"] = 0.5  # in GB
@@ -65,6 +65,7 @@ param.physics["forced"] = True
 param.physics["rotating"] = True
 param.physics["coriolis"] = 1e-4
 
+
 def stratif(z):
     return 1e-2*(z-0.5)
 
@@ -74,20 +75,31 @@ class Forcing(object):
         x = grid.x_b.view('i') / param["Lx"]-0.5
         y = grid.y_b.view('i') / param["Ly"]-0.5
         z = grid.z_b.view('i') / param["Lz"]
-        d = np.sqrt( x**2+y**2)
-        msk = 0.5*(1.-np.tanh(d/0.1))
-        self.Q = 1e-5*np.exp(-z/0.02)*msk
+
+        d = np.sqrt(x**2+y**2)
+        r0 = 0.01 # <= radius of the heat source (domain horizontal extent is 100 r0)
+        msk = 0.5*(1.-np.tanh(d/r0))
+        delta = 1/(param["global_nz"])
+        self.Q = 1e-5*np.exp(-z/delta)/delta*msk
+
         self.bclim = stratif(z)
-        d0 = 0.4
-        width = 0.05
-        dampingcoef = 1./200
-        self.damping = 0.5*(1+np.tanh( (d-d0)/width ))
-        self.damping *= dampingcoef
         
+        d0 = 0.45
+        horwidth = 0.05
+        h0 = 0.95
+        verwidth = 0.025
+
+        dampingcoef = 1./200 # <= rationalize this value
+
+        self.damping = 0.5*(1+np.tanh((d-d0)/horwidth))
+        self.damping *= 0.5*(1+np.tanh((z-h0)/verwidth))
+        self.damping *= dampingcoef
+
     def add(self, state, dstate, time):
         db = dstate.b.view("i")
         b = state.b.view("i")
         db += self.Q - self.damping*(b-self.bclim)
+
 
 nyles = nyles_module.Nyles(param)
 
@@ -102,6 +114,8 @@ z = nyles.grid.z_b.view('i') / Lz
 
 # linear stratification
 b[:] = stratif(z)
+
+# todo: add noise near the bottom to help trigger the turbulence
 
 nyles.model.diagnose_var(nyles.model.state)
 

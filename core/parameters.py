@@ -4,7 +4,7 @@ import datetime
 
 
 # List of categories that are needed in the defaults
-CATEGORIES = ["model", "physics", "IO", "animation", "time", "discretization", "MPI", "multigrid"]
+CATEGORIES = ["model", "physics", "IO", "animation", "time", "discretization", "MPI", "multigrid", "user"]
 # List of attributes that are needed for every parameter
 ATTRIBUTES = ["type", "default", "avail", "doc"]
 
@@ -143,7 +143,8 @@ class UserParameters(object):
             **self.time,
             **self.discretization,
             **self.MPI,
-            **self.multigrid
+            **self.multigrid,
+            **self.user
         }
 
     def check(self):

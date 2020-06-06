@@ -321,5 +321,15 @@
             "avail": ">= 0",
             "doc": "Minimal size of a subdomain (in terms of nx*ny*nz). This defines the coarsest level. "
         }
+    },
+
+    "user": {
+        "param1": {
+            "type": "float",
+            "default": 0.0,
+            "avail": "any",
+            "doc": "User parameter. Can be anything. In Rayleigh Benard experiment, this is either the imposed flux or the imposed buoyancy gradient"
+        }
     }
+
 }

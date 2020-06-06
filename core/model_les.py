@@ -98,18 +98,19 @@ class LES(object):
     def rhs(self, state, t, dstate, last=False):
         reset_state(dstate)
         # transport the tracers
-        self.tracer.rhstrac(state, dstate)
+        self.tracer.rhstrac(state, dstate, last=last)
         # vortex force
         if self.nonlinear:
             vortf.vortex_force(state, dstate, self.orderVF)
         # bernoulli
         bern.bernoulli(state, dstate, self.grid)
 
-        if last and self.add_viscosity:
-            visc.add_viscosity(self.grid, state, dstate, self.viscosity)
-
         if self.forced:
             self.forcing.add(state, dstate, t)
+
+        if self.add_viscosity:
+            visc.add_viscosity(self.grid, state, dstate, self.viscosity)
+
 
     @timing
     def forward(self, t, dt):

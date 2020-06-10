@@ -256,8 +256,8 @@ class NylesIO(object):
 
         # Create the history file and save the initial state
         self.create_history_file(grid, variables)
-        self.write_history_file(state, t, n)
-        self.t_next_hist = t + self.dt_hist
+        #self.write_history_file(state, t, n)
+        #self.t_next_hist = t + self.dt_hist
 
     @timing
     def write(self, state, t, n):

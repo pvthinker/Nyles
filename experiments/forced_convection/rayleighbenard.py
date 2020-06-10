@@ -16,15 +16,15 @@ Kdiff = 1e-2
 visc = 1e-2
 
 # imposed flux or imposed temperature
-forcing_condition = "flux" # "flux" or "temp"
+forcing_condition = "temp" # "flux" or "temp"
 
 Q = 5e-4 # value of the flux in the "flux" case
-Deltab = 5e-2 # delta buoyancy in the "temp" case 
+Deltab = 10e-2 # delta buoyancy in the "temp" case
 
 nh = 3
-nxglo = 64
-nyglo = 8
-nzglo = 16
+nxglo = 32
+nyglo = 4
+nzglo = 4
 
 npx = 1
 npy = 1
@@ -51,24 +51,28 @@ param.model["Ly"] = Ly
 param.model["Lz"] = Lz
 
 param.IO["datadir"] = "~/data/Nyles"
-param.IO["expname"] = "RB_diffusion"
+param.IO["expname"] = "RB_00"
 param.IO["mode"] = "overwrite"
-param.IO["variables_in_history"] = ['b', 'u', 'div', 'p']
+param.IO["variables_in_history"] = ['b', 'u']
 param.IO["simplified_grid"] = True
 
-param.IO["timestep_history"] = .5  # 0.0 saves every frame
+param.IO["timestep_history"] = 100.  # 0.0 saves every frame
 param.IO["disk_space_warning"] = 0.5  # in GB
 
+# this is the maximum time step imposed by diffusion
+# when the flow becomes turbulent, the time step
+# might need to be reduced. This can be done by
+# using auto_dt_dt = True
 dz = Lz/nzglo
-maxdt = 0.125*dz**2/Kdiff
+maxdt = 0.1*dz**2/Kdiff
 
-param.time["timestepping"] = "EF"#"RK3_SSP"
-param.time["tend"] = 600.0
+param.time["timestepping"] = "LFAM3"
+param.time["tend"] = 3000.0
 param.time["auto_dt"] = True
 # parameter if auto_dt is False
 param.time["dt"] = maxdt
 # parameters if auto_dt is True
-param.time["cfl"] = 1.
+param.time["cfl"] = 0.8
 param.time["dt_max"] = maxdt
 
 param.discretization["global_nx"] = nxglo
@@ -88,12 +92,23 @@ param.multigrid["tol"] = 1e-4
 
 
 param.physics["forced"] = True
-param.physics["diff_coef"] = {"b": Kdiff, "u": visc}
+if param.time["timestepping"] == "RK3_SSP":
+    # the 1.5=3/2 coefficient is to compensate for the weights in
+    # RK3_SSP: diffusion and viscosity are added only on the
+    # third stage, at n+1/2, that enters the tendency with a
+    # 2/3 coefficient
+    param.physics["diff_coef"] = {"b": Kdiff*1.5, "u": visc*1.5}
+
+else:
+    param.physics["diff_coef"] = {"b": Kdiff, "u": visc}
+
 
 if forcing_condition == "temp":
     param.user["param1"] = Deltab
+
 elif forcing_condition == "flux":
     param.user["param1"] = Q
+
 else:
     raise ValueError
 
@@ -107,7 +122,6 @@ class Forcing_flux(object):
             
         if param["loc"][0] == 0:
             self.botlevel = True
-
 
         x = grid.x_b.view('i') / param["Lx"]-0.5
         y = grid.y_b.view('i') / param["Ly"]-0.5
@@ -133,7 +147,6 @@ class Forcing_temp(object):
         if param["loc"][0] == 0:
             self.botlevel = True
 
-
         x = grid.x_b.view('i') / param["Lx"]-0.5
         y = grid.y_b.view('i') / param["Ly"]-0.5
         z = grid.z_b.view('i') / param["Lz"]
@@ -154,7 +167,7 @@ nyles = nyles_module.Nyles(param)
 
 # the user must attach the forcing to the model
 if forcing_condition == "temp":
-    nyles.model.forcing = Forcing_flux(nyles.param, nyles.grid)
+    nyles.model.forcing = Forcing_temp(nyles.param, nyles.grid)
 elif forcing_condition == "flux":
     nyles.model.forcing = Forcing_flux(nyles.param, nyles.grid)
 

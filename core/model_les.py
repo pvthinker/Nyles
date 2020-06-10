@@ -105,10 +105,10 @@ class LES(object):
         # bernoulli
         bern.bernoulli(state, dstate, self.grid)
 
-        if self.forced:
+        if self.forced and last:
             self.forcing.add(state, dstate, t)
 
-        if self.add_viscosity:
+        if self.add_viscosity and last:
             visc.add_viscosity(self.grid, state, dstate, self.viscosity)
 
 

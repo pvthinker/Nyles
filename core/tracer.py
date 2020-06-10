@@ -69,7 +69,7 @@ class Tracer_numerics(object):
 
                 fortran.upwind(field, velocity, dfield, self.order)
 
-                if self.diffusion:
+                if self.diffusion and last:
                     if (tracname in self.diff_coef.keys()):
                         coef = self.diff_coef[tracname]*self.ids2[direction]
                         dissip.add_laplacian(field, dfield, coef)

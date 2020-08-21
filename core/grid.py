@@ -9,7 +9,7 @@ import numpy as np
 
 # Local imports
 from variables import Scalar, Vector
-
+import mpitools as mpi
 
 class Grid(object):
     def __init__(self, param):
@@ -156,6 +156,17 @@ class Grid(object):
         z_vor_k[:,:,:], y_vor_k[:,:,:], x_vor_k[:,:,:] = np.meshgrid(
             self.z_vor_k_1D, self.y_vor_k_1D, self.x_vor_k_1D, indexing="ij"
         )
+
+    def sum(self, array3d):
+        """ compute the global domain sum of array3d
+        array3d should be in (k,j,i) convention """
+
+        assert array3d.shape == (self.size["k"], self.size["j"], self.size["i"])
+
+        k0, k1, j0, j1, i0, i1 = self.domainindices
+        localsum = array3d[k0:k1, j0:j1, i0:i1].sum()
+
+        return mpi.global_sum(localsum)
 
 
 if __name__ == "__main__":

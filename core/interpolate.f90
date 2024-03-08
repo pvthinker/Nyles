@@ -1,3 +1,5 @@
+include "weno.f90"
+
 subroutine interpolate(vU, qp, qm, order, n)
 
   implicit none

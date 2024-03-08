@@ -6,6 +6,7 @@ import numpy as np
 import pickle
 
 import model_les
+import model_les_euler
 import model_advection as model_adv
 import variables
 import grid
@@ -15,6 +16,7 @@ import timing
 import topology as topo
 import mpitools
 from time import time
+from online_diag import VFwork
 
 
 class Nyles(object):
@@ -90,10 +92,14 @@ class Nyles(object):
     def initiate(self, param):
         if param['modelname'] == 'LES':
             self.model = model_les.LES(param, self.grid)
+        elif param['modelname'] == 'Euler3d':
+            self.model = model_les_euler.LES(param, self.grid)
         elif param['modelname'] == 'linear':
             self.model = model_les.LES(param, self.grid, linear=True)
         elif param['modelname'] == 'advection':
             self.model = model_adv.Advection(param, self.grid)
+
+        self.diag = VFwork(self.model, self.grid)
 
         self.tend = param['tend']
         self.auto_dt = param['auto_dt']
@@ -158,6 +164,11 @@ class Nyles(object):
             blowup = self.model.forward(t, dt)
             t += dt
             n += 1
+            if (t >= self.IO.t_next_hist):
+                self.diag.compute()
+                Kdiss = mpitools.global_sum(self.diag.worksum)
+                if self.myrank == 0:
+                    print(f"\nKdiss = {Kdiss}")
             stop = self.IO.write(self.model.state, t, n)
             if self.myrank == 0:
                 realtime = time()

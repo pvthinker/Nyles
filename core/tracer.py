@@ -67,6 +67,8 @@ class Tracer_numerics(object):
                 i0 = self.i0[direction]
                 i1 = self.i1[direction]
 
+                if direction == 'i':
+                    dfield[...] = 0.
                 fortran.upwind(field, velocity, dfield, self.order)
 
                 if self.diffusion and last:

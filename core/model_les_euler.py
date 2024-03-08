@@ -33,7 +33,7 @@ class LES(object):
     def __init__(self, param, grid, linear=False):
         self.nonlinear = not linear
         self.grid = grid
-        self.traclist = ['b']
+        self.traclist = ['']
         # Add tracers (if any)
         for i in range(param["n_tracers"]):
             t_nickname = "t{}".format(i)
@@ -82,8 +82,6 @@ class LES(object):
                 print("TOPOLOGY = XYZ PERIO")
             elif param["geometry"] == "closed":
                 topology = 1
-            elif param["geometry"] == "perio_xy":
-                topology = 5
             else:
                 assert False
 
@@ -97,8 +95,8 @@ class LES(object):
     @timing
     def diagnose_var(self, state):
         #bc.apply_bc_on_velocity(state, self.neighbours)
-        self.halo.fill(state.b)
-        self.halo.fill(state.u)
+        # self.halo.fill(state.b)
+        # self.halo.fill(state.u)
 
         # Diagnostic variables
         cov_to_contra.U_from_u(state, self.grid)
@@ -130,12 +128,12 @@ class LES(object):
     def rhs(self, state, t, dstate, last=False):
         reset_state(dstate)
         # transport the tracers
-        self.tracer.rhstrac(state, dstate)
+        #self.tracer.rhstrac(state, dstate)
         # vortex force
         if self.nonlinear:
             vortf.vortex_force(state, dstate, self.orderVF)
         # bernoulli
-        bern.bernoulli(state, dstate, self.grid)
+        bern.bernoulli_euler(state, dstate, self.grid)
 
         if last and self.add_viscosity:
             visc.add_viscosity(self.grid, state, dstate, self.viscosity)

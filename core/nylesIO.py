@@ -256,8 +256,8 @@ class NylesIO(object):
 
         # Create the history file and save the initial state
         self.create_history_file(grid, variables)
-        #self.write_history_file(state, t, n)
-        #self.t_next_hist = t + self.dt_hist
+        self.write_history_file(state, t, n)
+        self.t_next_hist = t + self.dt_hist
 
     @timing
     def write(self, state, t, n):
@@ -600,10 +600,14 @@ class NylesIO(object):
     def write_githashnumber(self):
         gitfile = self.output_directory +'/nyles.git'
         import version
-        gitinfos = version.get_git_commit()
+        githash = version.get_nyles_hash_number()
         # print(gitfile)
-        with open(gitfile, 'wb') as fid:
-            fid.write(gitinfos)
+        with open(gitfile, 'w') as fid:
+            fid.write('# this experiment has been done with\n')
+            fid.write('# Nyles commit\n')
+            fid.write(githash+'\n')
+            fid.write('# to rerun it with same version \n')
+            fid.write('# git checkout %s' % githash[:7])
 
     def generate_units(self, dimensions):
         units = dimensions

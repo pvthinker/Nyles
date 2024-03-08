@@ -25,40 +25,61 @@ subroutine upwind(trac, u, dtrac, order, l, m, n)
   integer:: i, j, k, ii
   real*8::c1,c2,c3, b1, b2, b3, b4, b5
   real*8:: UU, fx, fxm
-  real*8,dimension(n) :: phi, qm, qp, um, up
+  real*8,dimension(n) :: phi, qm, qp, um, up, flux
 
+  logical:: linear=.false.
 
   do k = 1, l
      do j = 1, m
-        do i = 1, n
-           UU = abs(u(k,j,i))
-           up(i) = 0.5*(u(k,j,i)+UU) ! right-going flux
-           um(i) = 0.5*(u(k,j,i)-UU) ! left-going flux
-           phi(i) = trac(k,j,i)
-        enddo
-        !
-        call interpolate(phi, qp, qm, order, n)
-        !
-        if (mod(order, 2).eq.0) then
-           fxm = 0.
-           do i=1,n-1
-              fx = u(k,j,i)*qp(i)
-              dtrac(k, j, i) = dtrac(k, j, i) + fxm - fx
-              fxm = fx
+        if (linear) then
+           !
+           do i = 1, n
+              UU = abs(u(k,j,i))
+              up(i) = 0.5*(u(k,j,i)+UU) ! right-going flux
+              um(i) = 0.5*(u(k,j,i)-UU) ! left-going flux
+              phi(i) = trac(k,j,i)
            enddo
-           i=n
-           fx = 0.
-           dtrac(k, j, i) = dtrac(k, j, i) + fxm - fx
-        else
-           fxm = 0.
-           do i=1,n-1
-              fx = up(i)*qp(i) + um(i)*qm(i+1)
+           !
+           !
+           call interpolate(phi, qp, qm, order, n)
+           !
+           if (mod(order, 2).eq.0) then
+              fxm = 0.
+              do i=1,n-1
+                 fx = u(k,j,i)*qp(i)
+                 dtrac(k, j, i) = dtrac(k, j, i) + fxm - fx
+                 fxm = fx
+              enddo
+              i=n
+              fx = 0.
               dtrac(k, j, i) = dtrac(k, j, i) + fxm - fx
-              fxm = fx
+           else
+              fxm = 0.
+              do i=1,n-1
+                 fx = up(i)*qp(i) + um(i)*qm(i+1)
+                 dtrac(k, j, i) = dtrac(k, j, i) + fxm - fx
+                 fxm = fx
+              enddo
+              i=n
+              fx = 0.
+              dtrac(k, j, i) = dtrac(k, j, i) + fxm - fx
+           endif
+
+        else ! WENO
+           !
+           do i = 1, n
+              up(i) = u(k,j,i)
+              phi(i) = trac(k,j,i)
            enddo
-           i=n
-           fx = 0.
-           dtrac(k, j, i) = dtrac(k, j, i) + fxm - fx
+           !
+           call flux1d(up, phi, flux, n)
+           !
+           i = 1
+           dtrac(k, j, i) = dtrac(k, j, i)  - flux(i)
+           do i=2,n
+              dtrac(k, j, i) = dtrac(k, j, i) + flux(i-1) - flux(i)
+           enddo
+
         endif
      enddo
   enddo

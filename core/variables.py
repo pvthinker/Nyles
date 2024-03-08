@@ -43,6 +43,7 @@ modelvar = {
     'u': ModelVariable('velocity', 'covariant velocity', 'L^2.T^-1', prognostic=True),
     'U': ModelVariable('velocity', 'contravariant velocity',  'T^-1', prognostic=False),
     'vor': ModelVariable('vorticity', 'vorticity',  'L^2.T^-1', prognostic=False),
+    'work': ModelVariable('scalar', 'work',  'L^2.T^-2', prognostic=False),
 }
 
 # ----------------------------------------------------------------------
@@ -86,7 +87,7 @@ class Scalar(object):
 
     """
 
-    def __init__(self, param, name, nickname, dimension, prognostic: bool=False):
+    def __init__(self, param, name, nickname, dimension, prognostic: bool = False):
         """Construct a scalar field in 3D space for a physical quantity.
 
         The arguments of the constructor have the same role as the
@@ -136,7 +137,8 @@ class Scalar(object):
         idx = slice(starti, endi)
 
         self.mg_idx = (kdx, jdx, idx)
-        self.mg_idx2 = np.array([startk, endk, startj, endj, starti, endi], dtype=int)
+        self.mg_idx2 = np.array(
+            [startk, endk, startj, endj, starti, endi], dtype=int)
 
         # Create arrays extended by the halo;
         # it might be smarter to remove the halo
@@ -239,7 +241,7 @@ class Vector(dict):
     """
 
     def __init__(self, param, name, nickname, dimension,
-                 prognostic: bool=False, is_velocity: bool=True):
+                 prognostic: bool = False, is_velocity: bool = True):
         """Construct a vector field in 3D space for a physical quantity.
 
         The arguments of the constructor have the same role as the
@@ -415,10 +417,12 @@ def get_state(param):
     Useful in the debug phase to rapidly get a full operational state.
     """
     listvar = []
+
     for nickname, var in modelvar.items():
         if var.type == 'scalar':
             listvar.append(
-                Scalar(param, var.name, nickname, var.dimension, var.prognostic)
+                Scalar(param, var.name, nickname,
+                       var.dimension, var.prognostic)
             )
         elif var.type == 'velocity':
             listvar.append(

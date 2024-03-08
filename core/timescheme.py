@@ -123,9 +123,10 @@ class Timescheme(object):
 
     # ----------------------------------------
     def LFAM3(self, state, t, dt, **kwargs):
+        # Predictor
+        self.rhs(state, t, self.dstate)
 
         if self.first:
-            self.rhs(state, t, self.dstate, last=True)
             # Euler Forward if very first time step
             for scalar_name in self.prognostic_scalars:
                 scalar = state.get(scalar_name)
@@ -140,8 +141,6 @@ class Timescheme(object):
             self.diagnose_var(state)
 
         else:
-            # Predictor
-            self.rhs(state, t, self.dstate)
             for scalar_name in self.prognostic_scalars:
                 scalar = state.get(scalar_name)
                 s = scalar.view()

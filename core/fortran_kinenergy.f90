@@ -48,28 +48,9 @@ subroutine kin(u, v, ke, ds2, order, l, m, n)
 
   do k = 1, l
      do j = 1, m
-        !zke(0) = 0.
-        do i = 1, n
-           zke(i) = u(k, j, i)*v(k, j, i)*cff2
+        do i = 2, n
+           ke(k,j,i) = ke(k,j,i)+cff2*0.5*(u(k,j,i)**2+u(k,j,i-1)**2)
         enddo
-        !
-        call interpolate(zke, kep, kem, order, n)
-        !
-        if (mod(order, 2).eq.0) then
-           do i = 1, n
-              ke(k,j,i) = ke(k,j,i)+kem(i)
-           enddo
-        else
-           UU = 0.5*(v(k,j,1)+0)
-           do i = 1, n
-              if (UU.gt.0) then
-                 ke(k,j,i) = ke(k,j,i)+kep(i-1)
-              else
-                 ke(k,j,i) = ke(k,j,i)+kem(i)
-              endif
-              if (i.lt.n)UU = 0.5*(v(k,j,i+1)+v(k,j,i))
-           enddo
-        endif
      enddo
   enddo
 end subroutine kin

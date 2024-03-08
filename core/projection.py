@@ -11,6 +11,7 @@ import boundarycond as bc
 localite = 0
 pback = []
 
+
 @timing
 def compute_div(state, **kwargs):
     """Compute divergence from U, the contravariant velocity
@@ -48,63 +49,42 @@ def compute_p(mg, state, grid, ngbs):
     grid is the Grid object with the metric tensor
     """
     global localite, pback
-    div = state.div
+
     compute_div(state)
 
-    # at the end of the loop div and U are in the 'i' convention
-    # this is mandatory because MG only works with the 'i' convention
+    div = state.div.view("i")
+    p = state.p.view("i")
 
-    # copy divergence into the multigrid RHS
-    # watch out, halo in MG is nh=1, it's wider for div
-    b = mg.grid[0].b
-    x = mg.grid[0].x
+    # print(state.div.mg_idx)
 
-    # this is triplet of slices than span the MG domain (inner+MG halo)
-    # typically mg_idx = (kidx, jidx, iidx)
-    # with kidx = slice(k0, k1) the slice in the k direction
-    mg_idx = state.div.mg_idx
-    #idx = state.div.mg_idx
-    #print(idx)
-    d = div.view('i')
-    #b[:] = div.view('i')[mg_idx]
-    #l,m,n = np.shape(d)
-    #ll,mm,nn = np.shape(b)
-    #print(l,m,n,ll,mm,nn)
-    mg.grid[0].toarray('b')
-    mg.grid[0].toarray('x')    
-    #fortran.var2mg(d,b,idx,l,m,n,ll,mm,nn)
-    #print(np.shape(b), mg_idx)
-    b[:] = div.view('i')[mg_idx]
-    mg.grid[0].tovec('b')
-    mg.grid[0].tovec('x')
-    
-    p = state.p.view('i')
-    # if localite>2:
-    #     mg.grid[0].toarray('x')
-    #     x[:] = pback[localite %3][mg_idx]
-    #     mg.grid[0].tovec('x')
-    # solve
-    mg.solve_directly()
+    if False:
+        x = np.zeros((70, 70, 70))
+        b = np.zeros((70, 70, 70))
+        #b = state.div.data["i"]
+        nh = 3
+        b[nh:-nh, nh:-nh, nh:-nh] = div
+        #b[20,10,20] = -1
+        # print("pshape=",p.shape)
+        # exit()
+        mg.solve(x, b)
+        p[:, :, :] = x[nh:-nh, nh:-nh, nh:-nh]*grid.dx**2
+        # print("xnorm=",np.sum(p**2))
 
-    # copy MG solution to pressure
-
-    mg.grid[0].toarray('x')    
-    p[mg_idx] = x
-    if localite>2:
-        pback[localite%3][:] = p
+        # if localite>2:
+        #     pback[localite%3][:] = p
+        # else:
+        #     pback += [p.copy()]
+        localite += 1
     else:
-        pback += [p.copy()]
-    localite += 1
-    #fortran.mg2var(p,x,idx)
-    mg.grid[0].tovec('x')
-    
+        mg.solve_directly(p, div)
+        # print("xnorm=",np.sum(p**2))
+
     # correct u (the covariant component)
     # now we start with the 'i' convention
     for i in 'ijk':
         p = state.p.view(i)
         u = state.u[i].view(i)
         fortran.gradke(p, u)
-        #u[:, :, :-1] -= np.diff(p)
 
 
 if __name__ == "__main__":

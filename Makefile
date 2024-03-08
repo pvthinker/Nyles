@@ -12,7 +12,7 @@ all:
 	export F2PY=$(F2PY) ; cd core && $(MAKE)
 
 clean:
-	rm -f core/*.so core/*/*.so
+	rm -f core/*.so core/*/*.so core/*/*.o
 
 cleanemacs:
 	find . -name '*~' -exec rm {} \;

@@ -206,7 +206,7 @@ def build(modules, path=None, isfloat32=False, skip=True):
             print(bold(f"{library:>20}: [ok]"))
 
 
-def buildmodule(fortranfile, path=".", skip=False):
+def buildmodule(fortranfile, path=".", skip=False, modulename=None):
     """ transform a fortran script into a python module"""
 
     if isinstance(fortranfile, str):
@@ -219,17 +219,17 @@ def buildmodule(fortranfile, path=".", skip=False):
         for f in fortranfile:
             functions.update(retrieve_functions(f, path=path))
 
-        modulename = os.path.splitext(fortranfile[-1])[0]
-        print(functions)
+        assert isinstance(modulename, str), "module name should be specified"
+
     else:
         assert False
 
     #lib = f"lib{modulename}.so"
-    for isfloat32 in [False, True]:
+    for isfloat32 in [False]:
         lib = get_libname(f"lib{modulename}.so", isfloat32)
         build({lib: fortranfile}, path=path, isfloat32=isfloat32, skip=skip)
 
-    write_module(modulename, functions)
+    write_module(modulename, functions, path)
     print(f"create Python module: {bold(modulename)}")
     print("that contains:")
     for name, signature in functions.items():
@@ -259,12 +259,12 @@ def get_libname(lib, isfloat32):
 
 
 class Function:
-    def __init__(self, lib, name, signature, isfloat32=False):
+    def __init__(self, lib, name, signature, isfloat32=False,path="."):
         self.name = name
         self.signature = signature
         self.lib = get_libname(lib, isfloat32)
         self.isfloat32 = isfloat32
-        self.f = import_from_library(self.lib, name)
+        self.f = import_from_library(self.lib, name,path=path)
         self.f.restype = c_float if isfloat32 else c_double
         self.tags = {}
 
@@ -293,18 +293,22 @@ def get(name, isfloat32=False):
         print(f"{{name}} not in {{list(functions.keys())}}")
         return None
     signature = functions[name]
-    return Function('{lib}', name, signature, isfloat32)
+    path = '{path}'
+    return Function('{lib}', name, signature, isfloat32, path=path)
 
 """
 
 
-def write_module(modulename, functions):
+def write_module(modulename, functions, path):
+    absolute_path = os.getcwd()+"/"+path
     lib = f"lib{modulename}.so"
     strfunctions = ",\n".join(
         [f"   '{name}': '{signature}'"
          for name, signature in functions.items()])
     strfunctions = "{\n"+strfunctions+"}\n"
-    infos = {"lib": lib, "strfunctions": strfunctions}
+    infos = {"lib": lib,
+             "strfunctions": strfunctions,
+             "path": absolute_path}
     with open(f"{modulename}.py", "w") as fid:
         for line in template.split("\n"):
             fid.write(line.format(**infos)+"\n")

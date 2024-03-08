@@ -2,27 +2,6 @@ import build
 import numpy as np
 import mgmod
 
-
-def compile():
-    srcs = ["types.f90",
-            "mg_enums.f90",
-            "mod_io.f90",
-            "mod_tiles.f90",
-            "mod_halo.f90",
-            "mod_gluesplit.f90",
-            "mg_types.f90",
-            "mg_log.f90",
-            "basicoperators.f90",
-            "operators.f90",
-            "mg_setup.f90",
-            "pytools.f90",
-            "solvers.f90",
-            "tuning.f90",
-            "tests.f90"]
-
-    build.buildmodule(srcs)
-
-
 class MG:
     def __init__(self, npx, npy, nx, ny, nz, nh, topology=1):
         self.nh = nh

@@ -10,4 +10,14 @@ The project started in September 2019 as a GFD project with two
 graduate students of Marine Physics. We have now reached a point where
 the numerical choices reveal their promises.
 
+In 2023 WENO reconstructions was added, a new multigrid solver was added, and an attempt to implement the diagnostic of implicit dissipation.
+
+To run it:
+
+  - cd Nyles
+  - make [for once, this compiles the Fortran into *.so libraries]
+  - source activate.sh [every time you open a new terminal]
+  - cd experiments/lock
+  - python3 lockexchange.py
+
 ![ScreenShot](/screenshots/nyles_0.png)
